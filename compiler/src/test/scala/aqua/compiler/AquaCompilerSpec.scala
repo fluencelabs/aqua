@@ -221,6 +221,69 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  it should "not generate hop back with empty response" in {
+    val src = Map(
+      "index.aqua" ->
+        """service Op("op"):
+          |  call(s: string)
+          |
+          |func exec(peers: []string):
+          |    for peer <- peers par:
+          |        on peer:
+          |            Op.call("hahahahah")
+          |""".stripMargin
+    )
+
+    val transformCfg = TransformConfig(
+      noEmptyResponse = true
+    )
+
+    insideRes(src, transformCfg = transformCfg)("exec") { case exec :: _ =>
+      val peers = VarModel("-peers-arg-", ArrayType(ScalarType.string))
+      val peer = VarModel("peer-0", ScalarType.string)
+      val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+
+      val expected =
+        XorRes.wrap(
+          SeqRes.wrap(
+            getDataSrv("-relay-", "-relay-", ScalarType.string),
+            getDataSrv("peers", peers.name, peers.`type`),
+            ParRes.wrap(
+              FoldRes
+                .lastNever(peer.name, peers)
+                .wrap(
+                  ParRes.wrap(
+                    XorRes.wrap(
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        CallServiceRes(
+                          LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                          "call",
+                          CallRes(
+                            LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                            None
+                          ),
+                          peer
+                        ).leaf
+                      ),
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        through(initPeer),
+                        failErrorRes
+                      )
+                    ),
+                    NextRes(peer.name).leaf
+                  )
+                )
+            )
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+      exec.body.equalsOrShowDiff(expected) shouldBe (true)
+    }
+  }
+
   it should "compile with imports" in {
 
     val src = Map(
