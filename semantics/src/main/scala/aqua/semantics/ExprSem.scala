@@ -45,7 +45,6 @@ object ExprSem {
       case expr: ArrowExpr[S] => new ArrowSem(expr).program[G]
       case expr: OnExpr[S] => new OnSem(expr).program[G]
       case expr: ForExpr[S] => new ForSem(expr).program[G]
-      case expr: ForkExpr[S] => new ForkSem(expr).program[G]
       case expr: IfExpr[S] => new IfSem(expr).program[G]
       case expr: TryExpr[S] => new TrySem(expr).program[G]
       case expr: CatchExpr[S] => new CatchSem(expr).program[G]

@@ -184,31 +184,14 @@ case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends S
 object ForTag {
 
   enum Mode {
-    case Blocking
-    case NonBlocking
+    case ParMode, SeqMode, TryMode, RecMode
   }
 
-  def blocking(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.Blocking)
+  def par(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.ParMode)
 
-  def nonBlocking(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.NonBlocking)
-}
-
-case class ForkTag(
-  item: String,
-  iterable: ValueRaw
-) extends SeqGroupTag {
-
-  override def restrictsVarNames: Set[String] = Set(item)
-
-  override def usesVarNames: Set[String] = iterable.varNames
-
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ForkTag(item, iterable.map(f))
-
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(item = map.getOrElse(item, item))
+  def seq(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.SeqMode)
 }
 
 case class CallArrowRawTag(

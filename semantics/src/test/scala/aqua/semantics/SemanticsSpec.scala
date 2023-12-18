@@ -607,7 +607,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                          |""".stripMargin
 
     insideBody(script) { body =>
-      matchSubtree(body) { case (ForTag("p", _, ForTag.Mode.Blocking), forTag) =>
+      matchSubtree(body) { case (ForTag("p", _, ForTag.Mode.ParMode), forTag) =>
         matchChildren(forTag) { case (ParTag, parTag) =>
           matchChildren(parTag)(
             { case (OnTag(_, _, strat), _) =>
