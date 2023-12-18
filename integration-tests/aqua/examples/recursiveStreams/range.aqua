@@ -7,7 +7,7 @@ func range(a: i32, b: i32) -> []i32:
     iterator: *i32
 
     iterator <<- a
-    fork i <- iterator:
+    for i <- iterator rec:
         if i < b:
             result <<- i
             iterator <<- i + 1

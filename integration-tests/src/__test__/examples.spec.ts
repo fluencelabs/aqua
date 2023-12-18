@@ -161,7 +161,7 @@ import {
   returnArrowCall,
   returnArrowChainCall,
 } from "../examples/returnArrowCall.js";
-import { rangeCall } from "../examples/fork/range.js";
+import { rangeCall } from "../examples/recursiveStreams/range.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
