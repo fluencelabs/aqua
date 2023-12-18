@@ -15,11 +15,11 @@ export declare class GeneratedSource {
 export declare class CompilationResult {
   services: Record<string, ServiceDef>;
   functions: Record<string, AquaFunction>;
-  functionCall?: AquaFunction;
   errors: string[];
   warnings: string[];
   generatedSources: GeneratedSource[];
 }
+
 /**
  * Imports configuration for the compiler.
  * Structure:
@@ -83,12 +83,11 @@ type CodeString = {
 };
 
 export type CompileFromStringArgs = CommonArgs & CodeString;
-export type CompileFromStringReturnType = Omit<CompilationResult, "funcCall">;
 
 /** Compile aqua code from a string */
 export declare function compileFromString(
   args: CompileFromStringArgs,
-): Promise<CompileFromStringReturnType>;
+): Promise<CompilationResult>;
 
 type FilePath = {
   /** Path to the aqua file to be compiled */
@@ -96,12 +95,11 @@ type FilePath = {
 };
 
 export type CompileFromPathArgs = CommonArgs & FilePath;
-export type CompileFromPathReturnType = Omit<CompilationResult, "funcCall">;
 
 /** Compile aqua code from a file */
 export declare function compileFromPath(
   args: CompileFromPathArgs,
-): Promise<CompileFromPathReturnType>;
+): Promise<CompilationResult>;
 
 type FuncCall = {
   /** Function call you want to compile. Example: someFunc("someArg") */
@@ -110,20 +108,22 @@ type FuncCall = {
   data?: Record<string, unknown> | undefined;
 };
 
+export type CallCompilationResult = CompilationResult & {
+  functionCall: AquaFunction;
+};
+
 export type CompileFuncCallFromStringArgs = CommonArgs & CodeString & FuncCall;
-export type CompileFuncCallFromStringReturnType = Required<CompilationResult>;
 
 /** Compile aqua function call from a string */
 export declare function compileAquaCallFromString(
   args: CompileFuncCallFromStringArgs,
-): Promise<CompileFuncCallFromStringReturnType>;
+): Promise<CallCompilationResult>;
 
 export type CompileFuncCallFromPathArgs = CommonArgs & FilePath & FuncCall;
-export type CompileFuncCallFromPathReturnType = Required<CompilationResult>;
 
 /** Compile aqua function call from a file */
 export declare function compileAquaCallFromPath(
   args: CompileFuncCallFromPathArgs,
-): Promise<CompileFuncCallFromPathReturnType>;
+): Promise<CallCompilationResult>;
 
 export {};
