@@ -2,161 +2,87 @@ package aqua.files
 
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
+import aqua.io.FilesUnresolved
 import aqua.io.{AquaFileError, FileSystemError, ListAquaErrors}
+import aqua.syntax.eithert.*
+
+import cats.data.EitherT
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.implicits.catsSyntaxApplicativeId
+import cats.syntax.applicative.*
 import cats.syntax.either.*
 import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
 import cats.syntax.monad.*
 import cats.syntax.traverse.*
+import cats.syntax.validated.*
 import cats.{Functor, Monad}
 import fs2.io.file.{Files, Path}
+import scala.util.Try
 import scribe.Logging
 
-import scala.util.Try
+trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileError, FileModuleId] {
+  def imports: Imports
 
-class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
-  sourcesPath: Path,
-  importFrom: List[Path]
-) extends AquaSources[F, AquaFileError, FileModuleId] with Logging {
-  private val filesIO = implicitly[AquaIO[F]]
-
-  override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
-    filesIO.listAqua(sourcesPath).flatMap {
-      case Validated.Valid(files) =>
-        files
-          .map(f =>
-            filesIO
-              .readFile(f)
-              .value
-              .map[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] {
-                case Left(err) => Validated.invalidNec(err)
-                case Right(content) => Validated.validNec(Chain.one(FileModuleId(f) -> content))
-              }
-          )
-          .traverse(identity)
-          .map(
-            _.foldLeft[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]](
-              Validated.validNec(Chain.nil)
-            )(_ combine _)
-          )
-      case Validated.Invalid(e) =>
-        Validated
-          .invalidNec[AquaFileError, Chain[(FileModuleId, String)]](ListAquaErrors(e))
-          .pure[F]
-    }
-
-  // Resolve an import that was written in a 'from' file
-  // Try to find it in a list of given imports or near 'from' file
   override def resolveImport(
     from: FileModuleId,
-    imp: String
-  ): F[ValidatedNec[AquaFileError, FileModuleId]] = {
-    val validatedPath = Validated.fromEither(Try(Path(imp)).toEither.leftMap(FileSystemError.apply))
-    validatedPath match {
-      case Validated.Valid(importP) =>
-        // if there is no `.aqua` extension, than add it
-        filesIO
-          .resolve(importP, importFrom.prependedAll(from.file.parent))
-          .bimap(NonEmptyChain.one, FileModuleId(_))
-          .value
-          .map(Validated.fromEither)
-      case Validated.Invalid(err) => Validated.invalidNec[AquaFileError, FileModuleId](err).pure[F]
-    }
-
-  }
+    imported: String
+  ): F[ValidatedNec[AquaFileError, FileModuleId]] =
+    AquaIO[F]
+      .resolve(
+        imports.resolutions(
+          // NOTE: It is important to use normalized absolute path here
+          from.file.normalize.absolute,
+          imported
+        )
+      )
+      .leftMap {
+        case e: FilesUnresolved =>
+          e.toImportUnresolved(imported)
+        case e => e
+      }
+      .map(FileModuleId.apply)
+      .toValidatedNec
 
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
-    filesIO.readFile(file.file).leftMap(NonEmptyChain.one).value.map(Validated.fromEither)
+    AquaIO[F].readFile(file.file).toValidatedNec
+}
 
-  // Get a directory of a file, or this file if it is a directory itself
-  private def getDir(path: Path): F[Path] = {
-    Files[F]
-      .isDirectory(path)
-      .map { res =>
-        if (res) path else path.parent.getOrElse(path)
-      }
-  }
+/**
+ * Aqua sources that are read from file system.
+ */
+class AquaFileSources[F[_]: Monad: AquaIO](
+  sourcesPath: Path,
+  override val imports: Imports
+) extends AquaFileImports[F] with Logging {
 
-  /**
-   * @param srcFile aqua source
-   * @param targetPath a main path where all output files will be written
-   * @param suffix `.aqua` will be replaced with this suffix
-   * @return
-   */
-  def resolveTargetPath(
-    srcFile: Path,
-    targetPath: Path,
-    suffix: String
-  ): F[Validated[Throwable, Path]] =
-    Files[F].isDirectory(sourcesPath).flatMap {
-      case false =>
-        Validated.catchNonFatal {
-          targetPath.absolute.normalize
-            .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
-        }.pure[F]
-      case true =>
-        getDir(sourcesPath).map { srcDir =>
-          Validated.catchNonFatal {
-            val srcFilePath = srcDir.absolute.normalize
-              .relativize(srcFile.absolute.normalize)
-
-            // use `srcFilePath` as a suffix for target file path, so the directory structure is replicated
-            val targetDir =
-              targetPath.absolute.normalize
-                .resolve(
-                  srcFilePath
-                )
-
-            targetDir.parent
-              .getOrElse(targetDir)
-              .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
-          }
-        }
-    }
-
-  // Write content to a file and return a success message
-  private def writeWithResult(
-    target: Path,
-    content: String,
-    funcsCount: Int,
-    servicesCount: Int
-  ) = {
-    filesIO
-      .writeFile(
-        target,
-        content
+  override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
+    (for {
+      files <- AquaIO[F]
+        .listAqua(sourcesPath)
+        .transform(_.toEitherNec)
+      contents <- EitherT.fromValidatedF(
+        files
+          .traverse(file =>
+            AquaIO[F]
+              .readFile(file)
+              .map(content => FileModuleId(file) -> content)
+              .toValidatedNec
+          )
+          .map(_.sequence)
       )
-      .as(s"Result $target: compilation OK ($funcsCount functions, $servicesCount services)")
-      .value
-      .map(Validated.fromEither)
-  }
+    } yield contents).toValidated
+}
 
-  def write(
-    targetPath: Path
-  )(ac: AquaCompiled[FileModuleId]): F[Seq[Validated[AquaFileError, String]]] =
-    if (ac.compiled.isEmpty)
-      Seq(
-        Validated.valid[AquaFileError, String](
-          s"Source ${ac.sourceId.file}: compilation OK (nothing to emit)"
-        )
-      ).pure[F]
-    else
-      ac.compiled.map { compiled =>
-        resolveTargetPath(
-          ac.sourceId.file,
-          targetPath,
-          compiled.suffix
-        ).flatMap { result =>
-          result
-            .leftMap(FileSystemError.apply)
-            .map { target =>
-              writeWithResult(target, compiled.content, ac.funcsCount, ac.servicesCount)
-            }
-            .traverse(identity)
-        }
-      }.traverse(identity)
-        .map(_.map(_.andThen(identity)))
+/**
+ * Aqua sources that are read from string map.
+ */
+class AquaStringSources[F[_]: Monad: AquaIO](
+  sourcesMap: Map[FileModuleId, String],
+  override val imports: Imports
+) extends AquaFileImports[F] {
+
+  override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
+    Chain.fromSeq(sourcesMap.toSeq).validNec.pure[F]
 }

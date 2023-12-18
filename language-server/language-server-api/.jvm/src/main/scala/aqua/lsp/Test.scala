@@ -1,7 +1,7 @@
 package aqua.lsp
 
 import aqua.compiler.AquaCompilerConf
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
+import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId, Imports}
 import aqua.io.AquaFileError
 import aqua.lsp.LSPCompiler
 import aqua.parser.lift.FileSpan
@@ -15,11 +15,20 @@ import scribe.Level
 
 object Test extends IOApp.Simple {
 
-  implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+  given AquaIO[IO] = new AquaFilesIO[IO]
 
   override def run: IO[Unit] = {
 
-    val sources = new AquaFileSources[IO](Path("./aqua-src/antithesis.aqua"), List(Path("./aqua")))
+    val sources = new AquaFileSources[IO](
+      Path("./aqua-src/antithesis.aqua"),
+      Imports(
+        Map(
+          Path("/") -> Imports.PathSettings(
+            Map("" -> List(Path("./aqua")))
+          )
+        )
+      )
+    )
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     for {

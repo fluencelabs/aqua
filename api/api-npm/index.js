@@ -24,6 +24,33 @@ function getConfig({
   );
 }
 
+function normalizeImports(imports) {
+  if (imports === undefined || imports === null) {
+    return {}; // No imports
+  }
+
+  if (Array.isArray(imports)) {
+    return {
+      "/": {
+        "": imports,
+      },
+    };
+  }
+
+  // Transform each inner string into an array
+  return Object.fromEntries(
+    Object.entries(imports).map(([pathPrefix, info]) => [
+      pathPrefix,
+      Object.fromEntries(
+        Object.entries(info).map(([importPrefix, locations]) => [
+          importPrefix,
+          Array.isArray(locations) ? locations : [locations],
+        ]),
+      ),
+    ]),
+  );
+}
+
 async function compile(...args) {
   try {
     const res = await Aqua.compile(...args);
@@ -42,11 +69,19 @@ async function compile(...args) {
 }
 
 export function compileFromString({ code, imports = [], ...commonArgs }) {
-  return compile(new Input(code), imports, getConfig(commonArgs));
+  return compile(
+    new Input(code),
+    normalizeImports(imports),
+    getConfig(commonArgs),
+  );
 }
 
 export function compileFromPath({ filePath, imports = [], ...commonArgs }) {
-  return compile(new Path(filePath), imports, getConfig(commonArgs));
+  return compile(
+    new Path(filePath),
+    normalizeImports(imports),
+    getConfig(commonArgs),
+  );
 }
 
 export function compileAquaCallFromString({
@@ -58,7 +93,7 @@ export function compileAquaCallFromString({
 }) {
   return compile(
     new Call(funcCall, data, new Input(code)),
-    imports,
+    normalizeImports(imports),
     getConfig(commonArgs),
   );
 }
@@ -72,7 +107,7 @@ export function compileAquaCallFromPath({
 }) {
   return compile(
     new Call(funcCall, data, new Input(filePath)),
-    imports,
+    normalizeImports(imports),
     getConfig(commonArgs),
   );
 }

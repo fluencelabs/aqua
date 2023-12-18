@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.13.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.1...aqua-v0.13.2) (2023-12-14)
+
+
+### Features
+
+* **api:** Accept structured imports [LNG-288] ([#989](https://github.com/fluencelabs/aqua/issues/989)) ([f7bfa83](https://github.com/fluencelabs/aqua/commit/f7bfa8317bb07e0dacf64343bb777c9ea8ff81b7))
+
+
+### Bug Fixes
+
+* **tests:** Lower tests size ([#1018](https://github.com/fluencelabs/aqua/issues/1018)) ([6732f8f](https://github.com/fluencelabs/aqua/commit/6732f8f2ccb5cfd371065f041b9ced5cca0d79e5))
+
 ## [0.13.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.0...aqua-v0.13.1) (2023-12-07)
 
 
