@@ -51,7 +51,6 @@ export interface CompilationResult {
  * {
  *  "<compiled-path-prefix-1>": {
  *   "<import-path-prefix-1>": ["<import-path-1>", "<import-path-2>"],
- *   "<import-path-prefix-2>": "<import-path-3>",
  *   ...
  *  }
  *  ...
