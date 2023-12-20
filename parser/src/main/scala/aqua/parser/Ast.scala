@@ -3,17 +3,20 @@ package aqua.parser
 import aqua.helpers.tree.Tree
 import aqua.parser.expr.*
 import aqua.parser.head.{HeadExpr, HeaderExpr}
-import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.{LiftParser, Span}
 
+import cats.Show
 import cats.data.{Chain, Validated, ValidatedNec}
-import cats.syntax.flatMap.*
 import cats.free.Cofree
+import cats.syntax.flatMap.*
 import cats.{Comonad, Eval}
 import cats.~>
-import cats.Show
 
 case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
+
+  def mapK[K[_]: Comonad](nt: S ~> K): Ast[K] =
+    Ast(head.map(_.mapK(nt)), tree.map(_.mapK(nt)))
 
   def cata[T](folder: (Expr[S], Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata[Chain, Expr[S], T](tree)(folder)

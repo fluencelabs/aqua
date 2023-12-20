@@ -8,6 +8,7 @@ import aqua.parser.lift.{LiftParser, Span}
 
 import cats.data.{Validated, ValidatedNec}
 import cats.parse.{Parser as P, Parser0 as P0}
+import cats.syntax.validated.*
 import cats.{Comonad, ~>}
 
 object Parser extends scribe.Logging {
@@ -24,19 +25,15 @@ object Parser extends scribe.Logging {
 
   def parse[S[_]: LiftParser: Comonad](
     p: P0[ValidatedNec[ParserError[S], Ast[S]]]
-  )(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
-    p.parseAll(source) match {
-      case Right(value) => value
-      case Left(e) => Validated.invalidNec(LexerError(e.wrapErr))
-    }
-  }
+  )(source: String): ValidatedNec[ParserError[S], Ast[S]] =
+    p.parseAll(source).left.map(e => LexerError(e.wrapErr).invalidNec).merge
 
   def natParser[S[_]: LiftParser: Comonad, K[_]: Comonad](
     p: P0[ValidatedNec[ParserError[S], Ast[S]]],
     nat: S ~> K
   )(source: String): ValidatedNec[ParserError[K], Ast[K]] =
-    parse[S](p)(source).bimap(
+    parse(p)(source).bimap(
       e => e.map(_.mapK(nat)),
-      ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
+      ast => ast.mapK(nat)
     )
 }
