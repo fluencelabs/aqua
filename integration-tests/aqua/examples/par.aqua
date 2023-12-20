@@ -1,3 +1,5 @@
+aqua Par
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service ParService("parservice-id"):

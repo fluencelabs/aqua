@@ -1,3 +1,5 @@
+aqua MultiReturn
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service GetStr("multiret-test"):

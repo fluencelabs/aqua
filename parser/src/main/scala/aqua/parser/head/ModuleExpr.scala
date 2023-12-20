@@ -43,7 +43,9 @@ object ModuleExpr extends HeaderExpr.Companion {
     nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
   override val p: Parser[ModuleExpr[Span.S]] =
-    ((`module` | `aqua-word`) *> ` ` *> Ability.dotted ~
+    ((`module`.flatMap(_ =>
+      Parser.failWith("'module' word is deprecated. Use 'aqua' instead.")
+    ) | `aqua-word`) *> ` ` *> Ability.dotted ~
       (` declares ` *> nameOrAbListOrAll).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)

@@ -1,3 +1,5 @@
+aqua Fold
+
 import "println.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"
 

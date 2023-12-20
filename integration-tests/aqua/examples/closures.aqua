@@ -1,4 +1,4 @@
-module Closure declares *
+aqua Closure declares *
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 

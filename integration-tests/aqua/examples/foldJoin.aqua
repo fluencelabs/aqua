@@ -1,4 +1,4 @@
-module FoldJoin
+aqua FoldJoin
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 

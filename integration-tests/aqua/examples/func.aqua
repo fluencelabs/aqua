@@ -1,3 +1,5 @@
+aqua Func
+
 service TestSrv("test-service-id"):
     str: -> string
 

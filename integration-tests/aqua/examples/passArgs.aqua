@@ -1,3 +1,5 @@
+aqua PassArgs
+
 import Op from "@fluencelabs/aqua-lib/builtin.aqua"
 
 service AquaDHT("test-dht"):

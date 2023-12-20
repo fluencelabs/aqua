@@ -1,3 +1,5 @@
+module Aaa
+
 func arr() -> string:
   n = "str"
   <- n
