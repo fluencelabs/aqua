@@ -1,3 +1,5 @@
+aqua Option
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service SomeS("test2"):

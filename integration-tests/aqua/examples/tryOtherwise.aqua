@@ -1,3 +1,5 @@
+aqua TryOtherwise
+
 service Unexisted("unex"):
   getStr() -> string
 

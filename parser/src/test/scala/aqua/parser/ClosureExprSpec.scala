@@ -31,7 +31,9 @@ class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "closure" should "parse" in {
     val script =
-      """func f() -> string:
+      """aqua Test
+        |
+        |func f() -> string:
         |  closure = (s: string) -> string:
         |    LocalSrv.inside()
         |    p2Id <- Peer.identify()

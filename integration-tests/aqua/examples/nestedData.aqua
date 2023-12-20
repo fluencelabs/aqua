@@ -1,3 +1,5 @@
+aqua NestedData
+
 data NestedType:
     val: string
 

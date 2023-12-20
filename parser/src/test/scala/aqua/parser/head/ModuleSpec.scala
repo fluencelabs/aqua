@@ -13,7 +13,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   "module header" should "be parsed" in {
-    ModuleExpr.p.parseAll("module MyModule").value.mapK(spanToId) should be(
+    ModuleExpr.p.parseAll("aqua MyModule").value.mapK(spanToId) should be(
       ModuleExpr(
         toAb("MyModule"),
         None,
@@ -23,7 +23,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     HeadExpr.ast
-      .parseAll(s"""module MyModule declares *
+      .parseAll(s"""aqua MyModule declares *
                    |""".stripMargin)
       .value
       .head

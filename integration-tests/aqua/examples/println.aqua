@@ -1,3 +1,5 @@
+aqua Println
+
 service Println("println-service-id"):
     print: string -> ()
 

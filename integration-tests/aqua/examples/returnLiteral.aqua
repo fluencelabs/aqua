@@ -1,2 +1,4 @@
+aqua ReturnLiteral
+
 func returnLiteral() -> string:
     <- "some literal"

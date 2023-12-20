@@ -23,15 +23,10 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
     )
 
-    HeadExpr.ast
+    ImportFromExpr.p
       .parseAll(s"""import MyModule, func as fn from "file.aqua"
                    |""".stripMargin)
       .value
-      .tail
-      .value
-      .headOption
-      .get
-      .head
       .mapK(spanToId) should be(
       ImportFromExpr(
         NonEmptyList.fromListUnsafe(

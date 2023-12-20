@@ -1,4 +1,4 @@
-module Export declares foobar, foo
+aqua Export declares foobar, foo
 
 import Op as Noop from "@fluencelabs/aqua-lib/builtin.aqua"
 

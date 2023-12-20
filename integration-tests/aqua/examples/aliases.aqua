@@ -1,3 +1,5 @@
+aqua Aliases
+
 data SomeData:
     value: string
     otherValue: u64

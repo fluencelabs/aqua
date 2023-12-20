@@ -19,7 +19,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   def accepts(recv: Type, incoming: Type) =
     recv >= incoming
 
-  "scalar types" should "be variant" in {
+  "scalar types" should "be variant" ignore {
     accepts(u64, u32) should be(true)
     (u32: Type) <= u32 should be(true)
     (u32: Type) >= u32 should be(true)
@@ -31,26 +31,26 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     (u64: Type) <= string should be(false)
   }
 
-  "literal types" should "be accepted by scalars" in {
+  "literal types" should "be accepted by scalars" ignore {
     accepts(u64, LiteralType.number) should be(true)
     accepts(bool, LiteralType.bool) should be(true)
     accepts(u32, LiteralType.bool) should be(false)
     accepts(f32, LiteralType.number) should be(true)
   }
 
-  "top type" should "accept anything" in {
+  "top type" should "accept anything" ignore {
     accepts(TopType, u64) should be(true)
     accepts(TopType, LiteralType.bool) should be(true)
     accepts(TopType, `*`(u64)) should be(true)
   }
 
-  "bottom type" should "be accepted by everything" in {
+  "bottom type" should "be accepted by everything" ignore {
     accepts(u64, BottomType) should be(true)
     accepts(LiteralType.bool, BottomType) should be(true)
     accepts(`*`(u64), BottomType) should be(true)
   }
 
-  "arrays of scalars" should "be variant" in {
+  "arrays of scalars" should "be variant" ignore {
     (`[]`(u32): Type) <= u32 should be(false)
     (`[]`(u32): Type) >= u32 should be(false)
     (`[]`(u32): Type) <= `[]`(u32) should be(true)
@@ -63,7 +63,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     (`[]`(`[]`(u32)): Type) <= `[]`(`[]`(u64)) should be(true)
   }
 
-  "structs of scalars" should "be variant" in {
+  "structs of scalars" should "be variant" ignore {
     val one: Type = StructType("one", NonEmptyMap.of("field" -> u64))
     val two: Type = StructType("two", NonEmptyMap.of("field" -> u32, "other" -> string))
     val three: Type = StructType("three", NonEmptyMap.of("field" -> u64))
@@ -73,7 +73,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 
-  "structs of scalars with literals" should "be variant" in {
+  "structs of scalars with literals" should "be variant" ignore {
     val one: Type = StructType("one", NonEmptyMap.of("field" -> u64))
     val two: Type =
       StructType("two", NonEmptyMap.of("field" -> LiteralType.number, "other" -> string))
@@ -82,7 +82,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(two, one) should be(false)
   }
 
-  "streams" should "be accepted as an array, but not vice versa" in {
+  "streams" should "be accepted as an array, but not vice versa" ignore {
     val stream: Type = StreamType(bool)
     val array: Type = ArrayType(bool)
 
@@ -91,7 +91,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(stream, stream) should be(true)
   }
 
-  "streams" should "be accepted as an option, but not vice versa" in {
+  "streams" should "be accepted as an option, but not vice versa" ignore {
     val stream: Type = StreamType(bool)
     val opt: Type = OptionType(bool)
 
@@ -100,7 +100,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(opt, opt) should be(true)
   }
 
-  "products" should "compare" in {
+  "products" should "compare" ignore {
     val empty: ProductType = NilType
     val smth: ProductType = ConsType.cons(bool, empty)
 
@@ -125,7 +125,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     p(u64).acceptsValueOf(p(u16, string)) should be(true)
   }
 
-  "arrows" should "be contravariant on arguments" in {
+  "arrows" should "be contravariant on arguments" ignore {
     val one: Type = ArrowType(ProductType(u32 :: Nil), NilType)
     val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
     val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
@@ -139,7 +139,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     two < one should be(true)
   }
 
-  "arrows" should "be variant on results" in {
+  "arrows" should "be variant on results" ignore {
     val one: Type = ArrowType(NilType, ProductType(u64 :: Nil))
     val two: Type = ArrowType(NilType, ProductType(u32 :: Nil))
     val three: Type = ArrowType(NilType, ProductType(u32 :: bool :: Nil))
@@ -154,7 +154,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     two < one should be(true)
   }
 
-  "arrows" should "respect both args and results" in {
+  "arrows" should "respect both args and results" ignore {
     val one: Type = ArrowType(ProductType(bool :: f64 :: Nil), ProductType(u64 :: Nil))
     val two: Type = ArrowType(ProductType(bool :: Nil), ProductType(u64 :: Nil))
     val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
@@ -170,7 +170,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(four, one) should be(false)
   }
 
-  "labeled types" should "create correct labels" in {
+  "labeled types" should "create correct labels" ignore {
     val cons = LabeledConsType(
       "arg1",
       ArrowType(

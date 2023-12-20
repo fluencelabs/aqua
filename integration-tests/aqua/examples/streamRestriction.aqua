@@ -1,3 +1,5 @@
+aqua StreamRestriction
+
 func streamFold(arr: []string) -> []string:
   res: *string
   for n <- arr:

@@ -1,3 +1,5 @@
+aqua DataAlias
+
 -- set `PeerId` name to be a type alias for `string` type
 alias PeerId : string
 

@@ -1,3 +1,5 @@
+aqua ParSeq
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service NumOp("op"):

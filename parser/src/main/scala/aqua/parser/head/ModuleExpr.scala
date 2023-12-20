@@ -1,15 +1,16 @@
 package aqua.parser.head
 
-import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.Token
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, LiteralToken, Name, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ModuleExpr[F[_]](
   name: Ability[F],
@@ -42,7 +43,9 @@ object ModuleExpr extends HeaderExpr.Leaf {
     nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
   override val p: Parser[ModuleExpr[Span.S]] =
-    ((`module` | `aqua-word`) *> ` ` *> Ability.dotted ~
+    ((`module`.flatMap(_ =>
+      Parser.failWith("'module' word is deprecated. Use 'aqua' instead.")
+    ) | `aqua-word`) *> ` ` *> Ability.dotted ~
       (` declares ` *> nameOrAbListOrAll).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)

@@ -1,17 +1,12 @@
 package aqua.parser
 
 import aqua.helpers.tree.Tree
-import aqua.parser.expr.*
-import aqua.parser.head.{HeadExpr, HeaderExpr}
-import aqua.parser.lift.{LiftParser, Span}
-import aqua.parser.lift.LiftParser.*
+import aqua.parser.head.HeaderExpr
 
-import cats.data.{Chain, Validated, ValidatedNec}
-import cats.syntax.flatMap.*
+import cats.data.Chain
 import cats.free.Cofree
-import cats.{Comonad, Eval}
-import cats.~>
-import cats.Show
+import cats.syntax.flatMap.*
+import cats.{Eval, Show}
 
 case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
 

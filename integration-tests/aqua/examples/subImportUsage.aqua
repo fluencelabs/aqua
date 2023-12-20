@@ -1,3 +1,5 @@
+aqua SubImportUsage
+
 import "imports_exports/subImport.aqua"
 
 service ConcatSubs("concat_subs"):

@@ -1,3 +1,5 @@
+aqua Constants
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service Getter("test"):

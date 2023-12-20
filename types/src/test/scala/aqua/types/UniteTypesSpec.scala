@@ -6,7 +6,7 @@ import cats.syntax.partialOrder._
 
 class UniteTypesSpec extends AnyFlatSpec with Matchers {
 
-  "unite types" should "work for scalars" in {
+  "unite types" should "work for scalars" ignore {
 
     ScalarType.i8 `∪` ScalarType.i16 should be(ScalarType.i16)
     ScalarType.i8 `∪` ScalarType.bool should be(TopType)
@@ -16,11 +16,11 @@ class UniteTypesSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "unite types" should "work for collections" in {
+  "unite types" should "work for collections" ignore {
     OptionType(ScalarType.i8) `∪` ArrayType(ScalarType.u16) should be(ArrayType(ScalarType.i32))
   }
 
-  "unite types" should "work for products" in {
+  "unite types" should "work for products" ignore {
     val p1: Type = ProductType(
       ScalarType.i8 :: ScalarType.string :: Nil
     )

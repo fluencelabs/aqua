@@ -1,3 +1,5 @@
+aqua PushToStream
+
 service OpA("pop"):
   get_str() -> string
 

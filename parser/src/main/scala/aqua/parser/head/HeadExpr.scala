@@ -7,11 +7,12 @@ import aqua.parser.lift.LiftParser.*
 import cats.{Comonad, Eval}
 import cats.data.Chain
 import cats.free.Cofree
-import cats.parse.{Parser => P, Parser0 => P0}
+import cats.parse.{Parser as P, Parser0 as P0}
 import aqua.parser.lexer.Token
 import cats.~>
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import aqua.parser.Ast.Head
 
 case class HeadExpr[S[_]](token: Token[S]) extends HeaderExpr[S] {
 
@@ -24,16 +25,17 @@ object HeadExpr {
   def headExprs: List[HeaderExpr.Companion] =
     UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: ExportExpr :: Nil
 
+  val headers: P0[Chain[Head[S]]] = P.repSep0(P.oneOf(headExprs.map(_.ast.backtrack)), ` \n+`).map(Chain.fromSeq)
+  
   val ast: P0[Ast.Head[Span.S]] =
-    (P.unit.lift0.map(Token.lift) ~ ((ModuleExpr.p <* ` \n+`).? ~
-      P.repSep0(P.oneOf(headExprs.map(_.ast.backtrack)), ` \n+`).map(Chain.fromSeq))
+    ((ModuleExpr.p <* ` \n+`).? ~ headers)
       .surroundedBy(` \n+`.?)
-      .?).map {
-      case (p, Some((maybeMod, exprs))) =>
-        Cofree(
-          maybeMod.getOrElse(HeadExpr[Span.S](p)),
+      .?.flatMap {
+      case Some((Some(mod), exprs)) =>
+        P.pure(Cofree(
+          mod,
           Eval.now(exprs)
-        )
-      case (p, None) => Cofree(HeadExpr[Span.S](p), Eval.now(Chain.nil))
+        ))
+      case _ => P.failWith("Aqua file must start with 'aqua AquaName' string")
     }
 }

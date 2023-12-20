@@ -1,3 +1,5 @@
+aqua Example
+
 service Peer("peer"):
     is_connected: string -> bool
 

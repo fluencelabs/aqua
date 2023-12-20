@@ -1,3 +1,4 @@
+aqua RecursiveStream
 
 service YesNoService("yesno"):
   get() -> string
