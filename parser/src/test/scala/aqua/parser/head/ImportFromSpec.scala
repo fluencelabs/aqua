@@ -5,6 +5,7 @@ import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.LiftParser.Implicits.*
 import aqua.types.LiteralType
+
 import cats.Id
 import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec
@@ -24,7 +25,7 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     ImportFromExpr.p
-      .parseAll(s"""import MyModule, func as fn from "file.aqua"""".stripMargin)
+      .parseAll("""import MyModule, func as fn from "file.aqua"""")
       .value
       .mapK(spanToId) should be(
       ImportFromExpr(

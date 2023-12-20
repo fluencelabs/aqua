@@ -1,4 +1,8 @@
-module Aaa
+export arr
+
+aqua Aaa
+
+
 
 func arr() -> string:
   n = "str"

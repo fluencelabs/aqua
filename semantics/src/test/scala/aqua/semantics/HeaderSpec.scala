@@ -33,6 +33,7 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
      */
     Chain(
       ModuleExpr(
+        word = ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
         name = Ability[Id]("TestModule"),
         declareAll = None,
         declareNames = Nil,

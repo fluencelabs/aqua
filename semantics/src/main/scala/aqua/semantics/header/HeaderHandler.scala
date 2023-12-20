@@ -106,11 +106,11 @@ class HeaderHandler[S[_]: Comonad, C](using
           )
         )
 
-    val handleModule: ModuleExpr[S] => HeaderSem[S, C] = {
-      case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
+    val handleModule: ModuleExpr[S] => Res[S, C] = {
+      case ModuleExpr(word, name, declareAll, declareNames, declareCustom) =>
         val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
 
-        HeaderSem(
+        lazy val sem = HeaderSem(
           // Save module header info
           acm.empty.setModule(
             name.value,
@@ -133,11 +133,18 @@ class HeaderHandler[S[_]: Comonad, C](using
                     )
                   )
                   .void
-              }.combineAll
-                .as(
-                  // TODO: why module name and declares is lost? where is it lost?
-                  ctx.setModule(name.value, declares = shouldDeclare)
-                )
+              }.combineAll.as(
+                // TODO: why module name and declares is lost? where is it lost?
+                ctx.setModule(name.value, declares = shouldDeclare)
+              )
+        )
+
+        word.value.fold(
+          module = error(
+            word,
+            "Keyword `module` is deprecated, use `aqua` instead"
+          ).invalidNec,
+          aqua = sem.validNec
         )
     }
 
@@ -148,7 +155,7 @@ class HeaderHandler[S[_]: Comonad, C](using
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
 
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
@@ -218,14 +225,15 @@ class HeaderHandler[S[_]: Comonad, C](using
         resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
     }
 
-    header.uncons.collect { case (m: ModuleExpr[S], rest) => (m.some, rest) }
+    val (module, other) = header.uncons.collect { case (m: ModuleExpr[S], rest) => (m.some, rest) }
       .getOrElse((none, header))
       .bimap(
-        _.map(handleModule).toValidNec(
-          MissingHeaderError("Missing aqua module header")
-        ),
+        _.toValidNec(
+          MissingHeaderError("Missing `aqua` module header at the top")
+        ).andThen(handleModule),
         _.foldMap(onExpr)
       )
-      .combineAll
+
+    module |+| other
   }
 }

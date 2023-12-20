@@ -16,6 +16,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
   "module header" should "be parsed" in {
     ModuleExpr.p.parseAll("aqua MyModule").value.mapK(spanToId) should be(
       ModuleExpr(
+        ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
         toAb("MyModule"),
         None,
         Nil,
@@ -31,6 +32,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .get
       .mapK(spanToId) should be(
       ModuleExpr(
+        ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
         toAb("MyModule"),
         Some(Token.lift[Id, Unit](())),
         Nil,
