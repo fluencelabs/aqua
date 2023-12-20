@@ -24,8 +24,7 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     ImportFromExpr.p
-      .parseAll(s"""import MyModule, func as fn from "file.aqua"
-                   |""".stripMargin)
+      .parseAll(s"""import MyModule, func as fn from "file.aqua"""".stripMargin)
       .value
       .mapK(spanToId) should be(
       ImportFromExpr(
