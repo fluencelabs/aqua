@@ -7,26 +7,26 @@ import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
 
 import cats.data.Validated.{Invalid, Valid}
+import cats.data.{NonEmptyChain, ValidatedNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.foldable.*
 import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.reducible.*
-import cats.data.{NonEmptyChain, ValidatedNec}
 import monocle.Lens
 import monocle.macros.GenLens
 
 class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
   private def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] =
-    ast.collectHead {
+    ast.head.collect {
       case ImportExpr(fn) => fn
       case ImportFromExpr(_, fn) => fn
       case UseExpr(fn, _) => fn
       case UseFromExpr(_, fn, _) => fn
-    }.value.toList
+    }.toList
 
   /**
    * Process the AST and return the semantics result.

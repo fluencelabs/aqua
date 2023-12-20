@@ -6,20 +6,19 @@ import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
 
-import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, Validated, ValidatedNec}
-import cats.parse.Parser0
-import cats.syntax.either.*
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.monad.*
-import cats.syntax.foldable.*
-import cats.syntax.traverse.*
-import cats.syntax.validated.*
 import cats.data.Chain.*
 import cats.data.Validated.*
+import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, Validated, ValidatedNec}
+import cats.parse.Parser0
+import cats.syntax.applicative.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.traverse.*
-import cats.{~>, Comonad, Monad}
+import cats.syntax.validated.*
+import cats.{Comonad, Monad, ~>}
 import scribe.Logging
 
 // TODO: add tests
@@ -48,9 +47,9 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   // Resolve imports (not parse, just resolve) of the given file
   private def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
-    ast.collectHead { case fe: FilenameExpr[S] =>
+    ast.head.collect { case fe: FilenameExpr[S] =>
       fe.fileValue -> fe.token
-    }.value.traverse { case (filename, token) =>
+    }.traverse { case (filename, token) =>
       sources
         .resolveImport(id, filename)
         .map(

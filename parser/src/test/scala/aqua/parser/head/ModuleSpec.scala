@@ -3,11 +3,12 @@ package aqua.parser.head
 import aqua.AquaSpec
 import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.parser.lift.LiftParser.Implicits.*
 import aqua.types.LiteralType
+
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import aqua.parser.lift.LiftParser.Implicits.*
 
 class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
@@ -22,11 +23,12 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
     )
 
-    HeadExpr.ast
+    Header.p
       .parseAll(s"""aqua MyModule declares *
                    |""".stripMargin)
       .value
-      .head
+      .headOption
+      .get
       .mapK(spanToId) should be(
       ModuleExpr(
         toAb("MyModule"),

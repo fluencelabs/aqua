@@ -1,5 +1,6 @@
 package aqua.semantics
 
+import aqua.parser.Ast
 import aqua.parser.head.{ExportExpr, FromExpr, HeaderExpr, ModuleExpr}
 import aqua.parser.lexer.{Ability, Name}
 import aqua.raw.RawContext
@@ -11,8 +12,8 @@ import aqua.types.{AbilityType, ArrowType, NilType, ProductType, ScalarType}
 
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, Validated}
 import cats.free.Cofree
-import cats.{Eval, Id, Monoid}
 import cats.syntax.applicative.*
+import cats.{Eval, Id, Monoid}
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -23,26 +24,21 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
 
   val handler = new HeaderHandler[Id, RawContext]()
 
-  def exportHeader(funcName: String): Cofree[Chain, HeaderExpr[Id]] = {
+  def exportHeader(funcName: String): Ast.Head[Id] = {
     val exp: FromExpr.NameOrAbAs[Id] = Left((Name(funcName), None))
 
     /**
      * aqua TestModule
      * export <funcName>
      */
-    Cofree(
+    Chain(
       ModuleExpr(
         name = Ability[Id]("TestModule"),
         declareAll = None,
         declareNames = Nil,
         declareCustom = Nil
       ),
-      Chain(
-        Cofree(
-          ExportExpr(NonEmptyList.of(exp)),
-          Chain.empty.pure
-        )
-      ).pure
+      ExportExpr(NonEmptyList.of(exp))
     )
   }
 

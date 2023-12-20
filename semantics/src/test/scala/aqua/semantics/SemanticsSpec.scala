@@ -34,7 +34,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
   val semantics = new RawSemantics[Span.S]()
 
   private def addAqua(script: String) =
-    if (script.startWith("aqua")) script else "aqua Test\n" + script
+    if (script.startsWith("aqua")) script else "aqua Test\n" + script
 
   def insideResult(script: String)(
     test: PartialFunction[

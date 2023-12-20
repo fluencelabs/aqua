@@ -23,5 +23,6 @@ object Header {
     P.repSep0(
       P.oneOf(headExprs.map(_.p.backtrack)),
       ` \n+`
-    ).map(Chain.fromSeq)
+    ).surroundedBy(` \n+`.?)
+      .map(Chain.fromSeq)
 }

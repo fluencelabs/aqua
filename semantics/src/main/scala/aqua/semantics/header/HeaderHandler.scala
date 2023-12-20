@@ -3,6 +3,7 @@ package aqua.semantics.header
 import aqua.parser.Ast
 import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Name, Token}
+import aqua.semantics.MissingHeaderError
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
 
@@ -142,6 +143,9 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     // Handler for every header expression, will be combined later
     val onExpr: HeaderExpr[S] => Res[S, C] = {
+      case m: ModuleExpr[S] =>
+        error(m.token, "Module header is expected to be at the top").invalidNec
+
       case f @ ImportExpr(_) =>
         // Import everything from a file
         resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
@@ -214,8 +218,14 @@ class HeaderHandler[S[_]: Comonad, C](using
         resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
     }
 
-    header.uncons.collect { case (m: ModuleExpr[S], other) =>
-      other.map(onExpr).combineAll.map(handleModule(m) |+| _)
-    }
+    header.uncons.collect { case (m: ModuleExpr[S], rest) => (m.some, rest) }
+      .getOrElse((none, header))
+      .bimap(
+        _.map(handleModule).toValidNec(
+          MissingHeaderError("Missing aqua module header")
+        ),
+        _.foldMap(onExpr)
+      )
+      .combineAll
   }
 }

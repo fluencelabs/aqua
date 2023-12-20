@@ -108,22 +108,18 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
   def compile(
     src: Map[String, String],
     imports: Map[String, String] = Map.empty
-  ): ValidatedNec[AquaError[String, String, S], Map[String, LspContext[S]]] = {
+  ): ValidatedNec[AquaError[String, String, S], Map[String, LspContext[S]]] =
     LSPCompiler
       .compileToLsp[Id, String, String, Span.S](
         aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
-      .leftMap { errors =>
-        println(errors)
-        errors
-      }
-  }
 
   it should "return right tokens" in {
     val main =
-      """module Import
+      """aqua Import
+        |
         |import foo, strFunc, num from "export2.aqua"
         |
         |import "../gen/OneMore.aqua"
@@ -156,7 +152,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val firstImport =
-      """module Export declares strFunc, num, foo
+      """aqua Export declares strFunc, num, foo
         |
         |func absb() -> string:
         |    <- "ff"
@@ -173,7 +169,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |""".stripMargin
 
     val secondImport =
-      """
+      """aqua Export declares OneMore
+        |
         |service OneMore:
         |  more_call()
         |  consume(s: string)
@@ -226,7 +223,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     // this is tokens from imports, if we will use `FileSpan.F` file names will be different
     // OneMore service
-    res.checkTokenLoc(secondImport, "OneMore", 0, serviceType) shouldBe true
+    res.checkTokenLoc(secondImport, "OneMore", 1, serviceType) shouldBe true
     res.checkTokenLoc(
       secondImport,
       "more_call",
