@@ -18,6 +18,7 @@ import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
+import cats.syntax.traverse.*
 import cats.syntax.validated.*
 import cats.{Comonad, Eval, Monoid}
 
@@ -104,45 +105,43 @@ class HeaderHandler[S[_]: Comonad, C](using
           )
         )
 
-    // Handler for every header expression, will be combined later
-    val onExpr: PartialFunction[HeaderExpr[S], Res[S, C]] = {
-      // Module header, like `module A declares *`
+    val handleModule: ModuleExpr[S] => HeaderSem[S, C] = {
       case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
         val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
-        validNec(
-          HeaderSem[S, C](
-            // Save module header info
-            acm.empty.setModule(
-              name.value,
-              shouldDeclare
-            ),
-            (ctx, _) =>
-              // When file is handled, check that all the declarations exists
-              if (declareAll.nonEmpty) {
-                validNec(
-                  ctx.setModule(name.value, declares = ctx.all)
-                )
-              } else
-                (
-                  declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-                ).map { case (n, t) =>
-                  ctx
-                    .pick(n, None, ctx.module.nonEmpty)
-                    .toValidNec(
-                      error(
-                        t,
-                        s"`$n` is expected to be declared, but declaration is not found in the file"
-                      )
-                    )
-                    .void
-                }.combineAll
-                  .as(
-                    // TODO: why module name and declares is lost? where is it lost?
-                    ctx.setModule(name.value, declares = shouldDeclare)
-                  )
-          )
-        )
 
+        HeaderSem(
+          // Save module header info
+          acm.empty.setModule(
+            name.value,
+            shouldDeclare
+          ),
+          (ctx, _) =>
+            // When file is handled, check that all the declarations exists
+            if (declareAll.nonEmpty)
+              ctx.setModule(name.value, declares = ctx.all).validNec
+            else
+              (
+                declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
+              ).map { case (n, t) =>
+                ctx
+                  .pick(n, None, ctx.module.nonEmpty)
+                  .toValidNec(
+                    error(
+                      t,
+                      s"`$n` is expected to be declared, but declaration is not found in the file"
+                    )
+                  )
+                  .void
+              }.combineAll
+                .as(
+                  // TODO: why module name and declares is lost? where is it lost?
+                  ctx.setModule(name.value, declares = shouldDeclare)
+                )
+        )
+    }
+
+    // Handler for every header expression, will be combined later
+    val onExpr: HeaderExpr[S] => Res[S, C] = {
       case f @ ImportExpr(_) =>
         // Import everything from a file
         resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
@@ -152,7 +151,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         resolve(f)
           .andThen(getFrom(f, _))
           .map { ctx =>
-            HeaderSem[S, C](ctx, (c, _) => validNec(c))
+            HeaderSem(ctx, (c, _) => validNec(c))
           }
 
       case f @ UseExpr(_, asModule) =>
@@ -160,7 +159,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
           .map { fc =>
-            HeaderSem[S, C](fc, (c, _) => validNec(c))
+            HeaderSem(fc, (c, _) => validNec(c))
           }
 
       case f @ UseFromExpr(_, _, asModule) =>
@@ -169,86 +168,54 @@ class HeaderHandler[S[_]: Comonad, C](using
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
           .map { fc =>
-            HeaderSem[S, C](fc, (c, _) => validNec(c))
+            HeaderSem(fc, (c, _) => validNec(c))
           }
 
       case ExportExpr(pubs) =>
         // Save exports, finally handle them
-        validNec(
-          HeaderSem[S, C](
-            // Nothing there
-            picker.blank,
-            (ctx, initCtx) =>
-              val sumCtx = initCtx |+| ctx
+        HeaderSem(
+          // Nothing there
+          picker.blank,
+          (ctx, initCtx) =>
+            val sumCtx = initCtx |+| ctx
 
-              pubs
-                .map(
-                  _.bimap(
-                    _.bimap(n => (n, n.value), _.map(_.value)),
-                    _.bimap(n => (n, n.value), _.map(_.value))
-                  ).merge
-                )
-                .map { case ((token, name), rename) =>
-                  sumCtx
-                    .pick(name, rename, declared = false)
-                    .as(Map(name -> rename))
-                    .toValid(
-                      error(
-                        token,
-                        s"File has no $name declaration or import, " +
-                          s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
-                      )
+            pubs
+              .map(
+                _.bimap(
+                  _.bimap(n => (n, n.value), _.map(_.value)),
+                  _.bimap(n => (n, n.value), _.map(_.value))
+                ).merge
+              )
+              .map { case ((token, name), rename) =>
+                sumCtx
+                  .pick(name, rename, declared = false)
+                  .as(Map(name -> rename))
+                  .toValid(
+                    error(
+                      token,
+                      s"File has no $name declaration or import, " +
+                        s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
                     )
-                    .ensure(
-                      error(
-                        token,
-                        s"Can not export '$name' as it is an ability"
-                      )
-                    )(_ => !sumCtx.isAbility(name))
-                    .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
-                }
-                .prepend(validNec(ctx.exports))
-                .combineAll
-                .map(ctx.setExports)
-          )
-        )
-
-      case HeadExpr(token) =>
-        // Old file exports everything that it declares
-        validNec(
-          HeaderSem[S, C](
-            acm.empty,
-            (ctx, initCtx) => {
-              val sumCtx = initCtx |+| ctx
-              ctx.funcNames.toList
-                .traverse_(name =>
-                  // TODO: Provide better token for this error
-                  exportFuncChecks(sumCtx, token, name)
-                )
-                .combine(
-                  ctx.definedAbilityNames.toList.traverse_(name =>
-                    // TODO: Provide better token for this error
-                    error(token, s"Can not export '$name' as it is an ability ").invalidNec
                   )
-                )
-                .as(
-                  // Export everything
-                  ctx.setExports(
-                    ctx.all.map(_ -> None).toMap
-                  )
-                )
-            }
-          )
-        )
+                  .ensure(
+                    error(
+                      token,
+                      s"Can not export '$name' as it is an ability"
+                    )
+                  )(_ => !sumCtx.isAbility(name))
+                  .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
+              }
+              .prepend(validNec(ctx.exports))
+              .combineAll
+              .map(ctx.setExports)
+        ).validNec
 
       case f: FilenameExpr[S] =>
-        resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
     }
 
-    Cofree
-      .cata[Chain, HeaderExpr[S], Res[S, C]](header) { case (expr, children) =>
-        onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children))
-      }
-      .value
+    header.uncons.collect { case (m: ModuleExpr[S], other) =>
+      other.map(onExpr).combineAll.map(handleModule(m) |+| _)
+    }
   }
 }

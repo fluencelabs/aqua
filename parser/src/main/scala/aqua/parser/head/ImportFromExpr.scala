@@ -3,12 +3,13 @@ package aqua.parser.head
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{LiteralToken, ValueToken}
 import aqua.parser.lift.LiftParser
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ImportFromExpr[F[_]](
   imports: NonEmptyList[FromExpr.NameOrAbAs[F]],
@@ -21,7 +22,7 @@ case class ImportFromExpr[F[_]](
   override def toString: String = s"import ${FromExpr.show(imports)} from ${filename.value}"
 }
 
-object ImportFromExpr extends HeaderExpr.Leaf {
+object ImportFromExpr extends HeaderExpr.Companion {
 
   override val p: Parser[HeaderExpr[Span.S]] =
     (`import` *> FromExpr.importFrom.surroundedBy(` `) ~ ValueToken.string).map {

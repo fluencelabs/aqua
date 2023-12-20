@@ -1,15 +1,16 @@
 package aqua.parser.head
 
-import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.Token
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, LiteralToken, Name, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ModuleExpr[F[_]](
   name: Ability[F],
@@ -28,7 +29,7 @@ case class ModuleExpr[F[_]](
     )
 }
 
-object ModuleExpr extends HeaderExpr.Leaf {
+object ModuleExpr extends HeaderExpr.Companion {
 
   type NameOrAb[F[_]] = Either[Name[F], Ability[F]]
 

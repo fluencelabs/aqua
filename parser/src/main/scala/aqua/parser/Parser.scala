@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.parser.expr.RootExpr
-import aqua.parser.head.HeadExpr
+import aqua.parser.head.Header
 import aqua.parser.lift.LiftParser.LiftErrorOps
 import aqua.parser.lift.Span.S
 import aqua.parser.lift.{LiftParser, Span}
@@ -16,7 +16,7 @@ object Parser extends scribe.Logging {
 
   def parserSchema: P0[ValidatedNec[ParserError[Span.S], Ast[Span.S]]] = {
     logger.trace("creating schema...")
-    val parser = (HeadExpr.ast ~ RootExpr.ast0).map { case (head, bodyMaybe) =>
+    val parser = (Header.p ~ RootExpr.ast0).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))
     }
     logger.trace("schema created")
