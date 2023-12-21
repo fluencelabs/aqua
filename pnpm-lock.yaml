@@ -40,8 +40,8 @@ importers:
         specifier: 0.13.2
         version: link:../api/api-npm
       '@fluencelabs/aqua-lib':
-        specifier: git+https://github.com/fluencelabs/aqua-lib
-        version: github.com/fluencelabs/aqua-lib/f8d7738798d38e5d2cbbe31f5009eb71a5b79101
+        specifier: 0.9.0
+        version: 0.9.0
       '@types/jest':
         specifier: 29.5.2
         version: 29.5.2
@@ -489,6 +489,10 @@ packages:
     engines: {node: '>=12'}
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+    dev: true
+
+  /@fluencelabs/aqua-lib@0.9.0:
+    resolution: {integrity: sha512-V0xhc0UXBF6kjfL9Y/agWGQuW+ie2zckj37KWv8Dq4teYuo9N94O4Ynm7XULWHaaWtbWvzFcDcc6nc9qG7gxcQ==}
     dev: true
 
   /@fluencelabs/avm@0.54.0:
@@ -4102,9 +4106,3 @@ packages:
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
     dev: false
-
-  github.com/fluencelabs/aqua-lib/f8d7738798d38e5d2cbbe31f5009eb71a5b79101:
-    resolution: {tarball: https://codeload.github.com/fluencelabs/aqua-lib/tar.gz/f8d7738798d38e5d2cbbe31f5009eb71a5b79101}
-    name: '@fluencelabs/aqua-lib'
-    version: 0.8.2
-    dev: true
