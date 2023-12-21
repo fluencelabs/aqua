@@ -1,4 +1,4 @@
-aqua SubImport
+aqua SubImport declares *
 
 alias SomeString : string
 
