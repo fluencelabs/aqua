@@ -228,7 +228,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   it should "not generate hop back with empty response" in {
     val src = Map(
       "index.aqua" ->
-        """service Op("op"):
+        """aqua HopBackTest
+          |
+          |export exec
+          |
+          |service Op("op"):
           |  call(s: string)
           |
           |func exec(peers: []string):
