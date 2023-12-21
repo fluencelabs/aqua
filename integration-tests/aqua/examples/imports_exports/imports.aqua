@@ -1,5 +1,7 @@
 aqua Imports
 
+export StringService, concat_foobars
+
 import decl_foo, decl_bar from "declare.aqua"
 use DECLARE_CONST, SuperFoo, DECLARE_CONST2 as DC2 from "declare.aqua" as Declare
 import Op as Noop from "@fluencelabs/aqua-lib/builtin.aqua"
