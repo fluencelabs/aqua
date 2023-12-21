@@ -11,7 +11,7 @@ case class AquaAPIConfig(
   noXor: Boolean = false, // TODO: Remove
   noRelay: Boolean = false,
   tracing: Boolean = false,
-  noEmptyResponse: Boolean = false
+  noEmptyResponse: Boolean = true
 ) {
 
   def getTransformConfig: TransformConfig = {
