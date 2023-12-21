@@ -1,5 +1,7 @@
 aqua Println declares *
 
+export Println, print
+
 service Println("println-service-id"):
     print: string -> ()
 
