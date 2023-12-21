@@ -1,5 +1,7 @@
 aqua Par
 
+export ParService, parFunc, testTimeout
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service ParService("parservice-id"):

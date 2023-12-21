@@ -1,5 +1,7 @@
 aqua TryOtherwise
 
+export tryOtherwiseTest
+
 service Unexisted("unex"):
   getStr() -> string
 

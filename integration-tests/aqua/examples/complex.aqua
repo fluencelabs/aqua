@@ -1,5 +1,7 @@
 aqua Complex
 
+export TestS, doStuff
+
 import "helloWorld.aqua"
 import "println.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"

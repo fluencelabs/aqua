@@ -1,14 +1,14 @@
 aqua Stream
 
-import "@fluencelabs/aqua-lib/builtin.aqua"
-import "println.aqua"
-
 export Stringer
 export checkStreams, returnStreamFromFunc
 export stringEmpty, returnEmptyLiteral
 export returnNilLength, stringNone
 export streamFunctor, streamAssignment
 export streamIntFunctor, streamJoin
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+import "println.aqua"
 
 service Stringer("stringer-id"):
     returnString: string -> string

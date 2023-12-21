@@ -1,5 +1,7 @@
 aqua StreamResults
 
+export DTGetter, use_name1, use_name2
+
 data DT:
   field: string
 

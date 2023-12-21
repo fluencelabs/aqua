@@ -1,6 +1,6 @@
 aqua StreamCan
 
-export accumRes, bugLNG63, bugLNG63_2
+export accumRes, bugLNG63, bugLNG63_2, bugLNG63_3
 
 func toOpt(s: string) -> ?string:
   str: *string

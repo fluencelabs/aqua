@@ -1,5 +1,7 @@
 aqua Assignment
 
+export doSmth
+
 data Prod:
    value: string
 

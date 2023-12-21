@@ -1,5 +1,7 @@
 aqua Fold
 
+export iterateAndPrint, iterateAndPrintParallel, forBug499
+
 import "println.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"
 

@@ -1,5 +1,7 @@
 aqua OnErrorPropagation
 
+export Test, onPropagate, nestedOnPropagate, seqOnPropagate
+
 service Test("test-service"):
     fail(err: string)
 

@@ -1,5 +1,7 @@
 aqua MultiReturn
 
+export GetStr, GetNum, multiReturnFunc
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service GetStr("multiret-test"):

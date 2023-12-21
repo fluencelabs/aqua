@@ -1,5 +1,7 @@
 aqua StreamRestriction
 
+export streamFold, streamRes
+
 func streamFold(arr: []string) -> []string:
   res: *string
   for n <- arr:

@@ -1,5 +1,7 @@
 aqua Option
 
+export SomeS, useOptional, returnOptional, returnNone
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service SomeS("test2"):

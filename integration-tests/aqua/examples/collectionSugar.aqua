@@ -1,5 +1,7 @@
 aqua CollectionSugar
 
+export arraySugar, streamSugar, optionSugar, GetArr, bugLNG59
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 func arraySugar(n: u32, m: u32) -> []u32, []u32:

@@ -1,5 +1,7 @@
 aqua RecursiveStream
 
+export YesNoService, recursiveStream
+
 service YesNoService("yesno"):
   get() -> string
 

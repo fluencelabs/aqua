@@ -1,5 +1,7 @@
 aqua On
 
+export getPeerExternalAddresses
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 func getPeerExternalAddresses(otherNodePeerId: string) -> []string:

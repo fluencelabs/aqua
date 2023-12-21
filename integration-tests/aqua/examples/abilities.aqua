@@ -1,8 +1,8 @@
 aqua Main
 
-use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
-
 export handleAb, SomeService, bug214, checkAbCalls, bugLNG258_1, bugLNG258_2, bugLNG258_3, multipleAbilityWithClosure, MySrv, returnSrvAsAbility
+
+use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
 service SomeService("wed"):
   getStr(s: string) -> string

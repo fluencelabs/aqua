@@ -1,5 +1,7 @@
 aqua Join
 
+export joinIdxLocal, joinIdxRelay, joinIdx
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 func joinIdxLocal(idx: i16, nodes: []string) -> []string:

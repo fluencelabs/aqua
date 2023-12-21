@@ -1,5 +1,7 @@
 aqua Constants
 
+export Getter, callConstant, timestampAndTtl
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service Getter("test"):

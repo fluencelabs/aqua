@@ -1,4 +1,4 @@
-aqua Println
+aqua Println declares *
 
 service Println("println-service-id"):
     print: string -> ()
