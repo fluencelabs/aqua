@@ -1,8 +1,8 @@
 aqua NestedFuncs
 
-import "@fluencelabs/aqua-lib/builtin.aqua"
-
 export OpH, d
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service OpH("opa"):
   identity(s: string) -> string
