@@ -1,5 +1,7 @@
 aqua NestedData
 
+export Test, test
+
 data NestedType:
     val: string
 
