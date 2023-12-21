@@ -1,13 +1,13 @@
 package aqua.types
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import cats.data.NonEmptyMap
 import cats.syntax.partialOrder._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class IntersectTypesSpec extends AnyFlatSpec with Matchers {
 
-  "intersect types" should "work for scalars" ignore {
+  "intersect types" should "work for scalars" in {
 
     ScalarType.i8 `∩` ScalarType.i16 should be(ScalarType.i8)
     ScalarType.i8 `∩` ScalarType.bool should be(BottomType)
@@ -18,12 +18,12 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "intersect types" should "work for collections" ignore {
+  "intersect types" should "work for collections" in {
     OptionType(ScalarType.i8) `∩` ArrayType(ScalarType.u16) should be(OptionType(BottomType))
     OptionType(ScalarType.i16) `∩` ArrayType(ScalarType.u16) should be(OptionType(ScalarType.u8))
   }
 
-  "intersect types" should "work for products" ignore {
+  "intersect types" should "work for products" in {
     ProductType(ScalarType.i8 :: ScalarType.string :: Nil) `∩` ProductType(
       ScalarType.i8 :: Nil
     ) should be(ProductType(ScalarType.i8 :: Nil))
@@ -33,7 +33,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
     ) should be(ProductType(ScalarType.i8 :: Nil))
   }
 
-  "intersect types" should "work for structs" ignore {
+  "intersect types" should "work for structs" in {
     val x1: Type = StructType(
       "x1",
       NonEmptyMap.of[String, Type](
@@ -62,7 +62,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
     x1 `∩` x2 should be(x1_x2)
   }
 
-  "intersect types" should "work for arrows" ignore {
+  "intersect types" should "work for arrows" in {
     val a1 = ArrowType(
       ProductType(
         ScalarType.i8 :: ScalarType.string :: Nil

@@ -1,12 +1,12 @@
 package aqua.types
 
+import cats.syntax.partialOrder._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.syntax.partialOrder._
 
 class UniteTypesSpec extends AnyFlatSpec with Matchers {
 
-  "unite types" should "work for scalars" ignore {
+  "unite types" should "work for scalars" in {
 
     ScalarType.i8 `∪` ScalarType.i16 should be(ScalarType.i16)
     ScalarType.i8 `∪` ScalarType.bool should be(TopType)
@@ -16,11 +16,11 @@ class UniteTypesSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "unite types" should "work for collections" ignore {
+  "unite types" should "work for collections" in {
     OptionType(ScalarType.i8) `∪` ArrayType(ScalarType.u16) should be(ArrayType(ScalarType.i32))
   }
 
-  "unite types" should "work for products" ignore {
+  "unite types" should "work for products" in {
     val p1: Type = ProductType(
       ScalarType.i8 :: ScalarType.string :: Nil
     )

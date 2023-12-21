@@ -11,7 +11,7 @@ import scala.collection.immutable.SortedMap
 
 class TypeVarianceSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matchers {
 
-  "ServiceType" should "be subtype of AbilityType" ignore {
+  "ServiceType" should "be subtype of AbilityType" in {
     given Arbitrary[NonEmptyMap[String, ArrowType]] = Arbitrary(
       Gen
         .nonEmptyListOf(

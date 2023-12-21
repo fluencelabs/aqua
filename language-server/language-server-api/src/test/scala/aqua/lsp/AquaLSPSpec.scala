@@ -262,7 +262,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         ProductType(ScalarType.u32 :: Nil)
       )
     ) shouldBe true
-    res.checkTokenLoc(firstImport, "someVar", 2, ScalarType.u32, None, true) shouldBe true
+    res.checkTokenLoc(firstImport, "someVar", 2, ScalarType.u32, None) shouldBe true
 
     // foo function
     res.checkTokenLoc(
