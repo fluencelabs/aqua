@@ -28,6 +28,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .parseAll(s"""aqua MyModule declares *
                    |""".stripMargin)
       .value
+      .headers
       .headOption
       .get
       .mapK(spanToId) should be(

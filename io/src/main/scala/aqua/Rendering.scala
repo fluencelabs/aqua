@@ -6,7 +6,6 @@ import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.MissingHeaderError
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 
 import cats.Show
@@ -107,8 +106,6 @@ object Rendering {
             .focus(0)
             .map(_.toConsoleStr("Header error", message :: Nil, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)")
-        case MissingHeaderError(message) =>
-          Console.CYAN + message + Console.RESET
         case WrongAST(ast) =>
           "Semantic error: wrong AST"
 

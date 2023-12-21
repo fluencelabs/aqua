@@ -3,7 +3,6 @@ package aqua.semantics.header
 import aqua.parser.Ast
 import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Name, Token}
-import aqua.semantics.MissingHeaderError
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
 
@@ -225,14 +224,19 @@ class HeaderHandler[S[_]: Comonad, C](using
         resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
     }
 
-    val (module, other) = header.uncons.collect { case (m: ModuleExpr[S], rest) => (m.some, rest) }
-      .getOrElse((none, header))
-      .bimap(
-        _.toValidNec(
-          MissingHeaderError("Missing `aqua` module header at the top")
-        ).andThen(handleModule),
-        _.foldMap(onExpr)
-      )
+    val (module, other) =
+      header.headers.uncons.collect { case (m: ModuleExpr[S], rest) =>
+        (m.some, rest)
+      }.getOrElse((none, header.headers))
+        .bimap(
+          _.toValidNec(
+            error(
+              header.begin,
+              "Missing module header at the top of the file"
+            )
+          ).andThen(handleModule),
+          _.foldMap(onExpr)
+        )
 
     module |+| other
   }

@@ -19,10 +19,13 @@ object Header {
   def headExprs: List[HeaderExpr.Companion] =
     ModuleExpr :: UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: ExportExpr :: Nil
 
-  val p: P0[Ast.Head[Span.S]] =
-    P.repSep0(
-      P.oneOf(headExprs.map(_.p.backtrack)),
-      ` \n+`
-    ).surroundedBy(` \n+`.?)
-      .map(Chain.fromSeq)
+  val p: P0[Ast.Head[Span.S]] = (
+    P.unit.lift0 ~
+      P.repSep0(
+        P.oneOf(headExprs.map(_.p.backtrack)),
+        ` \n+`
+      ).surroundedBy(` \n+`.?)
+  ).map { case (point, headers) =>
+    Ast.Head(Token.lift(point), Chain.fromSeq(headers))
+  }
 }

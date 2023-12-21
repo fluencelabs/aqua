@@ -2,6 +2,7 @@ package aqua.semantics
 
 import aqua.parser.Ast
 import aqua.parser.head.{ExportExpr, FromExpr, HeaderExpr, ModuleExpr}
+import aqua.parser.lexer.Token
 import aqua.parser.lexer.{Ability, Name}
 import aqua.raw.RawContext
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
@@ -31,15 +32,18 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
      * aqua TestModule
      * export <funcName>
      */
-    Chain(
-      ModuleExpr(
-        word = ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
-        name = Ability[Id]("TestModule"),
-        declareAll = None,
-        declareNames = Nil,
-        declareCustom = Nil
-      ),
-      ExportExpr(NonEmptyList.of(exp))
+    Ast.Head(
+      Token.lift(()),
+      Chain(
+        ModuleExpr(
+          word = ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
+          name = Ability[Id]("TestModule"),
+          declareAll = None,
+          declareNames = Nil,
+          declareCustom = Nil
+        ),
+        ExportExpr(NonEmptyList.of(exp))
+      )
     )
   }
 
