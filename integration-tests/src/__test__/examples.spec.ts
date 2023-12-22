@@ -164,6 +164,7 @@ import { rangeCall } from "../examples/recursiveStreams/rangeCall.js";
 import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
 import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js";
 import { multiRecStreamCall } from "../examples/recursiveStreams/multiRecStreamCall.js";
+import { pipelineStreamCall } from "../examples/recursiveStreams/pipelineCall.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -256,7 +257,7 @@ describe("Testing examples", () => {
       }
     });
 
-    it.only("multi rec stream", async () => {
+    it("multi rec stream", async () => {
       const handle = (i: number) => {
         if (i % 3 === 0) return [i + 1];
         if (i % 3 === 1) return [i + 1, i + 2];
@@ -267,6 +268,13 @@ describe("Testing examples", () => {
         range(0, i + 1).forEach((j) => {
           expect(loop).toContain(j);
         });
+      }
+    }, 20000);
+
+    it.only("pipeline", async () => {
+      for (const i of range(1, 10)) {
+        const result = await pipelineStreamCall(0, i);
+        expect(result.sort()).toEqual(range(0, i + 1));
       }
     }, 20000);
   });
