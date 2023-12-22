@@ -247,7 +247,7 @@ describe("Testing examples", () => {
     }, 15000);
 
     it("yes|no stream", async () => {
-      for (const i of range(1, 5)) {
+      for (const i of range(1, 10)) {
         const yesNo = await yesNoStreamCall(i);
         expect(yesNo).toEqual(
           range(0, i)
@@ -255,7 +255,7 @@ describe("Testing examples", () => {
             .concat(["no"]),
         );
       }
-    });
+    }, 15000);
 
     it("multi rec stream", async () => {
       const handle = (i: number) => {
@@ -269,14 +269,14 @@ describe("Testing examples", () => {
           expect(loop).toContain(j);
         });
       }
-    }, 20000);
+    }, 15000);
 
     it("pipeline", async () => {
       for (const i of range(1, 10)) {
         const result = await pipelineStreamCall(0, i);
         expect(result.sort()).toEqual(range(0, i + 1));
       }
-    }, 20000);
+    }, 15000);
   });
 
   it("callArrow.aqua args bug 426", async () => {
