@@ -221,7 +221,7 @@ describe("Testing examples", () => {
     await stop();
   });
 
-  describe.only("for ... rec", () => {
+  describe("for ... rec", () => {
     const range = (start: number, end: number) =>
       Array.from({ length: end - start }, (v, k) => k + start);
 
@@ -271,7 +271,7 @@ describe("Testing examples", () => {
       }
     }, 20000);
 
-    it.only("pipeline", async () => {
+    it("pipeline", async () => {
       for (const i of range(1, 10)) {
         const result = await pipelineStreamCall(0, i);
         expect(result.sort()).toEqual(range(0, i + 1));
