@@ -135,7 +135,6 @@ import {
   joinIdxLocalCall,
   joinIdxRelayCall,
 } from "../examples/joinCall.js";
-import { recursiveStreamsCall } from "../examples/recursiveStreamsCall.js";
 import { renameVarsCall } from "../examples/renameVars.js";
 import {
   arraySugarCall,
@@ -161,8 +160,9 @@ import {
   returnArrowCall,
   returnArrowChainCall,
 } from "../examples/returnArrowCall.js";
-import { rangeCall } from "../examples/recursiveStreams/range.js";
-import { nestedCall } from "../examples/recursiveStreams/nested.js";
+import { rangeCall } from "../examples/recursiveStreams/rangeCall.js";
+import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
+import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -219,7 +219,7 @@ describe("Testing examples", () => {
     await stop();
   });
 
-  describe("for ... rec", () => {
+  describe.only("for ... rec", () => {
     const range = (start: number, end: number) =>
       Array.from({ length: end - start }, (v, k) => k + start);
 
@@ -243,6 +243,17 @@ describe("Testing examples", () => {
         expect(result).toEqual(range(0, i).flatMap((x) => range(0, x + 1)));
       }
     }, 15000);
+
+    it.only("yes|no stream", async () => {
+      for (const i of range(1, 5)) {
+        const yesNo = await yesNoStreamCall(i);
+        expect(yesNo).toEqual(
+          range(0, i)
+            .map((_) => "yes")
+            .concat(["no"]),
+        );
+      }
+    });
   });
 
   it("callArrow.aqua args bug 426", async () => {
@@ -860,15 +871,6 @@ describe("Testing examples", () => {
   // it('closures.aqua LNG-58 bug', async () => {
   //     let res = await lng58Bug()
   //     expect(res).toEqual("ok")
-  // });
-
-  // TODO: uncomment
-  // it('recursiveStreams.aqua', async () => {
-  //     let [sucList, loopList] = await recursiveStreamsCall();
-  //     console.log(sucList);
-  //     console.log(loopList);
-  //     expect(loopList).toEqual(['yes', 'yes', 'yes', 'yes', 'no']);
-  //     expect(sucList.length).toEqual(5);
   // });
 
   it("renameVars.aqua", async () => {
