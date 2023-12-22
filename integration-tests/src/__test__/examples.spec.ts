@@ -163,6 +163,7 @@ import {
 import { rangeCall } from "../examples/recursiveStreams/rangeCall.js";
 import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
 import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js";
+import { multiRecStreamCall } from "../examples/recursiveStreams/multiRecStreamCall.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -236,7 +237,7 @@ describe("Testing examples", () => {
       }
     }, 15000);
 
-    it.skip("nested", async () => {
+    it("nested", async () => {
       for (const i of range(0, 10)) {
         const result = await nestedCall(i);
         console.log(i, result);
@@ -244,7 +245,7 @@ describe("Testing examples", () => {
       }
     }, 15000);
 
-    it.only("yes|no stream", async () => {
+    it("yes|no stream", async () => {
       for (const i of range(1, 5)) {
         const yesNo = await yesNoStreamCall(i);
         expect(yesNo).toEqual(
@@ -254,6 +255,20 @@ describe("Testing examples", () => {
         );
       }
     });
+
+    it.only("multi rec stream", async () => {
+      const handle = (i: number) => {
+        if (i % 3 === 0) return [i + 1];
+        if (i % 3 === 1) return [i + 1, i + 2];
+        return [];
+      };
+      for (const i of range(1, 10)) {
+        const loop = await multiRecStreamCall(0, i, handle);
+        range(0, i + 1).forEach((j) => {
+          expect(loop).toContain(j);
+        });
+      }
+    }, 20000);
   });
 
   it("callArrow.aqua args bug 426", async () => {
