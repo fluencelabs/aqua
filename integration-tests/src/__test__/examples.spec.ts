@@ -162,6 +162,7 @@ import {
   returnArrowChainCall,
 } from "../examples/returnArrowCall.js";
 import { rangeCall } from "../examples/recursiveStreams/range.js";
+import { nestedCall } from "../examples/recursiveStreams/nested.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -218,11 +219,11 @@ describe("Testing examples", () => {
     await stop();
   });
 
-  describe("fork", () => {
-    it("range", async () => {
-      const range = (start: number, end: number) =>
-        Array.from({ length: end - start }, (v, k) => k + start);
+  describe.only("for ... rec", () => {
+    const range = (start: number, end: number) =>
+      Array.from({ length: end - start }, (v, k) => k + start);
 
+    it("range", async () => {
       for (const i of range(-5, 5)) {
         for (const j of range(-5, 5)) {
           const result = await rangeCall(i, j);
@@ -232,6 +233,14 @@ describe("Testing examples", () => {
             expect(result).toEqual([]);
           }
         }
+      }
+    }, 15000);
+
+    it.skip("nested", async () => {
+      for (const i of range(0, 10)) {
+        const result = await nestedCall(i);
+        console.log(i, result);
+        expect(result).toEqual(range(0, i).flatMap((x) => range(0, x + 1)));
       }
     }, 15000);
   });
