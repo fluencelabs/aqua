@@ -1,0 +1,19 @@
+aqua RemoteRec
+
+export RemoteSrv, remoteRecStream
+
+service RemoteSrv("remote-srv"):
+  handle(i: i32) -> i32
+
+func remoteRecStream(init: i32, target: i32, friend: string, friendRelay: string) -> []i32:
+  loop: *i32
+
+  loop <<- init
+  for l <- loop rec:
+    on friend via friendRelay:
+      if l < target:
+        loop <- RemoteSrv.handle(l)
+
+  join loop[target - init]
+
+  <- loop

@@ -165,6 +165,7 @@ import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
 import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js";
 import { multiRecStreamCall } from "../examples/recursiveStreams/multiRecStreamCall.js";
 import { pipelineStreamCall } from "../examples/recursiveStreams/pipelineCall.js";
+import { remoteRecStreamCall } from "../examples/recursiveStreams/remoteRecCall.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -275,6 +276,14 @@ describe("Testing examples", () => {
       for (const i of range(1, 10)) {
         const result = await pipelineStreamCall(0, i);
         expect(result.sort()).toEqual(range(0, i + 1));
+      }
+    }, 15000);
+
+    it.skip("remote rec", async () => {
+      for (const i of range(0, 10)) {
+        console.log(i);
+        const result = await remoteRecStreamCall(0, i, peer2);
+        expect(result).toEqual(range(0, i + 1));
       }
     }, 15000);
   });
