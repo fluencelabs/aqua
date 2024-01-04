@@ -620,6 +620,30 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  it should "generate right model for `for ... rec`" in {
+    val script = """
+                   |func test():
+                   |   stream: *i32
+                   |   for i <- stream rec:
+                   |      stream <<- i
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      matchSubtree(body) { case (ForTag("i", stream, ForTag.Mode.RecMode), forTag) =>
+        stream.`type` shouldBe StreamType(ScalarType.i32)
+        matchChildren(forTag) { case (ParTag, parTag) =>
+          matchChildren(parTag)(
+            { case (PushToStreamTag(VarRaw(varName, _), Call.Export(streamName, _)), _) =>
+              varName shouldBe "i"
+              streamName shouldBe "stream"
+            },
+            { case (NextTag("i"), _) => }
+          )
+        }
+      }
+    }
+  }
+
   it should "forbid abilities or streams in struct fields" in {
     val scriptAbility =
       """
