@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.raw.*
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.{Counter, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -23,21 +23,26 @@ object RawValueInliner extends Logging {
 
   import aqua.model.inline.Inline.*
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Inline)] = for {
+  ): State[S, (Exports.Export, Inline)] = for {
     optimized <- StateT.liftF(Optimization.optimize(raw))
     _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
     result <- optimized match {
       case VarRaw(name, t) =>
         for {
-          exports <- Exports[S].exports
-          model = VarModel(name, t, Chain.empty).resolveWith(exports)
-        } yield model -> Inline.empty
+          maybeExport <- Exports[S].get(name)
+          model = VarModel(name, t)
+          exp = maybeExport.getOrElse(
+            Exports.Export.Value(model)
+          )
+        } yield exp -> Inline.empty
 
       case LiteralRaw(value, t) =>
-        State.pure(LiteralModel(value, t) -> Inline.empty)
+        val model = LiteralModel(value, t)
+        val exp = Exports.Export.Value(model)
+        State.pure(exp -> Inline.empty)
 
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
@@ -115,7 +120,7 @@ object RawValueInliner extends Logging {
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
     valueListToModel(call.args).flatMap { args =>
       if (flatStreamArguments)
-        args.map{ arg =>
+        args.map { arg =>
           TagInliner.flat(arg._1, arg._2, true)
         }.sequence
       else
