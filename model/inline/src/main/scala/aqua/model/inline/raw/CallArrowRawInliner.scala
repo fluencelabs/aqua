@@ -14,7 +14,7 @@ import scribe.Logging
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = {

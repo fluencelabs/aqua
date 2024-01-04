@@ -3,6 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.raw.*
+import aqua.model.inline.state.Exports.Export
 import aqua.model.inline.state.{Counter, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
@@ -26,23 +27,23 @@ object RawValueInliner extends Logging {
   private[inline] def unfold[S: Mangler: Exports](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (Exports.Export, Inline)] = for {
+  ): State[S, (Export, Inline)] = for {
     optimized <- StateT.liftF(Optimization.optimize(raw))
     _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
     result <- optimized match {
+      case LiteralRaw(value, t) =>
+        val model = LiteralModel(value, t)
+        val exp = Export.Value(model)
+        State.pure(exp -> Inline.empty)
+
       case VarRaw(name, t) =>
         for {
           maybeExport <- Exports[S].get(name)
           model = VarModel(name, t)
           exp = maybeExport.getOrElse(
-            Exports.Export.Value(model)
+            Export.Value(model)
           )
         } yield exp -> Inline.empty
-
-      case LiteralRaw(value, t) =>
-        val model = LiteralModel(value, t)
-        val exp = Exports.Export.Value(model)
-        State.pure(exp -> Inline.empty)
 
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
