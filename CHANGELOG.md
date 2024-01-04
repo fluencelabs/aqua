@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.2...aqua-v0.13.3) (2023-12-22)
+
+
+### Features
+
+* **api:** Refactor js api interfaces ([#1024](https://github.com/fluencelabs/aqua/issues/1024)) ([33a2ca8](https://github.com/fluencelabs/aqua/commit/33a2ca87e00eab7075772cce4a8c012c6a137167))
+* **lsp-api:** Fix interface definition [LNG-298] ([#1027](https://github.com/fluencelabs/aqua/issues/1027)) ([5bc01a9](https://github.com/fluencelabs/aqua/commit/5bc01a9c02252add86c018fa90703cda287d1338))
+
+
+### Bug Fixes
+
+* **compiler:** Do not generate hop back with empty response by default [LNG-305] ([#1019](https://github.com/fluencelabs/aqua/issues/1019)) ([a4d8ee7](https://github.com/fluencelabs/aqua/commit/a4d8ee7083dcd050858602422986a28d6aaa9420))
+* **deps:** update dependency @fluencelabs/js-client to v0.5.5 ([#1020](https://github.com/fluencelabs/aqua/issues/1020)) ([851a66f](https://github.com/fluencelabs/aqua/commit/851a66fb5fde5c448f8262fd0df8dbf15cc13d8a))
+
 ## [0.13.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.1...aqua-v0.13.2) (2023-12-14)
 
 
