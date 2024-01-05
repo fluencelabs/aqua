@@ -60,6 +60,12 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
+  def ensureTypeConstructibleFrom(
+    token: Token[S],
+    expected: AbilityType | StructType,
+    arguments: NonEmptyMap[String, (NamedArg[S], Type)]
+  ): Alg[Boolean]
+
   def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, CollectibleType]
 
   def typeToStream(token: Token[S], givenType: Type): OptionT[Alg, StreamType]
