@@ -64,11 +64,11 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
             strategy = OnTag.ReturnStrategy.Relay.some
           )
           /**
-           * `parseq` => blocking (`never` as `last` in `fold`)
+           * `parseq` => par (`never` as `last` in `fold`)
            * So that peer initiating `parseq` would not continue execution past it
            */
           tag = ForTag
-            .blocking(expr.item.value, vm)
+            .par(expr.item.value, vm)
             .wrap(
               ParTag.wrap(
                 onTag.wrap(restricted),

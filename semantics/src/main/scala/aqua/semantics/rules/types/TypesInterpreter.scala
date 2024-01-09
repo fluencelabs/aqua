@@ -3,6 +3,7 @@ package aqua.semantics.rules.types
 import aqua.errors.Errors.internalError
 import aqua.parser.lexer.*
 import aqua.raw.value.*
+import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra}
 import aqua.semantics.rules.report.ReportAlgebra
@@ -442,6 +443,47 @@ class TypesInterpreter[S[_], X](using
             .as(false)
       }
     }
+
+  override def ensureTypeConstructibleFrom(
+    token: Token[S],
+    expected: AbilityType | StructType,
+    arguments: NonEmptyMap[String, (NamedArg[S], Type)]
+  ): State[X, Boolean] = for {
+    /* Check that required fields are present
+       among arguments and have correct types */
+    enough <- expected.fields.toNel.traverse { case (name, typ) =>
+      arguments.lookup(name) match {
+        case Some(arg -> givenType) =>
+          ensureTypeMatches(arg.argValue, typ, givenType)
+        case None =>
+          report
+            .error(
+              token,
+              s"Missing argument '$name' of type '$typ'"
+            )
+            .as(false)
+      }
+    }.map(_.forall(identity))
+    expectedKeys = expected.fields.keys.toNonEmptyList
+    /* Report unexpected arguments */
+    _ <- arguments.toNel.traverse_ { case (name, arg -> typ) =>
+      expected.fields.lookup(name) match {
+        case Some(_) => State.pure(())
+        case None =>
+          lazy val similar = Levenshtein
+            .mostSimilar(name, expectedKeys, 3)
+            .map(s => s"'$s'")
+            .mkString(", ")
+          val message =
+            if (enough)
+              s"Unexpected argument '$name'"
+            else
+              s"Unexpected argument '$name', did you mean $similar?"
+
+          report.warning(arg.argName, message)
+      }
+    }
+  } yield enough
 
   private def typeTo[T <: Type](
     token: Token[S],

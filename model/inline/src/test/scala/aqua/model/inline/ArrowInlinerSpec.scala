@@ -2245,7 +2245,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val foldOp = ForTag
-      .blocking(iVar.name, array)
+      .par(iVar.name, array)
       .wrap(
         inFold,
         NextTag(iVar.name).leaf

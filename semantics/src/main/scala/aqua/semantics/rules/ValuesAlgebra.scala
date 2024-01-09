@@ -17,6 +17,7 @@ import cats.data.{NonEmptyList, OptionT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
@@ -137,27 +138,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             reportNamedArgsDuplicates(fields)
           )
           fieldsGiven <- fields
-            .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
+            .traverse(arg =>
+              OptionT(valueToRaw(arg.argValue)).map(valueRaw =>
+                arg.argName.value -> (arg, valueRaw)
+              )
+            )
             .map(_.toNem) // Take only last value for a field
-          fieldsGivenTypes = fieldsGiven.map(_.`type`)
-          generated <- OptionT.fromOption(
-            resolvedType match {
-              case struct: StructType =>
-                (
-                  struct.copy(fields = fieldsGivenTypes),
-                  MakeStructRaw(fieldsGiven, struct)
-                ).some
-              case ability: AbilityType =>
-                (
-                  ability.copy(fields = fieldsGivenTypes),
-                  AbilityRaw(fieldsGiven, ability)
-                ).some
-            }
-          )
-          (genType, genData) = generated
+          fieldsGivenRaws = fieldsGiven.map { case (_, raw) => raw }
+          fieldsGivenTypes = fieldsGiven.map(_.map(_.`type`))
+          generated = resolvedType match {
+            case struct: StructType =>
+              MakeStructRaw(fieldsGivenRaws, struct)
+            case ability: AbilityType =>
+              AbilityRaw(fieldsGivenRaws, ability)
+          }
           data <- OptionT.whenM(
-            T.ensureTypeMatches(dvt, resolvedType, genType)
-          )(genData.pure)
+            T.ensureTypeConstructibleFrom(dvt, resolvedType, fieldsGivenTypes)
+          )(generated.pure)
         } yield data).value
 
       case ct @ CollectionToken(_, values) =>

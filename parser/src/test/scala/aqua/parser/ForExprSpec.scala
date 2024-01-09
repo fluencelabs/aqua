@@ -2,6 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.ForExpr
+
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -9,30 +10,48 @@ import org.scalatest.matchers.should.Matchers
 class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.{given, *}
 
+  def forTestSuite(
+    modeStr: String,
+    mode: Option[ForExpr.Mode]
+  ): Unit = {
+    parseFor(s"for some <- 1$modeStr") should be(
+      ForExpr[Id]("some", toNumber(1), mode)
+    )
+
+    parseFor(s"for some <- false$modeStr") should be(
+      ForExpr[Id]("some", toBool(false), mode)
+    )
+
+    parseFor(s"for some <- \"a\"$modeStr") should be(
+      ForExpr[Id]("some", toStr("a"), mode)
+    )
+
+    parseFor(s"for i <- []$modeStr") should be(
+      ForExpr[Id]("i", toArr(Nil), mode)
+    )
+
+    parseFor(s"for i <- [1, 2, 3]$modeStr") should be(
+      ForExpr[Id]("i", toArr(List(toNumber(1), toNumber(2), toNumber(3))), mode)
+    )
+
+    parseFor(s"for i <- stream$modeStr") should be(
+      ForExpr[Id]("i", toVar("stream"), mode)
+    )
+  }
+
   "for expression" should "be parsed" in {
-    parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None)
-    )
+    forTestSuite("", None)
+  }
 
-    parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None)
-    )
+  "for par expression" should "be parsed" in {
+    forTestSuite(" par", Some(ForExpr.Mode.ParMode))
+  }
 
-    parseFor("for some <- 1") should be(
-      ForExpr[Id]("some", toNumber(1), None)
-    )
+  "for try expression" should "be parsed" in {
+    forTestSuite(" try", Some(ForExpr.Mode.TryMode))
+  }
 
-    parseFor("for some <- false") should be(
-      ForExpr[Id]("some", toBool(false), None)
-    )
-
-    parseFor("for some <- false par") should be(
-      ForExpr[Id]("some", toBool(false), Some(ForExpr.Mode.ParMode))
-    )
-
-    parseFor("for some <- false try") should be(
-      ForExpr[Id]("some", toBool(false), Some(ForExpr.Mode.TryMode))
-    )
-
+  "for rec expression" should "be parsed" in {
+    forTestSuite(" rec", Some(ForExpr.Mode.RecMode))
   }
 }
