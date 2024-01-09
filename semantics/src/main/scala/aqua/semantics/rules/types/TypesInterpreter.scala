@@ -189,7 +189,7 @@ class TypesInterpreter[S[_], X](using
           .as(true)
     }
 
-  override def resolveField(op: IntoField[S], rootT: Type): State[X, Option[PropertyRaw]] = {
+  override def resolveIntoField(op: IntoField[S], rootT: Type): State[X, Option[PropertyRaw]] = {
     rootT match {
       case nt: NamedType =>
         nt.fields(op.value)
@@ -327,25 +327,32 @@ class TypesInterpreter[S[_], X](using
     }
   }
 
-  // TODO actually it's stateless, exists there just for reporting needs
-  override def resolveIndex(
+  override def resolveIntoIndex(
     op: IntoIndex[S],
     rootT: Type,
-    idx: ValueRaw
-  ): State[X, Option[PropertyRaw]] =
-    if (!ScalarType.i64.acceptsValueOf(idx.`type`))
-      report.error(op, s"Expected numeric index, got $idx").as(None)
-    else
-      rootT match {
-        case ot: OptionType =>
-          op.idx.fold(
-            State.pure(Some(IntoIndexRaw(idx, ot.element)))
-          )(v => report.error(v, s"Options might have only one element, use ! to get it").as(None))
-        case rt: CollectionType =>
-          State.pure(Some(IntoIndexRaw(idx, rt.element)))
-        case _ =>
-          report.error(op, s"Expected $rootT to be a collection type").as(None)
-      }
+    idxType: Type
+  ): State[X, Option[DataType]] =
+    ensureTypeOneOf(
+      op.idx.getOrElse(op),
+      ScalarType.integer,
+      idxType
+    ) *> (rootT match {
+      case ot: OptionType =>
+        op.idx.fold(State.pure(Some(ot.element)))(v =>
+          // TODO: Is this a right place to report this error?
+          // It is not a type error, but rather a syntax error
+          report.error(v, s"Options might have only one element, use ! to get it").as(None)
+        )
+      case rt: CollectionType =>
+        State.pure(Some(rt.element))
+      case t =>
+        report
+          .error(
+            op,
+            s"Non collection type `$t` does not support indexing"
+          )
+          .as(None)
+    })
 
   override def ensureValuesComparable(
     token: Token[S],

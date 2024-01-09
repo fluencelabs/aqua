@@ -40,7 +40,19 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineAlias(name: NamedTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveIndex(op: IntoIndex[S], rootT: Type, idx: ValueRaw): Alg[Option[PropertyRaw]]
+  /**
+   * Resolve `IntoIndex` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @param idxType type of the index
+   * @return type of the value at given index if property application is valid
+   */
+  def resolveIntoIndex(
+    op: IntoIndex[S],
+    rootT: Type,
+    idxType: Type
+  ): Alg[Option[DataType]]
 
   /**
    * Resolve `IntoCopy` property on value with `rootT` type
@@ -56,13 +68,13 @@ trait TypesAlgebra[S[_], Alg[_]] {
     types: NonEmptyList[Type]
   ): Alg[Option[StructType]]
 
-  def resolveField(op: IntoField[S], rootT: Type): Alg[Option[PropertyRaw]]
+  def resolveIntoField(op: IntoField[S], rootT: Type): Alg[Option[PropertyRaw]]
 
   /**
    * Resolve `IntoArrow` property on value with `rootT` type
    *
-   * @param rootT type of the value to which property is applied
    * @param op property to resolve
+   * @param rootT type of the value to which property is applied
    * @param types types of arguments passed
    * @return arrow type if property application is valid
    * @note `types` should correspond to `op.arguments`

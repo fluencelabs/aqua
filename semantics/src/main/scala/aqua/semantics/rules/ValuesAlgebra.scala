@@ -53,7 +53,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveField(op, rootType)
+        T.resolveIntoField(op, rootType)
       case op: IntoArrow[S] =>
         (for {
           args <- op.arguments.traverse(arg => OptionT(valueToRaw(arg)))
@@ -74,12 +74,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           structType <- OptionT(T.resolveIntoCopy(op, rootType, argsTypes))
         } yield IntoCopyRaw(structType, args.toNem)).value
       case op: IntoIndex[S] =>
-        for {
-          maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
-          idxProp <- maybeIdx.flatTraverse(
-            T.resolveIndex(op, rootType, _)
-          )
-        } yield idxProp
+        (for {
+          idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
+          valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
+        } yield IntoIndexRaw(idx, valueType)).value
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
