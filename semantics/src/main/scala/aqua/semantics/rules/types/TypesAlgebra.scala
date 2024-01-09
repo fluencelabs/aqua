@@ -50,11 +50,20 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
 
-  def resolveArrow(
+  /**
+   * Resolve `IntoArrow` property on value with `rootT` type
+   *
+   * @param rootT type of the value to which property is applied
+   * @param op property to resolve
+   * @param types types of arguments passed
+   * @return arrow type if property application is valid
+   * @note `types` should correspond to `op.arguments`
+   */
+  def resolveIntoArrow(
     rootT: Type,
     op: IntoArrow[S],
-    arguments: List[ValueRaw]
-  ): Alg[Option[PropertyRaw]]
+    types: List[Type]
+  ): Alg[Option[ArrowType]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 

@@ -1,5 +1,6 @@
 package aqua.semantics.rules.types
 
+import aqua.errors.Errors.internalError
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
@@ -16,6 +17,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.option.*
 import cats.syntax.traverse.*
 import cats.{Applicative, ~>}
@@ -215,50 +217,76 @@ class TypesInterpreter[S[_], X](using
     }
   }
 
-  override def resolveArrow(
+  override def resolveIntoArrow(
     rootT: Type,
     op: IntoArrow[S],
-    arguments: List[ValueRaw]
-  ): State[X, Option[PropertyRaw]] = {
+    types: List[Type]
+  ): State[X, Option[ArrowType]] = {
+    /* Safeguard to check condition on arguments */
+    if (op.arguments.length != types.length)
+      internalError(s"Invalid arguments, lists do not match: ${op.arguments} and $types")
+
+    val opName = op.name.value
+
     rootT match {
       case ab: GeneralAbilityType =>
-        val name = ab.name
-        val fields = ab.fields
-        lazy val fieldNames = fields.toNel.toList.map(_._1).mkString(", ")
-        fields(op.name.value)
-          .fold(
-            report
-              .error(
-                op,
-                s"Arrow `${op.name.value}` not found in type `$name`, " +
-                  s"available: $fieldNames"
-              )
-              .as(None)
-          ) {
-            case at @ ArrowType(_, _) =>
-              locations
-                .pointFieldLocation(name, op.name.value, op)
-                .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
-            case _ =>
+        val abName = ab.fullName
+
+        ab.fields.lookup(opName) match {
+          case Some(at: ArrowType) =>
+            val reportNotEnoughArguments =
+              /* Report at position of arrow application */
               report
                 .error(
                   op,
-                  s"Unexpected. `${op.name.value}` must be an arrow."
+                  s"Not enough arguments for arrow `$opName` in `$abName`, " +
+                    s"expected: ${at.domain.length}, given: ${op.arguments.length}"
                 )
-                .as(None)
-          }
-      case t =>
-        t.properties
-          .get(op.name.value)
-          .fold(
-            report
-              .error(
-                op,
-                s"Expected type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
-              )
-              .as(None)
-          )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
+                .whenA(op.arguments.length < at.domain.length)
+            val reportTooManyArguments =
+              /* Report once at position of the first extra argument */
+              op.arguments.drop(at.domain.length).headOption.traverse_ { arg =>
+                report
+                  .error(
+                    arg,
+                    s"Too many arguments for arrow `$opName` in `$abName`, " +
+                      s"expected: ${at.domain.length}, given: ${op.arguments.length}"
+                  )
+              }
+            val checkArgumentTypes =
+              op.arguments
+                .zip(types)
+                .zip(at.domain.toList)
+                .traverse { case ((arg, argType), expectedType) =>
+                  ensureTypeMatches(arg, expectedType, argType)
+                }
+                .map(_.forall(identity))
 
+            locations.pointFieldLocation(abName, opName, op) *>
+              reportNotEnoughArguments *>
+              reportTooManyArguments *>
+              checkArgumentTypes.map(typesMatch =>
+                Option.when(
+                  typesMatch && at.domain.length == op.arguments.length
+                )(at)
+              )
+
+          case Some(t) =>
+            report
+              .error(op, s"Field `$opName` has non arrow type `$t` in `$abName`")
+              .as(None)
+          case None =>
+            val available = ab.arrowFields.keys.mkString(", ")
+            report
+              .error(op, s"Arrow `$opName` not found in `$abName`, available: $available")
+              .as(None)
+        }
+      case t =>
+        /* NOTE: Arrows are only supported on services and abilities,
+           (`.copy(...)` for structs is resolved by separate method) */
+        report
+          .error(op, s"Arrow `$opName` not found in `$t`")
+          .as(None)
     }
   }
 

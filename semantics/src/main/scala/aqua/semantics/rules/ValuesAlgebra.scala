@@ -54,12 +54,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
       case op: IntoArrow[S] =>
-        for {
-          maybeArgs <- op.arguments.traverse(valueToRaw)
-          arrowProp <- maybeArgs.sequence.flatTraverse(
-            T.resolveArrow(rootType, op, _)
+        (for {
+          args <- OptionT(
+            op.arguments.traverse(valueToRaw).map(_.sequence)
           )
-        } yield arrowProp
+          argTypes = args.map(_.`type`)
+          arrowType <- OptionT(T.resolveIntoArrow(rootType, op, argTypes))
+        } yield IntoArrowRaw(op.name.value, arrowType, args)).value
       case op: IntoCopy[S] =>
         (for {
           _ <- OptionT.liftF(
