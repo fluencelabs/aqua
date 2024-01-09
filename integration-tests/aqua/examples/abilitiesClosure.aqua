@@ -14,7 +14,7 @@ func disjoint_run{WorkerJob}() -> -> string:
 func runJob(j: -> string) -> string:
   <- j()
 
-func bugLng314() -> string:
+func bugLNG314() -> string:
    job2 = () -> string:
      <- "strstrstr"
    worker_job = WorkerJob(runOnSingleWorker = job2)
