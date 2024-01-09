@@ -36,8 +36,8 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
       valsInline = foldedFields.toList.foldMap { case (_, inline) => inline }.desugar
-      _ <- Exports[S].resolved(name, varModel)
       _ <- updateFields(name, foldedFields)
+      _ <- Exports[S].resolved(name, varModel)
     } yield {
       (
         varModel,

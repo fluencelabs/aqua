@@ -489,13 +489,13 @@ object ArrowInliner extends Logging {
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] = for {
-    exports <- Exports[S].exports
-    streams <- getOutsideStreamNames
-
     passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
     arrowsFromAbilities <- call.abilityArgs
       .traverse(getAbilityArrows.tupled)
       .map(_.flatMap(_.toList).toMap)
+
+    exports <- Exports[S].exports
+    streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
     
     inlineResult <- Exports[S].scope(
