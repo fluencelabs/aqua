@@ -189,7 +189,7 @@ class TypesInterpreter[S[_], X](using
           .as(true)
     }
 
-  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
+  override def resolveField(op: IntoField[S], rootT: Type): State[X, Option[PropertyRaw]] = {
     rootT match {
       case nt: NamedType =>
         nt.fields(op.value)
@@ -219,8 +219,8 @@ class TypesInterpreter[S[_], X](using
   }
 
   override def resolveIntoArrow(
-    rootT: Type,
     op: IntoArrow[S],
+    rootT: Type,
     types: List[Type]
   ): State[X, Option[ArrowType]] = {
     /* Safeguard to check condition on arguments */
@@ -290,40 +290,47 @@ class TypesInterpreter[S[_], X](using
     }
   }
 
-  // TODO actually it's stateless, exists there just for reporting needs
-  override def resolveCopy(
-    token: IntoCopy[S],
+  override def resolveIntoCopy(
+    op: IntoCopy[S],
     rootT: Type,
-    args: NonEmptyList[(NamedArg[S], ValueRaw)]
-  ): State[X, Option[PropertyRaw]] =
+    types: NonEmptyList[Type]
+  ): State[X, Option[StructType]] = {
+    if (op.args.length != types.length)
+      internalError(s"Invalid arguments, lists do not match: ${op.args} and $types")
+
     rootT match {
       case st: StructType =>
-        args.forallM { case (arg, value) =>
-          val fieldName = arg.argName.value
-          st.fields.lookup(fieldName) match {
-            case Some(t) =>
-              ensureTypeMatches(arg.argValue, t, value.`type`)
-            case None =>
-              report.error(arg.argName, s"No field with name '$fieldName' in $rootT").as(false)
+        op.args
+          .zip(types)
+          .forallM { case (arg, argType) =>
+            val fieldName = arg.argName.value
+            st.fields.lookup(fieldName) match {
+              case Some(fieldType) =>
+                ensureTypeMatches(arg.argValue, fieldType, argType)
+              case None =>
+                report
+                  .error(
+                    arg.argName,
+                    s"No field with name '$fieldName' in `$st`"
+                  )
+                  .as(false)
+            }
           }
-        }.map(
-          Option.when(_)(
-            IntoCopyRaw(
-              st,
-              args.map { case (arg, value) =>
-                arg.argName.value -> value
-              }.toNem
-            )
+          .map(Option.when(_)(st))
+      case t =>
+        report
+          .error(
+            op,
+            s"Non data type `$t` does not support `.copy`"
           )
-        )
-      case _ =>
-        report.error(token, s"Expected $rootT to be a data type").as(None)
+          .as(None)
     }
+  }
 
   // TODO actually it's stateless, exists there just for reporting needs
   override def resolveIndex(
-    rootT: Type,
     op: IntoIndex[S],
+    rootT: Type,
     idx: ValueRaw
   ): State[X, Option[PropertyRaw]] =
     if (!ScalarType.i64.acceptsValueOf(idx.`type`))

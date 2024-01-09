@@ -53,28 +53,31 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveField(rootType, op)
+        T.resolveField(op, rootType)
       case op: IntoArrow[S] =>
         (for {
-          args <- OptionT(
-            op.arguments.traverse(valueToRaw).map(_.sequence)
-          )
+          args <- op.arguments.traverse(arg => OptionT(valueToRaw(arg)))
           argTypes = args.map(_.`type`)
-          arrowType <- OptionT(T.resolveIntoArrow(rootType, op, argTypes))
+          arrowType <- OptionT(T.resolveIntoArrow(op, rootType, argTypes))
         } yield IntoArrowRaw(op.name.value, arrowType, args)).value
       case op: IntoCopy[S] =>
         (for {
           _ <- OptionT.liftF(
             reportNamedArgsDuplicates(op.args)
           )
-          fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
-          prop <- OptionT(T.resolveCopy(op, rootType, fields))
-        } yield prop).value
+          args <- op.args.traverse(arg =>
+            OptionT(valueToRaw(arg.argValue)).map(
+              arg.argName.value -> _
+            )
+          )
+          argsTypes = args.map { case (_, raw) => raw.`type` }
+          structType <- OptionT(T.resolveIntoCopy(op, rootType, argsTypes))
+        } yield IntoCopyRaw(structType, args.toNem)).value
       case op: IntoIndex[S] =>
         for {
           maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
           idxProp <- maybeIdx.flatTraverse(
-            T.resolveIndex(rootType, op, _)
+            T.resolveIndex(op, rootType, _)
           )
         } yield idxProp
     }
