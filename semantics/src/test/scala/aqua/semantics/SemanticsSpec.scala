@@ -607,13 +607,37 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                          |""".stripMargin
 
     insideBody(script) { body =>
-      matchSubtree(body) { case (ForTag("p", _, ForTag.Mode.Blocking), forTag) =>
+      matchSubtree(body) { case (ForTag("p", _, ForTag.Mode.ParMode), forTag) =>
         matchChildren(forTag) { case (ParTag, parTag) =>
           matchChildren(parTag)(
             { case (OnTag(_, _, strat), _) =>
               strat shouldBe Some(OnTag.ReturnStrategy.Relay)
             },
             { case (NextTag("p"), _) => }
+          )
+        }
+      }
+    }
+  }
+
+  it should "generate right model for `for ... rec`" in {
+    val script = """
+                   |func test():
+                   |   stream: *i32
+                   |   for i <- stream rec:
+                   |      stream <<- i
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      matchSubtree(body) { case (ForTag("i", stream, ForTag.Mode.RecMode), forTag) =>
+        stream.`type` shouldBe StreamType(ScalarType.i32)
+        matchChildren(forTag) { case (ParTag, parTag) =>
+          matchChildren(parTag)(
+            { case (PushToStreamTag(VarRaw(varName, _), Call.Export(streamName, _)), _) =>
+              varName shouldBe "i"
+              streamName shouldBe "stream"
+            },
+            { case (NextTag("i"), _) => }
           )
         }
       }

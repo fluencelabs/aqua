@@ -36,7 +36,7 @@ case class ArgsFromService(dataServiceId: ValueRaw) extends ArgsProvider {
         )
         .leaf,
       ForTag
-        .nonBlocking(item, VarRaw(iter, ArrayType(t.element)))
+        .seq(item, VarRaw(iter, ArrayType(t.element)))
         .wrap(
           SeqTag.wrap(
             PushToStreamTag(VarRaw(item, t.element), Call.Export(varName, t)).leaf,

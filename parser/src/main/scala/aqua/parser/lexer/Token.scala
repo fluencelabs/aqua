@@ -56,6 +56,7 @@ object Token {
   val `via`: P[Unit] = P.string("via")
   val `%init_peer_id%` : P[Unit] = P.string("%init_peer_id%")
   val `for`: P[Unit] = P.string("for")
+  val `rec`: P[Unit] = P.string("rec")
   val `if`: P[Unit] = P.string("if")
   val `eqs`: P[Unit] = P.string("==")
   val `neq`: P[Unit] = P.string("!=")

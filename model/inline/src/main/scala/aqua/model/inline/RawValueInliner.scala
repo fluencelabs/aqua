@@ -115,8 +115,8 @@ object RawValueInliner extends Logging {
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
     valueListToModel(call.args).flatMap { args =>
       if (flatStreamArguments)
-        args.map{ arg =>
-          TagInliner.flat(arg._1, arg._2, true)
+        args.map { arg =>
+          TagInliner.flat(arg._1, arg._2)
         }.sequence
       else
         State.pure(args)
