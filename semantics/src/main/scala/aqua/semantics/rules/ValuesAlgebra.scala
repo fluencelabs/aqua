@@ -53,7 +53,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveIntoField(op, rootType)
+        OptionT(T.resolveIntoField(op, rootType))
+          .map(
+            _.fold(
+              field = t => IntoFieldRaw(op.value, t),
+              property = t => FunctorRaw(op.value, t)
+            )
+          )
+          .value
       case op: IntoArrow[S] =>
         (for {
           args <- op.arguments.traverse(arg => OptionT(valueToRaw(arg)))

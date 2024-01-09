@@ -68,7 +68,30 @@ trait TypesAlgebra[S[_], Alg[_]] {
     types: NonEmptyList[Type]
   ): Alg[Option[StructType]]
 
-  def resolveIntoField(op: IntoField[S], rootT: Type): Alg[Option[PropertyRaw]]
+  enum IntoFieldRes(`type`: Type) {
+    case Field(`type`: Type) extends IntoFieldRes(`type`)
+    case Property(`type`: Type) extends IntoFieldRes(`type`)
+
+    def fold[A](field: Type => A, property: Type => A): A =
+      this match {
+        case Field(t) => field(t)
+        case Property(t) => property(t)
+      }
+  }
+
+  /**
+   * Resolve `IntoField` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @return if property application is valid, return
+   *         Field(type) if it's a field of rootT (fields of structs or abilities),
+   *         Property(type) if it's a property of rootT (functors of collections)
+   */
+  def resolveIntoField(
+    op: IntoField[S],
+    rootT: Type
+  ): Alg[Option[IntoFieldRes]]
 
   /**
    * Resolve `IntoArrow` property on value with `rootT` type

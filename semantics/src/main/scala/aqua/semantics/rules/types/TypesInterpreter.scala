@@ -189,32 +189,39 @@ class TypesInterpreter[S[_], X](using
           .as(true)
     }
 
-  override def resolveIntoField(op: IntoField[S], rootT: Type): State[X, Option[PropertyRaw]] = {
+  override def resolveIntoField(
+    op: IntoField[S],
+    rootT: Type
+  ): State[X, Option[IntoFieldRes]] = {
     rootT match {
       case nt: NamedType =>
-        nt.fields(op.value)
-          .fold(
+        nt.fields(op.value) match {
+          case Some(t) =>
+            locations
+              .pointFieldLocation(nt.name, op.value, op)
+              .as(Some(IntoFieldRes.Field(t)))
+          case None =>
+            val fields = nt.fields.keys.map(k => s"`$k`").toList.mkString(", ")
             report
               .error(
                 op,
-                s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
+                s"Field `${op.value}` not found in type `${nt.name}`, available: $fields"
               )
               .as(None)
-          ) { t =>
-            locations.pointFieldLocation(nt.name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
-          }
+        }
       case t =>
         t.properties
-          .get(op.value)
-          .fold(
+          .get(op.value) match {
+          case Some(t) =>
+            State.pure(Some(IntoFieldRes.Property(t)))
+          case None =>
             report
               .error(
                 op,
-                s"Expected data type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+                s"Property `${op.value}` not found in type `$t`"
               )
               .as(None)
-          )(t => State.pure(Some(FunctorRaw(op.value, t))))
-
+        }
     }
   }
 
