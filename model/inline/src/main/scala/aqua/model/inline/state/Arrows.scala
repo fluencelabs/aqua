@@ -35,7 +35,7 @@ trait Arrows[S] extends Scoped[S] {
     for {
       arrs <- arrows
       capturedVars <- Exports[S].gather(arrow.capturedVars.toSeq)
-      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap ++
+      capturedArrows = arrs.view.filterKeys(arrow.capturedVars).toMap ++
         Arrows.arrowsByValues(arrs, capturedVars)
       funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology)
       _ <- save(arrow.name, funcArrow)
