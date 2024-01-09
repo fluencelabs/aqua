@@ -67,6 +67,9 @@ object AquaSpec {
   def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
   def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
 
+  def toArr(arr: List[ValueToken[Id]]): CollectionToken[Id] =
+    CollectionToken[Id](CollectionToken.Mode.ArrayMode, arr)
+
   def toNamedType(str: String): NamedTypeToken[Id] = NamedTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 

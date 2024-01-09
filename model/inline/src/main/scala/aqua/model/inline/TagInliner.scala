@@ -149,11 +149,10 @@ object TagInliner extends Logging {
 
   def flat[S: Mangler](
     vm: ValueModel,
-    op: Option[OpModel.Tree],
-    flatStream: Boolean
+    op: Option[OpModel.Tree]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
-      case v @ VarModel(n, StreamType(t), l) if flatStream =>
+      case ValueModel.Stream(v @ VarModel(n, _, l), StreamType(t)) =>
         val canonName = n + "_canon"
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
@@ -203,7 +202,7 @@ object TagInliner extends Logging {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
           viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
-            flat(vm, tree, true)
+            flat(vm, tree)
           }
           (pid, pif) = peerIdDe
           (viaD, viaF) = viaDeFlattened.unzip
@@ -238,7 +237,10 @@ object TagInliner extends Logging {
       case ForTag(item, iterable, mode) =>
         for {
           vp <- valueToModel(iterable)
-          flattened <- flat(vp._1, vp._2, true)
+          flattened <- mode match {
+            case ForTag.Mode.RecMode => State.pure(vp)
+            case _ => flat(vp._1, vp._2)
+          }
           (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
@@ -250,8 +252,8 @@ object TagInliner extends Logging {
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
           modeModel = mode match {
-            case ForTag.Mode.Blocking => ForModel.Mode.Never
-            case ForTag.Mode.NonBlocking => ForModel.Mode.Null
+            case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
+            case ForTag.Mode.ParMode | ForTag.Mode.RecMode => ForModel.Mode.Never
           }
         } yield TagInlined.Single(
           model = ForModel(n, v, modeModel),
