@@ -258,10 +258,9 @@ class TypesInterpreter[S[_], X](using
               op.arguments
                 .zip(types)
                 .zip(at.domain.toList)
-                .traverse { case ((arg, argType), expectedType) =>
+                .forallM { case ((arg, argType), expectedType) =>
                   ensureTypeMatches(arg, expectedType, argType)
                 }
-                .map(_.forall(identity))
 
             locations.pointFieldLocation(abName, opName, op) *>
               reportNotEnoughArguments *>
@@ -277,7 +276,7 @@ class TypesInterpreter[S[_], X](using
               .error(op, s"Field `$opName` has non arrow type `$t` in `$abName`")
               .as(None)
           case None =>
-            val available = ab.arrowFields.keys.mkString(", ")
+            val available = ab.arrowFields.keys.map(k => s"`$k`").mkString(", ")
             report
               .error(op, s"Arrow `$opName` not found in `$abName`, available: $available")
               .as(None)
@@ -317,7 +316,6 @@ class TypesInterpreter[S[_], X](using
             )
           )
         )
-
       case _ =>
         report.error(token, s"Expected $rootT to be a data type").as(None)
     }
@@ -451,7 +449,7 @@ class TypesInterpreter[S[_], X](using
   ): State[X, Boolean] = for {
     /* Check that required fields are present
        among arguments and have correct types */
-    enough <- expected.fields.toNel.traverse { case (name, typ) =>
+    enough <- expected.fields.toNel.forallM { case (name, typ) =>
       arguments.lookup(name) match {
         case Some(arg -> givenType) =>
           ensureTypeMatches(arg.argValue, typ, givenType)
@@ -463,7 +461,7 @@ class TypesInterpreter[S[_], X](using
             )
             .as(false)
       }
-    }.map(_.forall(identity))
+    }
     expectedKeys = expected.fields.keys.toNonEmptyList
     /* Report unexpected arguments */
     _ <- arguments.toNel.traverse_ { case (name, arg -> typ) =>
