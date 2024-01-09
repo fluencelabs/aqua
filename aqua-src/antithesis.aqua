@@ -1,3 +1,48 @@
-func arr() -> string:
-  n = "str"
-  <- n
+aqua M
+
+export haveFun
+
+data Worker:
+  host_id: string
+  worker_id: string
+
+ability Promise:
+  yield: -> ()
+  -- Cannot make empty failed as (never) or smth like that without introducing a coordinator
+  --failed: -> ()
+
+service Dummy("d"):
+  greeting(s: string) -> string
+
+ability Job:
+  run()
+
+ability WorkerJob:
+  runOnSingleWorker(worker: Worker) -> Job
+
+func done():
+  a = "need some body!"
+  -- I'm done
+
+func done_promise() -> Promise:
+  <- Promise(yield = done)
+
+func disjoint_run{WorkerJob}() -> Job:
+  workers: *Worker
+
+  run = func ():
+      job2 <- WorkerJob.runOnSingleWorker()
+
+  <- Job(run = run)
+
+func haveFun():
+   job2 = () -> Job:
+     run2 = ():
+       Dummy.greeting("hell!")
+
+     <- Job(run = run2)
+
+   worker_job = WorkerJob(runOnSingleWorker = job2)
+   subnet_job <- disjoint_run{worker_job}()
+
+   subnet_job.run()

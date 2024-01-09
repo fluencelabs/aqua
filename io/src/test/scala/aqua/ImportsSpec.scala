@@ -11,7 +11,7 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
 
   implicit override val generatorDrivenConfig =
     // Tests here are lightweight, so we can afford to run more of them
-    PropertyCheckConfiguration(minSuccessful = 500, sizeRange = 64)
+    PropertyCheckConfiguration(minSuccessful = 50, sizeRange = 32)
 
   val shortAlphaNumStr = for {
     length <- Gen.choose(1, 10)

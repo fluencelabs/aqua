@@ -28,7 +28,7 @@ object RawValueInliner extends Logging {
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] = for {
     optimized <- StateT.liftF(Optimization.optimize(raw))
-    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
+//    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
     result <- optimized match {
       case VarRaw(name, t) =>
         for {
@@ -83,20 +83,20 @@ object RawValueInliner extends Logging {
     for {
       vmp <- unfoldF
       (vm, map) = vmp
-      _ = logger.trace("MOD " + vm)
+//      _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
-      _ = logger.trace("DEC " + dc)
+//      _ = logger.trace("DEC " + dc)
 
       ops <- inlineToTree(map)
-      _ = logger.trace("desugarized ops: " + ops)
-      _ = logger.trace("map was: " + map)
+//      _ = logger.trace("desugarized ops: " + ops)
+//      _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
-    _ <- StateT.liftF(Eval.later(logger.trace("RAW " + value)))
+//    _ <- StateT.liftF(Eval.later(logger.trace("RAW " + value)))
     model <- toModel(unfold(value, propertiesAllowed))
   } yield model
 

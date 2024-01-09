@@ -15,8 +15,8 @@ object CallServiceRawInliner extends RawInliner[CallServiceRaw] with Logging {
     value: CallServiceRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
-    logger.trace(s"${exportTo.mkString(" ")} $value")
-    logger.trace(Console.BLUE + s"call service id ${value.serviceId}" + Console.RESET)
+//    logger.trace(s"${exportTo.mkString(" ")} $value")
+//    logger.trace(Console.BLUE + s"call service id ${value.serviceId}" + Console.RESET)
 
 
     val call = Call(value.arguments, exportTo)

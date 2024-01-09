@@ -156,10 +156,10 @@ object AquaContext extends Logging {
 
   // Convert RawContext into AquaContext, with exports handled
   def exportsFromRaw(rawContext: RawContext, cache: Cache): (AquaContext, Cache) = {
-    logger.trace(s"ExportsFromRaw ${rawContext.module}")
+//    logger.trace(s"ExportsFromRaw ${rawContext.module}")
     val (ctx, newCache) = fromRawContext(rawContext, cache)
-    logger.trace("raw: " + rawContext)
-    logger.trace("ctx: " + ctx)
+//    logger.trace("raw: " + rawContext)
+//    logger.trace("ctx: " + ctx)
 
     rawContext.exports
       .foldLeft(
@@ -183,7 +183,7 @@ object AquaContext extends Logging {
         val (newCtx, newCache) = rawContext.parts
           .foldLeft[(AquaContext, Cache)] {
             // Laziness unefficiency happens here
-            logger.trace(s"raw: ${rawContext.module}")
+//            logger.trace(s"raw: ${rawContext.module}")
             val (i, c) =
               rawContext.init
                 .map(fromRawContext(_, cache))
@@ -199,11 +199,11 @@ object AquaContext extends Logging {
             (i |+| blank.copy(abilities = abs)) -> absCache
           } {
             case ((ctx, ctxCache), (partContext, c: ConstantRaw)) =>
-              logger.trace("Adding constant " + c.name)
+//              logger.trace("Adding constant " + c.name)
               // Just saving a constant
               // Actually this should have no effect, as constants are resolved by semantics
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + c.name + " from raw")
+//              logger.trace("Got " + c.name + " from raw")
               val add =
                 blank
                   .copy(values =
@@ -215,12 +215,12 @@ object AquaContext extends Logging {
 
             case ((ctx, ctxCache), (partContext, func: FuncRaw)) =>
               // To add a function, we have to know its scope
-              logger.trace("Adding func " + func.name)
+//              logger.trace("Adding func " + func.name)
 
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + func.name + " from raw")
+//              logger.trace("Got " + func.name + " from raw")
               val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues, None)
-              logger.trace("Captured recursively for " + func.name)
+//              logger.trace("Captured recursively for " + func.name)
               val add = blank.copy(funcs = Map(func.name -> fr))
 
               (ctx |+| add, pcache)
@@ -232,9 +232,9 @@ object AquaContext extends Logging {
 
             case ((ctx, ctxCache), (partContext, m: ServiceRaw)) =>
               // To add a service, we need to resolve its ID, if any
-              logger.trace("Adding service " + m.name)
+//              logger.trace("Adding service " + m.name)
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + m.name + " from raw")
+//              logger.trace("Got " + m.name + " from raw")
               val id = m.defaultId
                 .map(ValueModel.fromRaw)
                 .map(_.resolveWith(pctx.allValues))

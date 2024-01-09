@@ -14,18 +14,43 @@ import fs2.{Stream, text}
 object Test extends IOApp.Simple {
 
   override def run: IO[Unit] = {
+
     APICompilation
       .compilePath(
+//        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
+//        "/home/diemust/git/ha/src/aqua/main.aqua",
         "./aqua-src/antithesis.aqua",
-        Imports.fromMap(Map("/" -> Map("" -> List("./aqua")))),
-        AquaAPIConfig(targetType = TypeScriptType),
+        Imports.fromMap(
+          Map(
+            "/" -> Map(
+//              "" -> List(
+//                "/home/diemust/git/decider/.fluence/aqua",
+//                "/home/diemust/.fluence/npm/@fluencelabs/aqua-lib/0.9.0/node_modules",
+//                "/home/diemust/.fluence/npm/@fluencelabs/spell/0.6.0/node_modules",
+//                "/home/diemust/.fluence/npm/@fluencelabs/registry/0.8.7/node_modules",
+//                "/home/diemust/.fluence/npm/@fluencelabs/aqua-ipfs/0.5.24/node_modules",
+//                "/home/diemust/.fluence/npm/@fluencelabs/installation-spell/0.6.0/node_modules"
+//              )
+              "" -> List(
+                "/home/diemust/git/ha/.fluence/aqua",
+                "/home/diemust/.fluence/npm/@fluencelabs/aqua-lib/0.9.0/node_modules",
+                "/home/diemust/.fluence/npm/@fluencelabs/spell/0.6.0/node_modules",
+                "/home/diemust/.fluence/npm/@fluencelabs/registry/0.8.7/node_modules",
+                "/home/diemust/.fluence/npm/@fluencelabs/aqua-ipfs/0.5.24/node_modules",
+                "/home/diemust/.fluence/npm/@fluencelabs/installation-spell/0.6.0/node_modules"
+              )
+            )
+          )
+        ),
+        AquaAPIConfig(logLevel = "info"),
         TypeScriptBackend(false, "IFluenceClient$$")
-      )
-      .flatMap { res =>
+      ).timed
+      .flatMap { case (duration, res) =>
+        println("Compilation time: " + duration.toMillis)
         val (warnings, result) = res.value.run
 
         IO.delay {
-          warnings.toList.foreach(println)
+          // warnings.toList.foreach(println)
         } *> result.fold(
           errors =>
             IO.delay {

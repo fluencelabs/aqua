@@ -117,6 +117,7 @@ object Transform extends Logging {
     )
 
     for {
+      _ <- Eval.later { logger.trace("start transforming...")}
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
       // Post transform the function.
@@ -125,9 +126,12 @@ object Transform extends Logging {
       // Topology module needs this `on`
       // as a starting point.
       initModel = initCallable.onInitPeer.wrap(model)
+      _ <- Eval.later { logger.trace("end funcToModel...")}
       tracingModel <- tracing(initModel)
+      _ <- Eval.later { logger.trace("end tracing...")}
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)
+      _ <- Eval.later { logger.trace("end topology...")}
       // Clear the tree
       result = clear(resolved)
     } yield FuncRes(

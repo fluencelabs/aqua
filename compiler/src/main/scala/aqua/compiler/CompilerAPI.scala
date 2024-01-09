@@ -1,32 +1,21 @@
 package aqua.compiler
 
+import aqua.backend.Backend
 import aqua.compiler.AquaError.*
-import aqua.backend.{AirFunction, Backend}
-import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
-import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.RawPart.Parts
-import aqua.raw.{RawContext, RawPart}
-import aqua.res.AquaRes
+import aqua.raw.RawContext
+import aqua.semantics.RawSemantics
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
-import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 
 import cats.data.*
-import cats.data.Validated.{invalid, validNec, Invalid, Valid}
-import cats.parse.Parser0
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.foldable.*
-import cats.syntax.functor.*
-import cats.syntax.monoid.*
-import cats.syntax.semigroup.*
-import cats.syntax.traverse.*
 import cats.syntax.either.*
-import cats.{~>, Comonad, Monad, Monoid, Order}
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.syntax.traverse.*
+import cats.{Comonad, Monad, Monoid, Order}
 import scribe.Logging
-
-import scala.collection.MapView
 
 object CompilerAPI extends Logging {
 
@@ -34,6 +23,8 @@ object CompilerAPI extends Logging {
     filesWithContext: Map[I, RawContext]
   ): Chain[AquaProcessed[I]] = {
     logger.trace("linking finished")
+
+    println("files with context: " + filesWithContext.keys)
 
     filesWithContext.toList
       // Process all contexts maintaining Cache
@@ -84,14 +75,19 @@ object CompilerAPI extends Logging {
     val compiler = getAquaCompiler[F, E, I, S](config)
 
     for {
+      _ <- logger.trace("Start compilation").pure[F]
       compiledRaw <- compiler.compileRaw(sources, parser)
+      _ <- logger.trace("Compile raw ended").pure[F]
       compiledV = compiledRaw.map(toAquaProcessed)
+      _ <- logger.trace("Aqua processed ended").pure[F]
       _ <- airValidator.init()
       result <- compiledV.flatTraverse { compiled =>
         compiled.traverse { ap =>
           logger.trace("generating output...")
           val res = backend.transform(ap.context)
+          logger.trace("end transforming...")
           val generated = backend.generate(res)
+          logger.trace("end generating...")
           val air = generated.toList.flatMap(_.air)
           val compiled = AquaCompiled(
             sourceId = ap.id,
@@ -109,6 +105,7 @@ object CompilerAPI extends Logging {
             )
         }.map(_.sequence.toEither.toEitherT)
       }
+      _ <- logger.trace("Writing result ended").pure[F]
     } yield result
   }
 

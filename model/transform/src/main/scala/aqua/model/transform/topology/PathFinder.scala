@@ -56,8 +56,8 @@ object PathFinder extends Logging {
     fromPeer: Option[ValueModel],
     toPeer: Option[ValueModel]
   ): Chain[ValueModel] = {
-    logger.trace(s"FROM ON: $fromOn")
-    logger.trace(s"TO ON: $toOn")
+//    logger.trace(s"FROM ON: $fromOn")
+//    logger.trace(s"TO ON: $toOn")
 
     val (from, to) = skipCommonPrefix(fromOn, toOn)
     val fromFix =
@@ -67,20 +67,20 @@ object PathFinder extends Logging {
       if (to.isEmpty && fromPeer != toPeer) Chain.fromOption(toOn.lastOption)
       else to
 
-    logger.trace("FIND PATH FROM | " + fromFix)
-    logger.trace("            TO | " + toFix)
+//    logger.trace("FIND PATH FROM | " + fromFix)
+//    logger.trace("            TO | " + toFix)
 
     val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
 
-    logger.trace(s"FROM TO: $fromTo")
+//    logger.trace(s"FROM TO: $fromTo")
 
     val toOptimize = Chain.fromOption(fromPeer) ++ fromTo ++ Chain.fromOption(toPeer)
     val optimized = optimizePath(toOptimize, fromPeer, toPeer)
 
-    logger.trace(
-      s"FROM PEER '${fromPeer.map(_.toString).getOrElse("None")}' TO PEER '${toPeer.map(_.toString).getOrElse("None")}'"
-    )
-    logger.trace("                     Optimized: " + optimized)
+//    logger.trace(
+//      s"FROM PEER '${fromPeer.map(_.toString).getOrElse("None")}' TO PEER '${toPeer.map(_.toString).getOrElse("None")}'"
+//    )
+//    logger.trace("                     Optimized: " + optimized)
 
     optimized
   }
@@ -108,9 +108,9 @@ object PathFinder extends Logging {
       case (acc, p) => acc :+ p
     }
 
-    logger.trace(s"PEER IDS: $optimized")
-    logger.trace(s"FROM PEER: $fromPeer")
-    logger.trace(s"TO PEER: $toPeer")
+//    logger.trace(s"PEER IDS: $optimized")
+//    logger.trace(s"FROM PEER: $fromPeer")
+//    logger.trace(s"TO PEER: $toPeer")
 
     val skipFrom = optimized.uncons match {
       case Some((head, tail)) if fromPeer.contains(head) => tail
