@@ -60,6 +60,16 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
+  /**
+   * Check if given type (ability or struct)
+   * can be constructed from given arguments
+   *
+   * @param token token of construction expression (for error reporting)
+   * @param expected type to construct
+   * @param arguments arguments to construct with (name -> (named arg, type))
+   * @return true if type can be constructed from given arguments
+   * reports error and warnings if necessary
+   */
   def ensureTypeConstructibleFrom(
     token: Token[S],
     expected: AbilityType | StructType,

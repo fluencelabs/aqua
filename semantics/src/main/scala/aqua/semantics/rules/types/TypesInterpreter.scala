@@ -419,8 +419,10 @@ class TypesInterpreter[S[_], X](using
   override def ensureTypeConstructibleFrom(
     token: Token[S],
     expected: AbilityType | StructType,
-    arguments: NonEmptyMapImpl.Type[String, (NamedArg[S], Type)]
+    arguments: NonEmptyMap[String, (NamedArg[S], Type)]
   ): State[X, Boolean] = for {
+    /* Check that required fields are present
+       among arguments and have correct types */
     enough <- expected.fields.toNel.traverse { case (name, typ) =>
       arguments.lookup(name) match {
         case Some(arg -> givenType) =>
@@ -435,6 +437,7 @@ class TypesInterpreter[S[_], X](using
       }
     }.map(_.forall(identity))
     expectedKeys = expected.fields.keys.toNonEmptyList
+    /* Report unexpected arguments */
     _ <- arguments.toNel.traverse_ { case (name, arg -> typ) =>
       expected.fields.lookup(name) match {
         case Some(_) => State.pure(())
