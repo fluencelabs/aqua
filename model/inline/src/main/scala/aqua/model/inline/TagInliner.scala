@@ -372,10 +372,10 @@ object TagInliner extends Logging {
         } yield TagInlined.Empty(prefix = prefix)
 
       case ClosureTag(arrow, detach) =>
-        if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())
+        if (detach) Arrows[S].resolved(arrow, None, true).as(TagInlined.Empty())
         else
           Arrows[S]
-            .resolved(arrow, arrow.name.some)
+            .resolved(arrow, arrow.name.some, true)
             .as(TagInlined.Single(model = CaptureTopologyModel(arrow.name)))
 
       case NextTag(item) =>

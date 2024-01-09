@@ -41,6 +41,9 @@ import {
   returnSrvAsAbilityCall,
 } from "../examples/abilityCall.js";
 import {
+  bugLNG314Call,
+} from "../examples/abilityClosureCall.js";
+import {
   nilLengthCall,
   nilLiteralCall,
   returnNilCall,
@@ -589,6 +592,11 @@ describe("Testing examples", () => {
     let result = await returnSrvAsAbilityCall();
     expect(result).toStrictEqual(["default-id", "resolved-id"]);
   });
+
+  it("abilitiesClosure.aqua bug LNG-314", async () => {
+      let result = await bugLNG314Call();
+      expect(result).toEqual("strstrstr");
+    });
 
   it("functors.aqua LNG-119 bug", async () => {
     let result = await bugLng119Call();
