@@ -7,7 +7,7 @@ ability WorkerJob:
 
 func disjoint_run{WorkerJob}() -> -> string:
   run = func () -> string:
-      r <- WorkerJob.runOnSingleWorker()
+      r <- WorkerJob.runOnSingleWorker("worker")
       <- r
   <- run
 
