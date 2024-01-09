@@ -11,10 +11,13 @@ func disjoint_run{WorkerJob}() -> -> string:
       <- r
   <- run
 
-func bugLNG314() -> string:
+func runJob(j: -> string) -> string:
+  <- j()
+
+func bugLng314() -> string:
    job2 = () -> string:
      <- "strstrstr"
    worker_job = WorkerJob(runOnSingleWorker = job2)
    subnet_job <- disjoint_run{worker_job}()
-   res <- subnet_job()
+   res <- runJob(subnet_job)
    <- res

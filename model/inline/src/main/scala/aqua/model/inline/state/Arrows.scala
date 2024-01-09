@@ -30,15 +30,14 @@ trait Arrows[S] extends Scoped[S] {
    */
   final def resolved(
     arrow: FuncRaw,
-    topology: Option[String],
-    isClosure: Boolean = false
+    topology: Option[String]
   )(using Exports[S]): State[S, Unit] =
     for {
       arrs <- arrows
       capturedVars <- Exports[S].gather(arrow.capturedVars.toSeq)
       capturedArrows = arrs.view.filterKeys(arrow.capturedVars).toMap ++
         Arrows.arrowsByValues(arrs, capturedVars)
-      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology, isClosure)
+      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 

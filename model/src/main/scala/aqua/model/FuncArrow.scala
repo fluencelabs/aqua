@@ -14,8 +14,7 @@ case class FuncArrow(
   ret: List[ValueRaw],
   capturedArrows: Map[String, FuncArrow],
   capturedValues: Map[String, ValueModel],
-  capturedTopology: Option[String],
-  isClosure: Boolean = false
+  capturedTopology: Option[String]
 ) {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
@@ -33,8 +32,7 @@ object FuncArrow {
     raw: FuncRaw,
     arrows: Map[String, FuncArrow],
     constants: Map[String, ValueModel],
-    topology: Option[String] = None,
-    isClosure: Boolean = false
+    topology: Option[String] = None
   ): FuncArrow =
     FuncArrow(
       raw.name,
@@ -43,8 +41,7 @@ object FuncArrow {
       raw.arrow.ret,
       arrows,
       constants,
-      topology,
-      isClosure
+      topology
     )
 
   /**

@@ -489,21 +489,15 @@ object ArrowInliner extends Logging {
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] = for {
-    arrows <-
-      // get all outside arrows for closures
-      if (arrow.isClosure) Arrows[S].arrows
-      else {
-        for {
-          passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
-          arrowsFromAbilities <- call.abilityArgs
-            .traverse(getAbilityArrows.tupled)
-            .map(_.flatMap(_.toList).toMap)
-        } yield passArrows ++ arrowsFromAbilities
-      }
-
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
 
+    passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
+    arrowsFromAbilities <- call.abilityArgs
+      .traverse(getAbilityArrows.tupled)
+      .map(_.flatMap(_.toList).toMap)
+    arrows = passArrows ++ arrowsFromAbilities
+    
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {
