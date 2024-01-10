@@ -59,7 +59,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     arrows <- Arrows[S].arrows
     exports <- Exports[S].exports
     lastArrow <- Exports[S].getLastVarName(funcName)
-    _ = println("lastArrow: " + lastArrow)
     arrow = arrows
       .get(funcName)
       .orElse(

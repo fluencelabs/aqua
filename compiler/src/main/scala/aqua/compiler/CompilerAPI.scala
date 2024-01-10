@@ -9,10 +9,10 @@ import aqua.semantics.RawSemantics
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 
 import cats.data.*
+import cats.syntax.applicative.*
 import cats.syntax.either.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
 import cats.syntax.traverse.*
 import cats.{Comonad, Monad, Monoid, Order}
 import scribe.Logging
@@ -37,9 +37,50 @@ object CompilerAPI extends Logging {
           _ <- State.set(expCache)
         } yield AquaProcessed(i, exp)
       }
-      .runA(AquaContext.Cache())
+      .run(AquaContext.Cache())
+      .map { case (cache, a) =>
+        println(
+          cache.data.toList
+            .flatMap(_._2.funcs.keys)
+            .groupBy(identity)
+            .view
+            .values
+            .map(l => (l.headOption, l.size))
+            .toList.sortBy(_._2).reverse
+        )
+        println(
+          cache.data.toList
+            .flatMap(_._1.parts.map(_._2.name).toList)
+            .groupBy(identity)
+            .view
+            .values
+            .map(l => (l.headOption, l.size))
+            .toList.sortBy(_._2).reverse
+        )
+        println("modules rawcontext: ")
+        println(
+          cache.data.toList
+            .flatMap(_._1.module.toList)
+            .groupBy(identity)
+            .view
+            .values
+            .map(l => (l.headOption, l.size))
+            .toList.sortBy(_._2).reverse
+        )
+        println("modules aquacontext: ")
+        println(
+          cache.data.toList
+            .flatMap(_._2.module.toList)
+            .groupBy(identity)
+            .view
+            .values
+            .map(l => (l.headOption, l.size))
+            .toList.sortBy(_._2).reverse
+        )
+        a
+      }
       // Convert result List to Chain
-      .map(Chain.fromSeq)
+      .map(a => Chain.fromSeq(a))
       .value
   }
 

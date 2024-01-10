@@ -1,12 +1,10 @@
 package aqua.api
 
-import aqua.api.TargetType.TypeScriptType
 import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.AquaCompiled
 import aqua.files.FileModuleId
 
 import cats.data.Chain
-import cats.data.Validated.{Invalid, Valid}
 import cats.effect.{IO, IOApp}
 import fs2.io.file.{Files, Path}
 import fs2.{Stream, text}
@@ -17,22 +15,13 @@ object Test extends IOApp.Simple {
 
     APICompilation
       .compilePath(
-//        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
-//        "/home/diemust/git/ha/src/aqua/main.aqua",
-        "./aqua-src/antithesis.aqua",
+        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
+//        "./aqua-src/antithesis.aqua",
         Imports.fromMap(
           Map(
             "/" -> Map(
-//              "" -> List(
-//                "/home/diemust/git/decider/.fluence/aqua",
-//                "/home/diemust/.fluence/npm/@fluencelabs/aqua-lib/0.9.0/node_modules",
-//                "/home/diemust/.fluence/npm/@fluencelabs/spell/0.6.0/node_modules",
-//                "/home/diemust/.fluence/npm/@fluencelabs/registry/0.8.7/node_modules",
-//                "/home/diemust/.fluence/npm/@fluencelabs/aqua-ipfs/0.5.24/node_modules",
-//                "/home/diemust/.fluence/npm/@fluencelabs/installation-spell/0.6.0/node_modules"
-//              )
               "" -> List(
-                "/home/diemust/git/ha/.fluence/aqua",
+                "/home/diemust/git/decider/.fluence/aqua",
                 "/home/diemust/.fluence/npm/@fluencelabs/aqua-lib/0.9.0/node_modules",
                 "/home/diemust/.fluence/npm/@fluencelabs/spell/0.6.0/node_modules",
                 "/home/diemust/.fluence/npm/@fluencelabs/registry/0.8.7/node_modules",
@@ -42,7 +31,7 @@ object Test extends IOApp.Simple {
             )
           )
         ),
-        AquaAPIConfig(logLevel = "info"),
+        AquaAPIConfig(logLevel = "trace"),
         TypeScriptBackend(false, "IFluenceClient$$")
       ).timed
       .flatMap { case (duration, res) =>

@@ -28,12 +28,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Alg[List[Call.Export]] = {
-    println("call: " + expr.callArrow)
-    println("variables: " + variables)
-    println("codomain: " + codomain)
     (variables zip codomain.toList).traverse { case (v, t) =>
-      println("v: " + v)
-      println("t: " + t)
       N.read(v, mustBeDefined = false).flatMap {
         case Some(stream @ StreamType(st)) =>
           T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream))
