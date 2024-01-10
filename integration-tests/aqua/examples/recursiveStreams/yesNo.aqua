@@ -1,0 +1,21 @@
+aqua YesNo
+
+export YesNoService, yesNoStream
+
+service YesNoService("yesno"):
+  get() -> string
+
+func yesNoStream() -> []string:
+  result: *string
+  loop: *string
+  
+  loop <<- "yes"
+  for l <- loop rec:
+    if l == "yes":
+      loop <- YesNoService.get()
+    else:
+      result <<- "success"
+
+  join result!
+
+  <- loop

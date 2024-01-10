@@ -499,7 +499,7 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
-
+    
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {

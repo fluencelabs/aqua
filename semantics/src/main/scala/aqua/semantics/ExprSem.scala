@@ -1,9 +1,9 @@
 package aqua.semantics
 
-import aqua.raw.Raw
 import aqua.parser.Expr
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
+import aqua.raw.Raw
 import aqua.semantics.expr.*
 import aqua.semantics.expr.func.*
 import aqua.semantics.rules.ValuesAlgebra
@@ -20,7 +20,7 @@ object ExprSem {
 
   def getProg[S[_], G[_]: Monad](
     expr: Expr[S]
-  )(implicit
+  )(using
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],

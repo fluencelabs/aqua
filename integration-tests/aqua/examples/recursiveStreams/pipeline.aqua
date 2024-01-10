@@ -1,0 +1,29 @@
+aqua Pipeline
+
+export pipelineStream
+
+func pipelineStream(init: i32, target: i32) -> []i32:
+  result: *string
+  
+  loop1: *i32
+  loop2: *i32
+  loop3: *i32
+  
+  loop1 <<- init
+  for l <- loop1 rec:
+    if l < target:
+      loop1 <<- l + 1
+      loop2 <<- l * 3
+
+  for l <- loop2 rec:
+    loop3 <<- l 
+    loop3 <<- l + 1
+    loop3 <<- l + 2
+
+  for l <- loop3 rec:
+    if l == target:
+      result <<- "success"
+
+  join result!
+
+  <- loop3
