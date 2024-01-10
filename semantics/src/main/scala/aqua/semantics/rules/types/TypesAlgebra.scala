@@ -61,6 +61,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
    * @param rootT type of the value to which property is applied
    * @param types types of arguments passed
    * @return struct type if property application is valid
+   * @note `types` should correspond to `op.args`
    */
   def resolveIntoCopy(
     op: IntoCopy[S],
