@@ -1,5 +1,6 @@
 package aqua.semantics.rules.types
 
+import aqua.errors.Errors.internalError
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.Levenshtein
@@ -17,6 +18,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.option.*
 import cats.syntax.traverse.*
 import cats.{Applicative, ~>}
@@ -187,132 +189,177 @@ class TypesInterpreter[S[_], X](using
           .as(true)
     }
 
-  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
+  override def resolveIntoField(
+    op: IntoField[S],
+    rootT: Type
+  ): State[X, Option[IntoFieldRes]] = {
     rootT match {
       case nt: NamedType =>
-        nt.fields(op.value)
-          .fold(
+        nt.fields(op.value) match {
+          case Some(t) =>
+            locations
+              .pointFieldLocation(nt.name, op.value, op)
+              .as(Some(IntoFieldRes.Field(t)))
+          case None =>
+            val fields = nt.fields.keys.map(k => s"`$k`").toList.mkString(", ")
             report
               .error(
                 op,
-                s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
+                s"Field `${op.value}` not found in type `${nt.name}`, available: $fields"
               )
               .as(None)
-          ) { t =>
-            locations.pointFieldLocation(nt.name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
-          }
+        }
       case t =>
         t.properties
-          .get(op.value)
-          .fold(
+          .get(op.value) match {
+          case Some(t) =>
+            State.pure(Some(IntoFieldRes.Property(t)))
+          case None =>
             report
               .error(
                 op,
-                s"Expected data type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+                s"Property `${op.value}` not found in type `$t`"
               )
               .as(None)
-          )(t => State.pure(Some(FunctorRaw(op.value, t))))
-
+        }
     }
   }
 
-  override def resolveArrow(
-    rootT: Type,
+  override def resolveIntoArrow(
     op: IntoArrow[S],
-    arguments: List[ValueRaw]
-  ): State[X, Option[PropertyRaw]] = {
+    rootT: Type,
+    types: List[Type]
+  ): State[X, Option[ArrowType]] = {
+    /* Safeguard to check condition on arguments */
+    if (op.arguments.length != types.length)
+      internalError(s"Invalid arguments, lists do not match: ${op.arguments} and $types")
+
+    val opName = op.name.value
+
     rootT match {
       case ab: GeneralAbilityType =>
-        val name = ab.name
-        val fields = ab.fields
-        lazy val fieldNames = fields.toNel.toList.map(_._1).mkString(", ")
-        fields(op.name.value)
-          .fold(
-            report
-              .error(
-                op,
-                s"Arrow `${op.name.value}` not found in type `$name`, " +
-                  s"available: $fieldNames"
-              )
-              .as(None)
-          ) {
-            case at @ ArrowType(_, _) =>
-              locations
-                .pointFieldLocation(name, op.name.value, op)
-                .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
-            case _ =>
+        val abName = ab.fullName
+
+        ab.fields.lookup(opName) match {
+          case Some(at: ArrowType) =>
+            val reportNotEnoughArguments =
+              /* Report at position of arrow application */
               report
                 .error(
                   op,
-                  s"Unexpected. `${op.name.value}` must be an arrow."
+                  s"Not enough arguments for arrow `$opName` in `$abName`, " +
+                    s"expected: ${at.domain.length}, given: ${op.arguments.length}"
                 )
-                .as(None)
-          }
-      case t =>
-        t.properties
-          .get(op.name.value)
-          .fold(
-            report
-              .error(
-                op,
-                s"Expected type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
-              )
-              .as(None)
-          )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
+                .whenA(op.arguments.length < at.domain.length)
+            val reportTooManyArguments =
+              /* Report once at position of the first extra argument */
+              op.arguments.drop(at.domain.length).headOption.traverse_ { arg =>
+                report
+                  .error(
+                    arg,
+                    s"Too many arguments for arrow `$opName` in `$abName`, " +
+                      s"expected: ${at.domain.length}, given: ${op.arguments.length}"
+                  )
+              }
+            val checkArgumentTypes =
+              op.arguments
+                .zip(types)
+                .zip(at.domain.toList)
+                .forallM { case ((arg, argType), expectedType) =>
+                  ensureTypeMatches(arg, expectedType, argType)
+                }
 
+            locations.pointFieldLocation(abName, opName, op) *>
+              reportNotEnoughArguments *>
+              reportTooManyArguments *>
+              checkArgumentTypes.map(typesMatch =>
+                Option.when(
+                  typesMatch && at.domain.length == op.arguments.length
+                )(at)
+              )
+
+          case Some(t) =>
+            report
+              .error(op, s"Field `$opName` has non arrow type `$t` in `$abName`")
+              .as(None)
+          case None =>
+            val available = ab.arrowFields.keys.map(k => s"`$k`").mkString(", ")
+            report
+              .error(op, s"Arrow `$opName` not found in `$abName`, available: $available")
+              .as(None)
+        }
+      case t =>
+        /* NOTE: Arrows are only supported on services and abilities,
+           (`.copy(...)` for structs is resolved by separate method) */
+        report
+          .error(op, s"Arrow `$opName` not found in `$t`")
+          .as(None)
     }
   }
 
-  // TODO actually it's stateless, exists there just for reporting needs
-  override def resolveCopy(
-    token: IntoCopy[S],
+  override def resolveIntoCopy(
+    op: IntoCopy[S],
     rootT: Type,
-    args: NonEmptyList[(NamedArg[S], ValueRaw)]
-  ): State[X, Option[PropertyRaw]] =
+    types: NonEmptyList[Type]
+  ): State[X, Option[StructType]] = {
+    if (op.args.length != types.length)
+      internalError(s"Invalid arguments, lists do not match: ${op.args} and $types")
+
     rootT match {
       case st: StructType =>
-        args.forallM { case (arg, value) =>
-          val fieldName = arg.argName.value
-          st.fields.lookup(fieldName) match {
-            case Some(t) =>
-              ensureTypeMatches(arg.argValue, t, value.`type`)
-            case None =>
-              report.error(arg.argName, s"No field with name '$fieldName' in $rootT").as(false)
+        op.args
+          .zip(types)
+          .forallM { case (arg, argType) =>
+            val fieldName = arg.argName.value
+            st.fields.lookup(fieldName) match {
+              case Some(fieldType) =>
+                ensureTypeMatches(arg.argValue, fieldType, argType)
+              case None =>
+                report
+                  .error(
+                    arg.argName,
+                    s"No field with name '$fieldName' in `$st`"
+                  )
+                  .as(false)
+            }
           }
-        }.map(
-          Option.when(_)(
-            IntoCopyRaw(
-              st,
-              args.map { case (arg, value) =>
-                arg.argName.value -> value
-              }.toNem
-            )
+          .map(Option.when(_)(st))
+      case t =>
+        report
+          .error(
+            op,
+            s"Non data type `$t` does not support `.copy`"
           )
-        )
-
-      case _ =>
-        report.error(token, s"Expected $rootT to be a data type").as(None)
+          .as(None)
     }
+  }
 
-  // TODO actually it's stateless, exists there just for reporting needs
-  override def resolveIndex(
-    rootT: Type,
+  override def resolveIntoIndex(
     op: IntoIndex[S],
-    idx: ValueRaw
-  ): State[X, Option[PropertyRaw]] =
-    if (!ScalarType.i64.acceptsValueOf(idx.`type`))
-      report.error(op, s"Expected numeric index, got $idx").as(None)
-    else
-      rootT match {
-        case ot: OptionType =>
-          op.idx.fold(
-            State.pure(Some(IntoIndexRaw(idx, ot.element)))
-          )(v => report.error(v, s"Options might have only one element, use ! to get it").as(None))
-        case rt: CollectionType =>
-          State.pure(Some(IntoIndexRaw(idx, rt.element)))
-        case _ =>
-          report.error(op, s"Expected $rootT to be a collection type").as(None)
-      }
+    rootT: Type,
+    idxType: Type
+  ): State[X, Option[DataType]] =
+    ensureTypeOneOf(
+      op.idx.getOrElse(op),
+      ScalarType.integer,
+      idxType
+    ) *> (rootT match {
+      case ot: OptionType =>
+        op.idx.fold(State.pure(Some(ot.element)))(v =>
+          // TODO: Is this a right place to report this error?
+          // It is not a type error, but rather a syntax error
+          report.error(v, s"Options might have only one element, use ! to get it").as(None)
+        )
+      case rt: CollectionType =>
+        State.pure(Some(rt.element))
+      case t =>
+        report
+          .error(
+            op,
+            s"Non collection type `$t` does not support indexing"
+          )
+          .as(None)
+    })
 
   override def ensureValuesComparable(
     token: Token[S],
@@ -423,7 +470,7 @@ class TypesInterpreter[S[_], X](using
   ): State[X, Boolean] = for {
     /* Check that required fields are present
        among arguments and have correct types */
-    enough <- expected.fields.toNel.traverse { case (name, typ) =>
+    enough <- expected.fields.toNel.forallM { case (name, typ) =>
       arguments.lookup(name) match {
         case Some(arg -> givenType) =>
           ensureTypeMatches(arg.argValue, typ, givenType)
@@ -435,7 +482,7 @@ class TypesInterpreter[S[_], X](using
             )
             .as(false)
       }
-    }.map(_.forall(identity))
+    }
     expectedKeys = expected.fields.keys.toNonEmptyList
     /* Report unexpected arguments */
     _ <- arguments.toNel.traverse_ { case (name, arg -> typ) =>

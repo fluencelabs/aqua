@@ -370,6 +370,11 @@ sealed trait NamedType extends Type {
 
   def fields: NonEmptyMap[String, Type]
 
+  def arrowFields: Map[String, ArrowType] =
+    fields.toSortedMap.collect { case (name, at: ArrowType) =>
+      name -> at
+    }
+
   /**
    * Get all fields defined in this type and its fields of named type.
    * Paths to fields are returned **without** type name
