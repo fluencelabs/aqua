@@ -1,23 +1,40 @@
 aqua M
 
-export bugLng314
+export bugLng317
+
+service MyOp("op"):
+  identity(s: string) -> string
 
 ability WorkerJob:
-  runOnSingleWorker(w: string) -> string
+  runOnSingleWorker(w: string) -> []string
 
-func disjoint_run{WorkerJob}() -> -> string:
-  run = func () -> string:
-      r <- WorkerJob.runOnSingleWorker()
+func runJob(j: -> []string) -> []string:
+  <- j()
+
+func disjoint_run{WorkerJob}() -> -> []string:
+  run = func () -> []string:
+      r <- WorkerJob.runOnSingleWorker("a")
       <- r
   <- run
 
-func runJob(j: -> string) -> string:
-  <- j()
+func empty() -> string:
+  a = "empty"
+  <- a
 
-func bugLng314() -> string:
-   job2 = () -> string:
-     <- "strstrstr"
-   worker_job = WorkerJob(runOnSingleWorker = job2)
+func bugLng317() -> []string:
+
+   res: *string
+
+   outer = () -> string:
+     <- empty()
+
+   clos = () -> -> []string:
+     job2 = () -> []string:
+       res <- outer()
+       res <- MyOp.identity("identity")
+       <- res
+     <- job2
+   worker_job = WorkerJob(runOnSingleWorker = clos())
    subnet_job <- disjoint_run{worker_job}()
-   res <- runJob(subnet_job)
-   <- res
+   finalRes <- runJob(subnet_job)
+   <- finalRes
