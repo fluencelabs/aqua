@@ -82,9 +82,6 @@ func multipleClosuresBugLNG262() -> i8, i8:
     arr2 <- create(2)
     <- arr1(), arr2()
 
-service MyOp("op"):
-  identity(s: string) -> string
-
 ability WorkerJob:
   runOnSingleWorker(w: string) -> []string
 
