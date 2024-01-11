@@ -123,6 +123,7 @@ import { lng193BugCall } from "../examples/closureReturnRename.js";
 import {
   closuresCall,
   multipleClosuresLNG262BugCall,
+  lng317BugCall
 } from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
@@ -1110,6 +1111,11 @@ describe("Testing examples", () => {
   it("closures.aqua bug LNG-262", async () => {
     let result = await multipleClosuresLNG262BugCall();
     expect(result).toEqual([1, 2]);
+  });
+
+  it("closures.aqua bug LNG-317", async () => {
+      let result = await lng317BugCall();
+      expect(result).toEqual(["empty", "identity"]);
   });
 
   it("closureArrowCapture.aqua", async () => {

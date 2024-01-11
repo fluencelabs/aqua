@@ -299,8 +299,7 @@ case class ClosureTag(
 
   override def exportsVarNames: Set[String] = Set(func.name)
 
-  // FIXME: Is it correct?
-  override def usesVarNames: Set[String] = Set.empty
+  override def usesVarNames: Set[String] = func.capturedVars
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func =
