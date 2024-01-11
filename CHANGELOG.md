@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.3...aqua-v0.13.4) (2024-01-11)
+
+
+### Features
+
+* **compiler:** `for ... rec` [LNG-307] ([#1026](https://github.com/fluencelabs/aqua/issues/1026)) ([ae32f80](https://github.com/fluencelabs/aqua/commit/ae32f8027729bfd463cddc57f857c307e1e3c709))
+* **compiler:** Enhance message of type error [LNG-313]  ([#1033](https://github.com/fluencelabs/aqua/issues/1033)) ([d5cd77b](https://github.com/fluencelabs/aqua/commit/d5cd77bb865433fdff46fefb48875bf8f5e585dc))
+
+
+### Bug Fixes
+
+* **compiler:** Add outside context to closures [LNG-317] ([#1038](https://github.com/fluencelabs/aqua/issues/1038)) ([85f3ecd](https://github.com/fluencelabs/aqua/commit/85f3ecdf3985c8bd3a4c68fb827968b79516f9b3))
+* **compiler:** Passing closures with abilities [LNG-314] ([#1035](https://github.com/fluencelabs/aqua/issues/1035)) ([5241f52](https://github.com/fluencelabs/aqua/commit/5241f522d8bc58649f4048aada034e3cbe320eb7))
+* **compiler:** Type check arrow calls on services and abilities [LNG-315] ([#1037](https://github.com/fluencelabs/aqua/issues/1037)) ([d46ee03](https://github.com/fluencelabs/aqua/commit/d46ee0347fee94055a6690a4d4b8d0e1cf29430c))
+
 ## [0.13.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.2...aqua-v0.13.3) (2023-12-22)
 
 
