@@ -1,0 +1,22 @@
+aqua MultiRec
+
+export TestService, multiRecStream
+
+service TestService("test-srv"):
+  handle(i: i32) -> []i32
+
+func multiRecStream(init: i32, target: i32) -> []i32:
+  result: *string
+  loop: *i32
+  
+  loop <<- init
+  for l <- loop rec:
+    news <- TestService.handle(l)
+    for n <- news:
+      loop <<- n
+    if l == target:
+      result <<- "done"
+
+  join result!
+
+  <- loop

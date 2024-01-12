@@ -150,7 +150,7 @@ object Exports {
       (fieldName, _) = field
     } yield AbilityType.fullName(variable, fieldName)
 
-    state.filterKeys(names.toSet ++ related).toMap
+    state.view.filterKeys(names.toSet ++ related).toMap
   }
 
   // Get last linked VarModel

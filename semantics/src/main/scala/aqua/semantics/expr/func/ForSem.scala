@@ -1,11 +1,10 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.ForExpr
-import aqua.parser.expr.func.ForExpr.Mode
 import aqua.parser.lexer.{Name, ValueToken}
 import aqua.raw.Raw
 import aqua.raw.ops.*
-import aqua.raw.ops.ForTag
+import aqua.raw.ops.ForTag.Mode
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.expr.func.FuncOpSem
@@ -40,18 +39,17 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
           (iterable, ops) match {
             case (Some(vm), FuncOp(op)) =>
               FuncOpSem.restrictStreamsInScope(op).map { restricted =>
-                val innerTag = expr.mode.fold(SeqTag) {
-                  case ForExpr.Mode.ParMode => ParTag
-                  case ForExpr.Mode.TryMode => TryTag
+                val mode = expr.mode.fold(ForTag.Mode.SeqMode) {
+                  case ForExpr.Mode.ParMode => ForTag.Mode.ParMode
+                  case ForExpr.Mode.TryMode => ForTag.Mode.TryMode
+                  case ForExpr.Mode.RecMode => ForTag.Mode.RecMode
                 }
 
-                /**
-                 * `for ... par` => blocking (`never` as `last` in `fold`)
-                 * `for` and `for ... try` => non blocking (`null` as `last` in `fold`)
-                 */
-                val mode = expr.mode.fold(ForTag.Mode.NonBlocking) {
-                  case ForExpr.Mode.ParMode => ForTag.Mode.Blocking
-                  case Mode.TryMode => ForTag.Mode.NonBlocking
+                val innerTag = mode match {
+                  case ForTag.Mode.SeqMode => SeqTag
+                  case ForTag.Mode.ParMode => ParTag
+                  case ForTag.Mode.TryMode => TryTag
+                  case ForTag.Mode.RecMode => ParTag
                 }
 
                 val forTag = ForTag(expr.item.value, vm, mode).wrap(
@@ -61,9 +59,15 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                   )
                 )
 
-                // Fix: continue execution after fold par immediately, without finding a path out from par branches
-                if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
-                else forTag.toFuncOp
+                // Fix: continue execution after fold par immediately,
+                // without finding a path out from par branches
+                val result = mode match {
+                  case ForTag.Mode.ParMode | ForTag.Mode.RecMode =>
+                    ParTag.Detach.wrap(forTag)
+                  case _ => forTag
+                }
+
+                result.toFuncOp
               }
             case _ => Raw.error("Wrong body of the `for` expression").pure[F]
           }

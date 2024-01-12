@@ -1,6 +1,6 @@
 aqua Closure declares *
 
-export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262
+export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262, lng317Bug
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
@@ -81,3 +81,37 @@ func multipleClosuresBugLNG262() -> i8, i8:
     arr1 <- create(1)
     arr2 <- create(2)
     <- arr1(), arr2()
+
+ability WorkerJob:
+  runOnSingleWorker(w: string) -> []string
+
+func runJob(j: -> []string) -> []string:
+  <- j()
+
+func disjoint_run{WorkerJob}() -> -> []string:
+  run = func () -> []string:
+      r <- WorkerJob.runOnSingleWorker("a")
+      <- r
+  <- run
+
+func empty() -> string:
+  a = "empty"
+  <- a
+
+func lng317Bug() -> []string:
+
+   res: *string
+
+   outer = () -> string:
+     <- empty()
+
+   clos = () -> -> []string:
+     job2 = () -> []string:
+       res <- outer()
+       res <- MyOp.identity("identity")
+       <- res
+     <- job2
+   worker_job = WorkerJob(runOnSingleWorker = clos())
+   subnet_job <- disjoint_run{worker_job}()
+   finalRes <- runJob(subnet_job)
+   <- finalRes

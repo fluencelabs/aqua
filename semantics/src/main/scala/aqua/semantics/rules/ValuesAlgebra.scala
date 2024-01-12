@@ -17,6 +17,7 @@ import cats.data.{NonEmptyList, OptionT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
@@ -52,29 +53,38 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveField(rootType, op)
-      case op: IntoArrow[S] =>
-        for {
-          maybeArgs <- op.arguments.traverse(valueToRaw)
-          arrowProp <- maybeArgs.sequence.flatTraverse(
-            T.resolveArrow(rootType, op, _)
+        OptionT(T.resolveIntoField(op, rootType))
+          .map(
+            _.fold(
+              field = t => IntoFieldRaw(op.value, t),
+              property = t => FunctorRaw(op.value, t)
+            )
           )
-        } yield arrowProp
+          .value
+      case op: IntoArrow[S] =>
+        (for {
+          args <- op.arguments.traverse(arg => OptionT(valueToRaw(arg)))
+          argTypes = args.map(_.`type`)
+          arrowType <- OptionT(T.resolveIntoArrow(op, rootType, argTypes))
+        } yield IntoArrowRaw(op.name.value, arrowType, args)).value
       case op: IntoCopy[S] =>
         (for {
           _ <- OptionT.liftF(
             reportNamedArgsDuplicates(op.args)
           )
-          fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
-          prop <- OptionT(T.resolveCopy(op, rootType, fields))
-        } yield prop).value
-      case op: IntoIndex[S] =>
-        for {
-          maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
-          idxProp <- maybeIdx.flatTraverse(
-            T.resolveIndex(rootType, op, _)
+          args <- op.args.traverse(arg =>
+            OptionT(valueToRaw(arg.argValue)).map(
+              arg.argName.value -> _
+            )
           )
-        } yield idxProp
+          argsTypes = args.map { case (_, raw) => raw.`type` }
+          structType <- OptionT(T.resolveIntoCopy(op, rootType, argsTypes))
+        } yield IntoCopyRaw(structType, args.toNem)).value
+      case op: IntoIndex[S] =>
+        (for {
+          idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
+          valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
+        } yield IntoIndexRaw(idx, valueType)).value
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
@@ -136,27 +146,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             reportNamedArgsDuplicates(fields)
           )
           fieldsGiven <- fields
-            .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
+            .traverse(arg =>
+              OptionT(valueToRaw(arg.argValue)).map(valueRaw =>
+                arg.argName.value -> (arg, valueRaw)
+              )
+            )
             .map(_.toNem) // Take only last value for a field
-          fieldsGivenTypes = fieldsGiven.map(_.`type`)
-          generated <- OptionT.fromOption(
-            resolvedType match {
-              case struct: StructType =>
-                (
-                  struct.copy(fields = fieldsGivenTypes),
-                  MakeStructRaw(fieldsGiven, struct)
-                ).some
-              case ability: AbilityType =>
-                (
-                  ability.copy(fields = fieldsGivenTypes),
-                  AbilityRaw(fieldsGiven, ability)
-                ).some
-            }
-          )
-          (genType, genData) = generated
+          fieldsGivenRaws = fieldsGiven.map { case (_, raw) => raw }
+          fieldsGivenTypes = fieldsGiven.map(_.map(_.`type`))
+          generated = resolvedType match {
+            case struct: StructType =>
+              MakeStructRaw(fieldsGivenRaws, struct)
+            case ability: AbilityType =>
+              AbilityRaw(fieldsGivenRaws, ability)
+          }
           data <- OptionT.whenM(
-            T.ensureTypeMatches(dvt, resolvedType, genType)
-          )(genData.pure)
+            T.ensureTypeConstructibleFrom(dvt, resolvedType, fieldsGivenTypes)
+          )(generated.pure)
         } yield data).value
 
       case ct @ CollectionToken(_, values) =>

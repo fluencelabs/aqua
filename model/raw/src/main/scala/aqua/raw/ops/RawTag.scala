@@ -183,16 +183,24 @@ case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends S
 
 object ForTag {
 
+  /**
+   *  | Syntax      | mode | fold last | canon | inner tag | par null wrap |
+   *  |-------------|:----:|:---------:|:-----:|:---------:|:-------------:|
+   *  | for ...     | seq  |   null    |   +   |    seq    |       -       |
+   *  | for ... par | par  |   never   |   +   |    par    |       +       |
+   *  | for ... try | try  |   null    |   +   |    try    |       -       |
+   *  | for ... rec | rec  |   never   |   -   |    par    |       +       |
+   *  | parseq ...  | par  |   never   |   +   |    par    |       -       |
+   */
   enum Mode {
-    case Blocking
-    case NonBlocking
+    case ParMode, SeqMode, TryMode, RecMode
   }
 
-  def blocking(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.Blocking)
+  def par(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.ParMode)
 
-  def nonBlocking(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.NonBlocking)
+  def seq(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.SeqMode)
 }
 
 case class CallArrowRawTag(
@@ -291,8 +299,7 @@ case class ClosureTag(
 
   override def exportsVarNames: Set[String] = Set(func.name)
 
-  // FIXME: Is it correct?
-  override def usesVarNames: Set[String] = Set.empty
+  override def usesVarNames: Set[String] = func.capturedVars
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func =

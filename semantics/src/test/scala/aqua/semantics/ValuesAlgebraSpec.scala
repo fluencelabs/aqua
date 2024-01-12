@@ -65,12 +65,30 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
   def stream(values: ValueToken[Id]*): CollectionToken[Id] =
     CollectionToken[Id](CollectionToken.Mode.StreamMode, values.toList)
 
+  def serviceCall(
+    srv: String,
+    method: String,
+    args: List[ValueToken[Id]] = Nil
+  ): PropertyToken[Id] =
+    PropertyToken(
+      variable(srv),
+      NonEmptyList.of(
+        IntoArrow(
+          Name[Id](method),
+          args
+        )
+      )
+    )
+
   def allPairs[A](list: List[A]): List[(A, A)] = for {
     a <- list
     b <- list
   } yield (a, b)
 
-  def genState(vars: Map[String, Type] = Map.empty) = {
+  def genState(
+    vars: Map[String, Type] = Map.empty,
+    types: Map[String, Type] = Map.empty
+  ) = {
     val init = RawContext.blank.copy(
       parts = Chain
         .fromSeq(ConstantRaw.defaultConstants())
@@ -88,6 +106,10 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           ) :: _
         )
       )
+      .focus(_.types)
+      .modify(types.foldLeft(_) { case (st, (name, t)) =>
+        st.defineType(NamedTypeToken(name), t)
+      })
   }
 
   def valueOfType(t: Type)(
@@ -625,5 +647,73 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     inside(res) { case Some(value) =>
       value.`type` shouldBe OptionType(BottomType)
     }
+  }
+
+  it should "type check service calls" in {
+    val srvName = "TestSrv"
+    val methodName = "testMethod"
+    val methodType = ArrowType(
+      ProductType(ScalarType.i8 :: ScalarType.string :: Nil),
+      ProductType(Nil)
+    )
+
+    def test(args: List[ValueToken[Id]], vars: Map[String, Type] = Map.empty) = {
+      val state = genState(
+        vars,
+        types = Map(
+          srvName -> ServiceType(
+            srvName,
+            NonEmptyMap.of(
+              methodName -> methodType
+            )
+          )
+        )
+      )
+
+      val call = serviceCall(srvName, methodName, args)
+
+      val alg = algebra()
+      val (st, res) = alg
+        .valueToRaw(call)
+        .run(state)
+        .value
+
+      res shouldBe None
+      atLeast(1, st.errors.toList) shouldBe a[RulesViolated[Id]]
+    }
+
+    // not enough arguments
+    // TestSrv.testMethod()
+    test(List.empty)
+    // TestSrv.testMethod(42)
+    test(literal("42", LiteralType.unsigned) :: Nil)
+    // TestSrv.testMethod(var)
+    test(variable("var") :: Nil, Map("var" -> ScalarType.i8))
+
+    // wrong argument type
+    // TestSrv.testMethod([42, var])
+    test(
+      array(literal("42", LiteralType.unsigned), variable("var")) :: Nil,
+      Map("var" -> ScalarType.i8)
+    )
+    // TestSrv.testMethod(42, var)
+    test(
+      literal("42", LiteralType.unsigned) :: variable("var") :: Nil,
+      Map("var" -> ScalarType.i64)
+    )
+    // TestSrv.testMethod("test", var)
+    test(
+      literal("test", LiteralType.string) :: variable("var") :: Nil,
+      Map("var" -> ScalarType.string)
+    )
+
+    // too many arguments
+    // TestSrv.testMethod(42, "test", var)
+    test(
+      literal("42", LiteralType.unsigned) ::
+        literal("test", LiteralType.string) ::
+        variable("var") :: Nil,
+      Map("var" -> ScalarType.string)
+    )
   }
 }

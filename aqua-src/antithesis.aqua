@@ -1,9 +1,40 @@
-export arr
+aqua M
 
-aqua Aaa
+export bugLng317
 
+service MyOp("op"):
+  identity(s: string) -> string
 
+ability WorkerJob:
+  runOnSingleWorker(w: string) -> []string
 
-func arr() -> string:
-  n = "str"
-  <- n
+func runJob(j: -> []string) -> []string:
+  <- j()
+
+func disjoint_run{WorkerJob}() -> -> []string:
+  run = func () -> []string:
+      r <- WorkerJob.runOnSingleWorker("a")
+      <- r
+  <- run
+
+func empty() -> string:
+  a = "empty"
+  <- a
+
+func bugLng317() -> []string:
+
+   res: *string
+
+   outer = () -> string:
+     <- empty()
+
+   clos = () -> -> []string:
+     job2 = () -> []string:
+       res <- outer()
+       res <- MyOp.identity("identity")
+       <- res
+     <- job2
+   worker_job = WorkerJob(runOnSingleWorker = clos())
+   subnet_job <- disjoint_run{worker_job}()
+   finalRes <- runJob(subnet_job)
+   <- finalRes

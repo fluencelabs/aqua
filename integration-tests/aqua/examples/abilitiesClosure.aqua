@@ -1,0 +1,23 @@
+aqua M
+
+export bugLNG314
+
+ability WorkerJob:
+  runOnSingleWorker(w: string) -> string
+
+func disjoint_run{WorkerJob}() -> -> string:
+  run = func () -> string:
+      r <- WorkerJob.runOnSingleWorker("worker")
+      <- r
+  <- run
+
+func runJob(j: -> string) -> string:
+  <- j()
+
+func bugLNG314() -> string:
+   job2 = () -> string:
+     <- "strstrstr"
+   worker_job = WorkerJob(runOnSingleWorker = job2)
+   subnet_job <- disjoint_run{worker_job}()
+   res <- runJob(subnet_job)
+   <- res

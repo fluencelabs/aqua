@@ -41,6 +41,9 @@ import {
   returnSrvAsAbilityCall,
 } from "../examples/abilityCall.js";
 import {
+  bugLNG314Call,
+} from "../examples/abilityClosureCall.js";
+import {
   nilLengthCall,
   nilLiteralCall,
   returnNilCall,
@@ -90,7 +93,7 @@ import {
   streamArgsCall,
   modifyStreamCall,
   returnDerivedStreamCall,
-  lng280BugWithForEmptyStreamFuncCall
+  lng280BugWithForEmptyStreamFuncCall,
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall.js";
@@ -120,6 +123,7 @@ import { lng193BugCall } from "../examples/closureReturnRename.js";
 import {
   closuresCall,
   multipleClosuresLNG262BugCall,
+  lng317BugCall
 } from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
@@ -135,7 +139,6 @@ import {
   joinIdxLocalCall,
   joinIdxRelayCall,
 } from "../examples/joinCall.js";
-import { recursiveStreamsCall } from "../examples/recursiveStreamsCall.js";
 import { renameVarsCall } from "../examples/renameVars.js";
 import {
   arraySugarCall,
@@ -161,6 +164,12 @@ import {
   returnArrowCall,
   returnArrowChainCall,
 } from "../examples/returnArrowCall.js";
+import { rangeCall } from "../examples/recursiveStreams/rangeCall.js";
+import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
+import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js";
+import { multiRecStreamCall } from "../examples/recursiveStreams/multiRecStreamCall.js";
+import { pipelineStreamCall } from "../examples/recursiveStreams/pipelineCall.js";
+import { remoteRecStreamCall } from "../examples/recursiveStreams/remoteRecCall.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -215,6 +224,77 @@ describe("Testing examples", () => {
 
   afterAll(async () => {
     await stop();
+  });
+
+  describe("for ... rec", () => {
+    const range = (start: number, end: number) =>
+      Array.from({ length: end - start }, (v, k) => k + start);
+
+    it("range", async () => {
+      for (const i of range(-5, 5)) {
+        for (const j of range(-5, 5)) {
+          const result = await rangeCall(i, j);
+          if (i < j) {
+            expect(result).toEqual(range(i, j));
+          } else {
+            expect(result).toEqual([]);
+          }
+        }
+      }
+    }, 15000);
+
+    /**
+     * This test does not work due to Aqua VM
+     */
+    it.skip("nested", async () => {
+      for (const i of range(0, 10)) {
+        const result = await nestedCall(i);
+        expect(result).toEqual(range(0, i).flatMap((x) => range(0, x + 1)));
+      }
+    }, 15000);
+
+    it("yes|no stream", async () => {
+      for (const i of range(1, 10)) {
+        const yesNo = await yesNoStreamCall(i);
+        expect(yesNo).toEqual(
+          range(0, i)
+            .map((_) => "yes")
+            .concat(["no"]),
+        );
+      }
+    }, 15000);
+
+    it("multi rec stream", async () => {
+      const handle = (i: number) => {
+        if (i % 3 === 0) return [i + 1];
+        if (i % 3 === 1) return [i + 1, i + 2];
+        return [];
+      };
+      for (const i of range(1, 10)) {
+        const loop = await multiRecStreamCall(0, i, handle);
+        range(0, i + 1).forEach((j) => {
+          expect(loop).toContain(j);
+        });
+      }
+    }, 15000);
+
+    it("pipeline", async () => {
+      for (const i of range(1, 10)) {
+        const result = await pipelineStreamCall(0, i);
+        expect(result.sort()).toEqual(range(0, i + 1));
+      }
+    }, 15000);
+
+    /**
+     * This test does not work due to `for ... rec`
+     * not taking topology into account
+     */
+    it.skip("remote rec", async () => {
+      for (const i of range(0, 10)) {
+        const result = await remoteRecStreamCall(0, i, peer2);
+        expect(result).toEqual(range(0, i + 1));
+      }
+    }, 15000);
   });
 
   it("callArrow.aqua args bug 426", async () => {
@@ -590,6 +670,11 @@ describe("Testing examples", () => {
     expect(result).toStrictEqual(["default-id", "resolved-id"]);
   });
 
+  it("abilitiesClosure.aqua bug LNG-314", async () => {
+      let result = await bugLNG314Call();
+      expect(result).toEqual("strstrstr");
+    });
+
   it("functors.aqua LNG-119 bug", async () => {
     let result = await bugLng119Call();
     expect(result).toEqual([1]);
@@ -630,29 +715,41 @@ describe("Testing examples", () => {
   it.skip("streamArgs.aqua LNG-280 with for", async () => {
     let result = await lng280BugWithForCall();
     expect(result).toEqual([
-        "valueUseStream",
-        "valueReturnStream",
-        "valueUseStream",
-        "valueReturnStream",
-        "valueUseStream",
-        "valueReturnStream"
+      "valueUseStream",
+      "valueReturnStream",
+      "valueUseStream",
+      "valueReturnStream",
+      "valueUseStream",
+      "valueReturnStream",
     ]);
   });
 
   it("streamArgs.aqua LNG-280 with for and anonymous stream", async () => {
     let result = await lng280BugWithForAnonStreamCall();
-    expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
+    expect(result).toEqual([
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+      [1, 5],
+    ]);
   });
 
   it("streamArgs.aqua LNG-280 with for and anonymous stream from function", async () => {
-      let result = await lng280BugWithForEmptyStreamFuncCall();
-      expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
-    });
+    let result = await lng280BugWithForEmptyStreamFuncCall();
+    expect(result).toEqual([
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+      [1, 5],
+    ]);
+  });
 
   it.skip("streamArgs.aqua return derived stream", async () => {
-      let result = await returnDerivedStreamCall();
-      expect(result).toEqual([1]);
-    });
+    let result = await returnDerivedStreamCall();
+    expect(result).toEqual([1]);
+  });
 
   it("streamResults.aqua", async () => {
     let streamResultsResult = await streamResultsCall();
@@ -820,15 +917,6 @@ describe("Testing examples", () => {
   // it('closures.aqua LNG-58 bug', async () => {
   //     let res = await lng58Bug()
   //     expect(res).toEqual("ok")
-  // });
-
-  // TODO: uncomment
-  // it('recursiveStreams.aqua', async () => {
-  //     let [sucList, loopList] = await recursiveStreamsCall();
-  //     console.log(sucList);
-  //     console.log(loopList);
-  //     expect(loopList).toEqual(['yes', 'yes', 'yes', 'yes', 'no']);
-  //     expect(sucList.length).toEqual(5);
   // });
 
   it("renameVars.aqua", async () => {
@@ -1023,6 +1111,11 @@ describe("Testing examples", () => {
   it("closures.aqua bug LNG-262", async () => {
     let result = await multipleClosuresLNG262BugCall();
     expect(result).toEqual([1, 2]);
+  });
+
+  it("closures.aqua bug LNG-317", async () => {
+      let result = await lng317BugCall();
+      expect(result).toEqual(["empty", "identity"]);
   });
 
   it("closureArrowCapture.aqua", async () => {
