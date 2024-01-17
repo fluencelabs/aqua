@@ -3,15 +3,8 @@ package aqua.semantics.rules.mangler
 import cats.kernel.Monoid
 
 final case class ManglerState(
-  forbidden: Set[String] = Set.empty
-) {
-
-  def isForbidden(name: String): Boolean =
-    forbidden.contains(name)
-
-  def forbid(name: String): ManglerState =
-    copy(forbidden = forbidden + name)
-}
+  forbidden: Map[String, Int] = Map.empty
+)
 
 object ManglerState {
 

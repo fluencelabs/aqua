@@ -32,6 +32,9 @@ case class ManglerState(lastNumbers: Map[String, Int] = Map.empty)
 object Mangler {
   def apply[S](implicit mangler: Mangler[S]): Mangler[S] = mangler
 
+  private def genName(name: String, n: Int) =
+    s"$name-$n"
+
   implicit object Simple extends Mangler[ManglerState] {
     val getForbiddenNames: State[ManglerState, ManglerState] = State.get
 
@@ -41,13 +44,15 @@ object Mangler {
           introduce.foldLeft((forbidden.lastNumbers, Map.empty[String, String])) {
             case ((lastNumbers, acc), name) =>
               val (newName, newNumber) =
-                lastNumbers.get(name).map(n => (s"$name-$n", n + 1)).getOrElse((name, 0))
+                lastNumbers.get(name).map(n => (genName(name, n), n + 1)).getOrElse((name, 0))
               (lastNumbers + (name -> newNumber), acc + (name -> newName))
           }
         State.modify[ManglerState](st => st.copy(lastNumbers = newLastNumbers)).map(_ => newNames)
       )
 
     def forbid(names: Set[String]): State[ManglerState, Unit] =
-      State.modify(st => st.copy(lastNumbers = st.lastNumbers ++ names.map(_ -> 0)))
+      State.modify(st =>
+        st.copy(lastNumbers = st.lastNumbers ++ names.map(n => n -> st.lastNumbers.getOrElse(n, 0)))
+      )
   }
 }
