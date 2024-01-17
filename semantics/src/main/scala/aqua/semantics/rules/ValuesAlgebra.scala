@@ -53,29 +53,38 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveField(rootType, op)
-      case op: IntoArrow[S] =>
-        for {
-          maybeArgs <- op.arguments.traverse(valueToRaw)
-          arrowProp <- maybeArgs.sequence.flatTraverse(
-            T.resolveArrow(rootType, op, _)
+        OptionT(T.resolveIntoField(op, rootType))
+          .map(
+            _.fold(
+              field = t => IntoFieldRaw(op.value, t),
+              property = t => FunctorRaw(op.value, t)
+            )
           )
-        } yield arrowProp
+          .value
+      case op: IntoArrow[S] =>
+        (for {
+          args <- op.arguments.traverse(arg => OptionT(valueToRaw(arg)))
+          argTypes = args.map(_.`type`)
+          arrowType <- OptionT(T.resolveIntoArrow(op, rootType, argTypes))
+        } yield IntoArrowRaw(op.name.value, arrowType, args)).value
       case op: IntoCopy[S] =>
         (for {
           _ <- OptionT.liftF(
             reportNamedArgsDuplicates(op.args)
           )
-          fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
-          prop <- OptionT(T.resolveCopy(op, rootType, fields))
-        } yield prop).value
-      case op: IntoIndex[S] =>
-        for {
-          maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
-          idxProp <- maybeIdx.flatTraverse(
-            T.resolveIndex(rootType, op, _)
+          args <- op.args.traverse(arg =>
+            OptionT(valueToRaw(arg.argValue)).map(
+              arg.argName.value -> _
+            )
           )
-        } yield idxProp
+          argsTypes = args.map { case (_, raw) => raw.`type` }
+          structType <- OptionT(T.resolveIntoCopy(op, rootType, argsTypes))
+        } yield IntoCopyRaw(structType, args.toNem)).value
+      case op: IntoIndex[S] =>
+        (for {
+          idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
+          valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
+        } yield IntoIndexRaw(idx, valueType)).value
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =

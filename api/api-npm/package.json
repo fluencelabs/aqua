@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-api",
-  "version": "0.13.3",
+  "version": "0.13.4",
   "description": "Aqua API",
   "type": "module",
   "main": "index.js",

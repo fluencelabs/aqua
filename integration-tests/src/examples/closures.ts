@@ -5,6 +5,7 @@ import {
   registerLocalSrv,
   closureOut2,
   lng58Bug,
+  lng317Bug,
   multipleClosuresBugLNG262
 } from "../compiled/examples/closures.js";
 import { config } from "../config.js";
@@ -36,4 +37,8 @@ export async function lng58CBugCall(): Promise<string> {
 
 export async function multipleClosuresLNG262BugCall(): Promise<[number, number]> {
   return multipleClosuresBugLNG262();
+}
+
+export async function lng317BugCall(): Promise<string[]> {
+  return lng317Bug();
 }

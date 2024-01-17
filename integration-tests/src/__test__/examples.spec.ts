@@ -40,9 +40,7 @@ import {
   multipleAbilityWithClosureCall,
   returnSrvAsAbilityCall,
 } from "../examples/abilityCall.js";
-import {
-  bugLNG314Call,
-} from "../examples/abilityClosureCall.js";
+import { bugLNG314Call } from "../examples/abilityClosureCall.js";
 import {
   nilLengthCall,
   nilLiteralCall,
@@ -123,6 +121,7 @@ import { lng193BugCall } from "../examples/closureReturnRename.js";
 import {
   closuresCall,
   multipleClosuresLNG262BugCall,
+  lng317BugCall,
 } from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
@@ -184,22 +183,12 @@ import log from "loglevel";
 // log.setDefaultLevel("debug")
 
 async function start() {
-  console.log("CONNECTING TO FIRST:");
-  Fluence.onConnectionStateChange((s) => {
-    console.log(s);
-  });
   await Fluence.connect(relay1, {});
-  const cl = await Fluence.getClient();
-  peer1 = cl;
-  selfPeerId = cl.getPeerId();
-  console.log("CONNECTED");
 
-  peer2 = await createClient(relay2, {});
-  console.log("CONNECTING TO SECOND:");
-  peer2.onConnectionStateChange((s) => {
-    console.log(s);
-  });
-  console.log("CONNECTED");
+  peer1 = Fluence.getClient();
+  selfPeerId = peer1.getPeerId();
+
+  peer2 = await createClient(relay2);
 }
 
 async function stop() {
@@ -670,9 +659,9 @@ describe("Testing examples", () => {
   });
 
   it("abilitiesClosure.aqua bug LNG-314", async () => {
-      let result = await bugLNG314Call();
-      expect(result).toEqual("strstrstr");
-    });
+    let result = await bugLNG314Call();
+    expect(result).toEqual("strstrstr");
+  });
 
   it("functors.aqua LNG-119 bug", async () => {
     let result = await bugLng119Call();
@@ -1110,6 +1099,11 @@ describe("Testing examples", () => {
   it("closures.aqua bug LNG-262", async () => {
     let result = await multipleClosuresLNG262BugCall();
     expect(result).toEqual([1, 2]);
+  });
+
+  it("closures.aqua bug LNG-317", async () => {
+    let result = await lng317BugCall();
+    expect(result).toEqual(["empty", "identity"]);
   });
 
   it("closureArrowCapture.aqua", async () => {
