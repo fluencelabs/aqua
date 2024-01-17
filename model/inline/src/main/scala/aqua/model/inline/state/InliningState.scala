@@ -23,7 +23,7 @@ import scribe.Logging
  *   for [[Counter]]
  */
 case class InliningState(
-  noNames: Set[String] = Set.empty,
+  noNames: ManglerState = ManglerState(),
   resolvedExports: Map[String, ValueModel] = Map.empty,
   resolvedArrows: Map[String, FuncArrow] = Map.empty,
   instructionCounter: Int = 0

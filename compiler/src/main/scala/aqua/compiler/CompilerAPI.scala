@@ -24,8 +24,6 @@ object CompilerAPI extends Logging {
   ): Chain[AquaProcessed[I]] = {
     logger.trace("linking finished")
 
-    println("files with context: " + filesWithContext.keys)
-
     filesWithContext.toList
       // Process all contexts maintaining Cache
       .traverse { case (i, rawContext) =>
@@ -38,47 +36,6 @@ object CompilerAPI extends Logging {
         } yield AquaProcessed(i, exp)
       }
       .run(AquaContext.Cache())
-      .map { case (cache, a) =>
-        println(
-          cache.data.toList
-            .flatMap(_._2.funcs.keys)
-            .groupBy(identity)
-            .view
-            .values
-            .map(l => (l.headOption, l.size))
-            .toList.sortBy(_._2).reverse
-        )
-        println(
-          cache.data.toList
-            .flatMap(_._1.parts.map(_._2.name).toList)
-            .groupBy(identity)
-            .view
-            .values
-            .map(l => (l.headOption, l.size))
-            .toList.sortBy(_._2).reverse
-        )
-        println("modules rawcontext: ")
-        println(
-          cache.data.toList
-            .flatMap(_._1.module.toList)
-            .groupBy(identity)
-            .view
-            .values
-            .map(l => (l.headOption, l.size))
-            .toList.sortBy(_._2).reverse
-        )
-        println("modules aquacontext: ")
-        println(
-          cache.data.toList
-            .flatMap(_._2.module.toList)
-            .groupBy(identity)
-            .view
-            .values
-            .map(l => (l.headOption, l.size))
-            .toList.sortBy(_._2).reverse
-        )
-        a
-      }
       // Convert result List to Chain
       .map(a => Chain.fromSeq(a))
       .value

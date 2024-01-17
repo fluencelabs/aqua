@@ -10,7 +10,6 @@ import cats.data.Chain
 import cats.data.NonEmptyMap
 import cats.syntax.monoid.*
 import cats.syntax.option.*
-
 import scala.collection.immutable.SortedMap
 
 /**

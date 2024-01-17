@@ -4,62 +4,50 @@ import cats.data.State
 
 trait Mangler[S] {
   self =>
-  def getForbiddenNames: State[S, Set[String]]
-
-  def findNewNames(introduce: Set[String]): State[S, Map[String, String]]
-
-  def findNewName(introduce: String): State[S, String] =
-    findNewNames(Set(introduce)).map(_.getOrElse(introduce, introduce))
+  def getForbiddenNames: State[S, ManglerState]
 
   def findAndForbidName(introduce: String): State[S, String] =
-    for {
-      n <- findNewName(introduce)
-      _ <- forbid(Set(n))
-    } yield n
+    findAndForbidNames(Set(introduce)).map(_.getOrElse(introduce, introduce))
 
-  def findAndForbidNames(introduce: Set[String]): State[S, Map[String, String]] =
-    for {
-      n <- findNewNames(introduce)
-      _ <- forbid(introduce ++ n.values.toSet)
-    } yield n
+  def findAndForbidNames(introduce: Set[String]): State[S, Map[String, String]]
 
   def forbid(names: Set[String]): State[S, Unit]
-
-  def forbidName(name: String): State[S, Unit] =
-    forbid(Set(name))
 
   def transformS[R](f: R => S, g: (R, S) => R): Mangler[R] =
     new Mangler[R] {
 
-      val getForbiddenNames: State[R, Set[String]] =
+      val getForbiddenNames: State[R, ManglerState] =
         self.getForbiddenNames.transformS(f, g)
-
-      def findNewNames(introduce: Set[String]): State[R, Map[String, String]] =
-        self.findNewNames(introduce).transformS(f, g)
 
       def forbid(names: Set[String]): State[R, Unit] =
         self.forbid(names).transformS(f, g)
+
+      def findAndForbidNames(introduce: Set[String]): State[R, Map[String, String]] =
+        self.findAndForbidNames(introduce).transformS(f, g)
     }
 }
+
+case class ManglerState(lastNumbers: Map[String, Int] = Map.empty)
 
 object Mangler {
   def apply[S](implicit mangler: Mangler[S]): Mangler[S] = mangler
 
-  implicit object Simple extends Mangler[Set[String]] {
-    val getForbiddenNames: State[Set[String], Set[String]] = State.get
+  implicit object Simple extends Mangler[ManglerState] {
+    val getForbiddenNames: State[ManglerState, ManglerState] = State.get
 
-    def findNewNames(introduce: Set[String]): State[Set[String], Map[String, String]] =
-      getForbiddenNames.map(forbidden =>
-        (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
-          acc + (name -> LazyList
-            .from(0)
-            .map(name + "-" + _)
-            .dropWhile(n => forbidden(n) || introduce(n) || acc.contains(n))
-            .head)
-        }
+    def findAndForbidNames(introduce: Set[String]): State[ManglerState, Map[String, String]] =
+      getForbiddenNames.flatMap(forbidden =>
+        val (newLastNumbers, newNames) =
+          introduce.foldLeft((forbidden.lastNumbers, Map.empty[String, String])) {
+            case ((lastNumbers, acc), name) =>
+              val (newName, newNumber) =
+                lastNumbers.get(name).map(n => (s"$name-$n", n + 1)).getOrElse((name, 0))
+              (lastNumbers + (name -> newNumber), acc + (name -> newName))
+          }
+        State.modify[ManglerState](st => st.copy(lastNumbers = newLastNumbers)).map(_ => newNames)
       )
 
-    def forbid(names: Set[String]): State[Set[String], Unit] =
-      State.modify(_ ++ names)
+    def forbid(names: Set[String]): State[ManglerState, Unit] =
+      State.modify(st => st.copy(lastNumbers = st.lastNumbers ++ names.map(_ -> 0)))
   }
 }

@@ -1,9 +1,8 @@
 package aqua.semantics
 
 import aqua.parser.Ast
-import aqua.semantics.SemanticError
 
-import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, ValidatedNec, Writer}
+import cats.data.{Chain, EitherT, NonEmptyChain, Writer}
 
 trait Semantics[S[_], C] {
 
