@@ -106,9 +106,9 @@ object Linker extends Logging {
             logger.debug(s"${m.id} dependsOn $importKeys")
             val deps: T => T =
               importKeys.map(acc).foldLeft(identity[T]) { case (fAcc, f) =>
-//                logger.debug("COMBINING ONE TIME ")
+                logger.debug("COMBINING ONE TIME ")
                 t => {
-//                  logger.debug(s"call combine $t")
+                  logger.debug(s"call combine $t")
                   fAcc(t) |+| f(t)
                 }
               }

@@ -73,19 +73,14 @@ object CompilerAPI extends Logging {
     val compiler = getAquaCompiler[F, E, I, S](config)
 
     for {
-      _ <- logger.trace("Start compilation").pure[F]
       compiledRaw <- compiler.compileRaw(sources, parser)
-      _ <- logger.trace("Compile raw ended").pure[F]
       compiledV = compiledRaw.map(toAquaProcessed)
-      _ <- logger.trace("Aqua processed ended").pure[F]
       _ <- airValidator.init()
       result <- compiledV.flatTraverse { compiled =>
         compiled.traverse { ap =>
           logger.trace("generating output...")
           val res = backend.transform(ap.context)
-          logger.trace("end transforming...")
           val generated = backend.generate(res)
-          logger.trace("end generating...")
           val air = generated.toList.flatMap(_.air)
           val compiled = AquaCompiled(
             sourceId = ap.id,
@@ -103,7 +98,6 @@ object CompilerAPI extends Logging {
             )
         }.map(_.sequence.toEither.toEitherT)
       }
-      _ <- logger.trace("Writing result ended").pure[F]
     } yield result
   }
 

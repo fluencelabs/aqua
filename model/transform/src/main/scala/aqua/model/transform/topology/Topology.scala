@@ -61,10 +61,10 @@ case class Topology private (
       .flatMap(tops =>
         cursor.op match {
           case CaptureTopologyModel(name) =>
-//            logger.trace(s"Capturing topology `$name`")
+            logger.trace(s"Capturing topology `$name`")
             Eval.now(tops + (name -> this))
           case x =>
-//            logger.trace(s"Skip $x")
+            logger.trace(s"Skip $x")
             cursor.toLastChild
               .traverse(_.topology.capturedTopologies)
               .map(_.getOrElse(Map.empty) ++ tops)
@@ -327,16 +327,16 @@ object Topology extends Logging {
     }
 
     val resolvedCofree = cursor.traverse(wrap) { rc =>
-//      logger.debug(s"<:> $rc")
+      logger.debug(s"<:> $rc")
       val currI = nextI
       val resolved = MakeRes
         .resolve(rc.topology.currentPeerId, currI)
         .lift
         .apply(rc.op)
 
-//      logger.trace("Resolved: " + resolved)
+      logger.trace("Resolved: " + resolved)
 
-//      if (debug) printDebugInfo(rc, currI)
+      if (debug) printDebugInfo(rc, currI)
 
       val chainZipperEv = resolved.traverse(tree =>
         (
@@ -350,7 +350,7 @@ object Topology extends Logging {
       OptionT(chainZipperEv)
     }
 
-//    logger.trace("Resolved Cofree: " + resolvedCofree.value.map(_.forceAll))
+    logger.trace("Resolved Cofree: " + resolvedCofree.value.map(_.forceAll))
 
     resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
       case None =>
@@ -416,12 +416,12 @@ object Topology extends Logging {
     tree: ResolvedOp.Tree
   ): Eval[Unit] =
     Eval.later {
-      /*if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+      if (cz.next.nonEmpty || cz.prev.nonEmpty) {
         logger.debug(s"Resolved   $rc -> $tree")
         if (cz.prev.nonEmpty)
           logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
         if (cz.next.nonEmpty)
           logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-      } else logger.debug(s"EMPTY    $rc -> $tree")*/
+      } else logger.debug(s"EMPTY    $rc -> $tree")
     }
 }
