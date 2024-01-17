@@ -52,7 +52,7 @@ object Mangler {
 
     def forbid(names: Set[String]): State[ManglerState, Unit] =
       State.modify(st =>
-        st.copy(lastNumbers = st.lastNumbers ++ names.map(n => n -> st.lastNumbers.getOrElse(n, 0)))
+        st.copy(lastNumbers = st.lastNumbers ++ names.map(n => n -> st.lastNumbers.getOrElse(n, -1)))
       )
   }
 }

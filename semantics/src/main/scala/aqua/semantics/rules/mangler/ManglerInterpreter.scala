@@ -14,8 +14,6 @@ class ManglerInterpreter[X](using
       s <- get
       newNameAndNum = s.forbidden.get(name).map(n => genName(name, n + 1) -> (n + 1)).getOrElse(genName(name, 0) -> 0)
       (newName, newNum) = newNameAndNum
-      _ = println("newName = " + newName)
-      _ = println("newNum = " + newNum)
       _ <- modify(st => st.copy(forbidden = st.forbidden + (name -> newNum)))
     } yield newName
 
