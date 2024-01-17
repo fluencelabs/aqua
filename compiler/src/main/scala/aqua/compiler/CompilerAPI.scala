@@ -35,9 +35,9 @@ object CompilerAPI extends Logging {
           _ <- State.set(expCache)
         } yield AquaProcessed(i, exp)
       }
-      .run(AquaContext.Cache())
+      .runA(AquaContext.Cache())
       // Convert result List to Chain
-      .map(a => Chain.fromSeq(a))
+      .map(Chain.fromSeq)
       .value
   }
 
