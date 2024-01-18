@@ -1,9 +1,9 @@
 package aqua.types
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import cats.data.NonEmptyMap
 import cats.syntax.partialOrder._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class IntersectTypesSpec extends AnyFlatSpec with Matchers {
 

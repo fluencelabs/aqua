@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
   import AquaSpec.{given, *}
 
-  private val parser = Parser.spanParser
+  private val parser = RootExpr.ast0
 
   "func header" should "parse" in {
     funcExpr("func some") should be(
@@ -237,7 +237,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
 
     val tree = parser.parseAll(script).value.toEither.value
 
-    val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
+    val qTree = tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
       acc.enqueue(tag.mapK(nat))
     }
 
@@ -311,8 +311,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         |""".stripMargin
 
     inside(parser.parseAll(script).value) { case Valid(ast) =>
-      ast
-        .cata[Int]((expr, results) =>
+      Cofree.cata[Chain, Expr[Span.S], Int](ast)((expr, results) =>
           // Count `if`s inside the tree
           Eval.later(results.sumAll + (expr match {
             case IfExpr(_) => 1

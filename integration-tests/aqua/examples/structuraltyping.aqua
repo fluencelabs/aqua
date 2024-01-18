@@ -1,8 +1,8 @@
 aqua Aaa
 
-import "@fluencelabs/aqua-lib/builtin.aqua"
-
 export structuralTypingTest
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 data WideData:
   s: string

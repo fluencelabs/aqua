@@ -1,3 +1,7 @@
+aqua PushToStream
+
+export OpA, get_results
+
 service OpA("pop"):
   get_str() -> string
 

@@ -1,4 +1,4 @@
-module Funcs declares main, A, calc
+aqua Funcs declares main, A, calc
 
 export main, A, calc, calc2, ifCalc, bugLNG260
 

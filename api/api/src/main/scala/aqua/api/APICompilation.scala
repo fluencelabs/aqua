@@ -16,7 +16,7 @@ import aqua.parser.expr.AbilityExpr.p
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
-import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
+import aqua.parser.{ArrowReturnError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
 import aqua.raw.ops.Call
 import aqua.raw.value.ValueRaw

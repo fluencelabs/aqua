@@ -49,9 +49,9 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   // Resolve imports (not parse, just resolve) of the given file
   private def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
-    ast.collectHead { case fe: FilenameExpr[S] =>
+    ast.head.collect { case fe: FilenameExpr[S] =>
       fe.fileValue -> fe.token
-    }.value.traverse { case (filename, token) =>
+    }.traverse { case (filename, token) =>
       sources
         .resolveImport(id, filename)
         .map(

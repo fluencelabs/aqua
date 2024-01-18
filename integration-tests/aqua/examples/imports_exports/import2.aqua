@@ -1,4 +1,4 @@
-module Import
+aqua Import
 import foobar from "export2.aqua"
 
 use foo as f from "export2.aqua" as Exp
