@@ -5,21 +5,21 @@ import aqua.linker.{AquaModule, Modules}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
+import aqua.syntax.eithert.fromValidatedF
 
-import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, Validated, ValidatedNec}
-import cats.parse.Parser0
-import cats.syntax.either.*
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.monad.*
-import cats.syntax.foldable.*
-import cats.syntax.traverse.*
-import cats.syntax.validated.*
 import cats.data.Chain.*
 import cats.data.Validated.*
+import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, Validated, ValidatedNec}
+import cats.parse.Parser0
+import cats.syntax.applicative.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.traverse.*
-import cats.{~>, Comonad, Monad}
+import cats.syntax.validated.*
+import cats.{Comonad, Monad, ~>}
 import scribe.Logging
 
 // TODO: add tests
@@ -34,17 +34,18 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   private type FE[A] = EitherT[F, NonEmptyChain[Err], A]
 
   // Parse all the source files
-  private def parseSources: F[ValidatedNec[Err, Chain[(I, Body)]]] =
-    sources.sources.map(
-      _.leftMap(_.map(SourcesError.apply)).andThen(
-        _.traverse { case (i, s) =>
-          parser(i)(s).bimap(
-            _.map(AquaParserError.apply),
-            ast => i -> ast
-          )
-        }
-      )
-    )
+  private def parseSources: FE[Chain[(I, Body)]] =
+    for {
+      srcs <- EitherT
+        .fromValidatedF(sources.sources)
+        .leftMap(_.map(SourcesError.apply))
+      parsed <- srcs.traverse { case (i, s) =>
+        parser(i)(s).bimap(
+          _.map(AquaParserError.apply),
+          ast => i -> ast
+        )
+      }.toEither.toEitherT
+    } yield parsed
 
   // Resolve imports (not parse, just resolve) of the given file
   private def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
@@ -75,21 +76,13 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     })
 
   // Parse sources, convert to modules
-  private def sourceModules: F[ValidatedNec[Err, Modules[I, Err, Body]]] =
-    parseSources.flatMap {
-      case Validated.Valid(srcs) =>
-        srcs.traverse { case (id, ast) =>
-          resolveImports(id, ast)
-        }.map(_.sequence)
-      case Validated.Invalid(errs) =>
-        errs.invalid.pure[F]
-    }.map(
-      _.map(
-        _.foldLeft(Modules[I, Err, Body]())(
-          _.add(_, toExport = true)
-        )
+  private def sourceModules: FE[Modules[I, Err, Body]] =
+    for {
+      srcs <- parseSources
+      modules <- EitherT.fromValidatedF(
+        srcs.traverse(resolveImports.tupled).map(_.sequence)
       )
-    )
+    } yield Modules.from(modules)
 
   private def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
     sources
@@ -124,11 +117,9 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   private def resolveSources: FE[Modules[I, Err, Ast[S]]] =
     for {
-      ms <- EitherT(
-        sourceModules.map(_.toEither)
-      )
-      res <- EitherT(
-        resolveModules(ms).map(_.toEither)
+      ms <- sourceModules
+      res <- EitherT.fromValidatedF(
+        resolveModules(ms)
       )
     } yield res
 

@@ -1,6 +1,6 @@
 package aqua.linker
 
-import cats.data.NonEmptyChain
+import cats.data.{Chain, NonEmptyChain}
 import cats.syntax.option._
 
 case class Modules[I, E, T](
@@ -36,4 +36,10 @@ case class Modules[I, E, T](
       loaded = loaded.view.mapValues(_.mapErr(f)).toMap,
       dependsOn = dependsOn.view.mapValues(_.map(f)).toMap
     )
+}
+
+object Modules {
+
+  def from[I, E, T](modules: Chain[AquaModule[I, E, T]]): Modules[I, E, T] =
+    modules.foldLeft(Modules[I, E, T]())(_.add(_, toExport = true))
 }
