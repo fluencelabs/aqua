@@ -1,4 +1,4 @@
-module Exports declares some_string, MyExportSrv, EXPORT_CONST, some_random_func
+aqua Exports declares some_string, MyExportSrv, EXPORT_CONST, some_random_func
 
 import Op as Noop from "@fluencelabs/aqua-lib/builtin.aqua"
 

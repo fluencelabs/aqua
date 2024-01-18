@@ -1,8 +1,8 @@
 aqua ReturnArrow
 
-import "@fluencelabs/aqua-lib/builtin.aqua"
-
 export callReturnedArrow, callReturnedChainArrow
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 func returnCall(arg: string) -> string -> string, string:
   str <- Op.concat_strings(arg, " literal")
