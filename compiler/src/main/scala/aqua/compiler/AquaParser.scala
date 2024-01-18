@@ -77,17 +77,17 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
           )
         )
     }.map(_.sequence.map { collected =>
-      AquaModule[I, Err, Body](
-        id,
+      AquaModule(
+        id = id,
         // How filenames correspond to the resolved IDs
-        collected.map { case (i, (fn, _)) =>
+        imports = collected.map { case (i, (fn, _)) =>
           fn -> i
         }.toList.toMap[String, I],
         // Resolved IDs to errors that point to the import in source code
-        collected.map { case (i, (_, err)) =>
+        dependsOn = collected.map { case (i, (_, err)) =>
           i -> err
         }.toList.toMap[I, Err],
-        ast
+        body = ast
       )
     })
 
@@ -102,33 +102,25 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   private def resolveModules(
     modules: Modules[I, Err, Body]
-  ): F[ValidatedNec[Err, Modules[I, Err, Ast[S]]]] =
-    modules.dependsOn.toList.traverse { case (moduleId, unresolvedErrors) =>
-      loadModule(moduleId).map(_.leftMap(_ ++ unresolvedErrors))
-    }.map(
-      _.sequence.map(
-        _.foldLeft(modules)(_ add _)
-      )
-    ).flatMap {
-      case Validated.Valid(ms) if ms.isResolved =>
-        ms.validNec.pure[F]
-      case Validated.Valid(ms) =>
-        resolveModules(ms)
-      case err =>
-        err.pure[F]
-    }
-
-  private def resolveSources: FE[Modules[I, Err, Ast[S]]] =
-    for {
-      ms <- sourceModules
-      res <- EitherT.fromValidatedF(
-        resolveModules(ms)
-      )
-    } yield res
+  ): FE[Modules[I, Err, Ast[S]]] =
+    modules.iterateUntilM(ms =>
+      EitherT
+        .fromValidatedF(
+          // Load all modules that are dependencies of the current modules
+          ms.dependsOn.toList.traverse { case (moduleId, unresolvedErrors) =>
+            loadModule(moduleId).map(
+              _.leftMap(_ ++ unresolvedErrors)
+            )
+          }.map(_.sequence)
+        )
+        // Add all loaded modules to the current modules
+        .map(ms.addAll)
+    )(_.isResolved)
 
   def resolve[T](
     transpile: AquaModule[I, Err, Body] => T => T
   ): FE[Modules[I, Err, T => T]] =
-    resolveSources.map(_.mapModuleToBody(transpile))
+    (sourceModules >>= resolveModules)
+      .map(_.mapModuleToBody(transpile))
 
 }

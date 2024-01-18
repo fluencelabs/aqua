@@ -1,6 +1,8 @@
 package aqua.linker
 
+import cats.Foldable
 import cats.data.{Chain, NonEmptyChain}
+import cats.syntax.foldable._
 import cats.syntax.option._
 
 case class Modules[I, E, T](
@@ -22,6 +24,9 @@ case class Modules[I, E, T](
         },
         exports = if (toExport) exports + aquaModule.id else exports
       )
+
+  def addAll[F[_]: Foldable](modules: F[AquaModule[I, E, T]]): Modules[I, E, T] =
+    modules.foldLeft(this)(_ add _)
 
   def isResolved: Boolean = dependsOn.isEmpty
 
