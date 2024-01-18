@@ -33,19 +33,35 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   private type FE[A] = EitherT[F, NonEmptyChain[Err], A]
 
+  private def parse(id: I, src: String): ValidatedNec[Err, (I, Body)] =
+    parser(id)(src).bimap(
+      _.map(AquaParserError.apply),
+      ast => id -> ast
+    )
+
   // Parse all the source files
   private def parseSources: FE[Chain[(I, Body)]] =
     for {
       srcs <- EitherT
         .fromValidatedF(sources.sources)
         .leftMap(_.map(SourcesError.apply))
-      parsed <- srcs.traverse { case (i, s) =>
-        parser(i)(s).bimap(
-          _.map(AquaParserError.apply),
-          ast => i -> ast
-        )
-      }.toEither.toEitherT
+      parsed <- srcs
+        .traverse(parse.tupled)
+        .toEither
+        .toEitherT
     } yield parsed
+
+  private def loadModule(id: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
+    (for {
+      src <- EitherT
+        .fromValidatedF(sources.load(id))
+        .leftMap(_.map(SourcesError.apply))
+      parsed <- parse(id, src).toEither.toEitherT
+      (id, ast) = parsed
+      resolved <- EitherT.fromValidatedF(
+        resolveImports(id, ast)
+      )
+    } yield resolved).toValidated
 
   // Resolve imports (not parse, just resolve) of the given file
   private def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
@@ -83,19 +99,6 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
         srcs.traverse(resolveImports.tupled).map(_.sequence)
       )
     } yield Modules.from(modules)
-
-  private def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
-    sources
-      .load(imp)
-      .map(_.leftMap(_.map(SourcesError.apply)).andThen { src =>
-        parser(imp)(src).leftMap(_.map(AquaParserError.apply))
-      })
-      .flatMap {
-        case Validated.Valid(ast) =>
-          resolveImports(imp, ast)
-        case Validated.Invalid(errs) =>
-          errs.invalid.pure[F]
-      }
 
   private def resolveModules(
     modules: Modules[I, Err, Body]
