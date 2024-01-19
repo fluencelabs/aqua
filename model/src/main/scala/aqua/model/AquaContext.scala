@@ -113,7 +113,7 @@ case class AquaContext(
 
 object AquaContext extends Logging {
 
-  case class Cache(data: Chain[(RawContext, AquaContext)] = Chain.empty) {
+  case class Cache(private val data: Chain[(RawContext, AquaContext)] = Chain.empty) {
     lazy val size: Long = data.size
 
     def get(ctx: RawContext): Option[AquaContext] =
