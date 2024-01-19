@@ -188,7 +188,7 @@ lazy val inline = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/inline"))
   .settings(commons)
-  .dependsOn(raw, model)
+  .dependsOn(raw, model, mangler)
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -207,7 +207,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, parser, errors)
+  .dependsOn(raw, parser, errors, mangler)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -246,6 +246,17 @@ lazy val logging = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("utils/logging"))
+  .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  )
+
+lazy val mangler = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/mangler"))
   .settings(commons)
   .settings(
     libraryDependencies ++= Seq(

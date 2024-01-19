@@ -1,5 +1,6 @@
 package aqua.model.inline.state
 
+import aqua.mangler.ManglerState
 import aqua.model.{FuncArrow, ValueModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.raw.arrow.FuncRaw

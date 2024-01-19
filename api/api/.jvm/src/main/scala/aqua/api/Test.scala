@@ -15,8 +15,8 @@ object Test extends IOApp.Simple {
 
     APICompilation
       .compilePath(
-        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
-//        "./aqua-src/antithesis.aqua",
+//        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
+        "./aqua-src/antithesis.aqua",
         Imports.fromMap(
           Map(
             "/" -> Map(
@@ -31,7 +31,7 @@ object Test extends IOApp.Simple {
             )
           )
         ),
-        AquaAPIConfig(logLevel = "trace"),
+        AquaAPIConfig(logLevel = "info"),
         TypeScriptBackend(false, "IFluenceClient$$")
       ).timed
       .flatMap { case (duration, res) =>

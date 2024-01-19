@@ -31,11 +31,11 @@ class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
       )
       serviceType <- EitherT.fromOptionF(
         T.resolveServiceType(expr.service),
-        Raw.error("Can not resolve service type")
+        Raw.error("Cannot resolve service type")
       )
       name <- EitherT.fromOptionF(
         A.renameService(expr.service),
-        Raw.error("Can not set service ID")
+        Raw.error("Cannot set service ID")
       )
       _ <- EitherT.liftF(
         N.derive(

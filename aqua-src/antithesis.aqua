@@ -1,48 +1,33 @@
 aqua M
 
-export haveFun
+export returnSrvAsAbility
 
-data Worker:
-  host_id: string
-  worker_id: string
+ability MyAb:
+    call() -> string
 
-ability Promise:
-  yield: -> ()
-  -- Cannot make empty failed as (never) or smth like that without introducing a coordinator
-  --failed: -> ()
+service MySrv("default-id"):
+    call() -> string
 
-service Dummy("d"):
-  greeting(s: string) -> string
+func mySrvDefault() -> MyAb:
+    <- MySrv
 
-ability Job:
-  run()
+func mySrvResolved() -> MyAb:
+    MySrv "resolved-id"
+    <- MySrv
 
-ability WorkerJob:
-  runOnSingleWorker(worker: Worker) -> Job
+func mySrvThird() -> MyAb:
+    MySrv "third-id"
+    <- MySrv
 
-func done():
-  a = "need some body!"
-  -- I'm done
+func useMyAb{MyAb}() -> string:
+    <- MyAb.call()
 
-func done_promise() -> Promise:
-  <- Promise(yield = done)
-
-func disjoint_run{WorkerJob}() -> Job:
-  workers: *Worker
-
-  run = func ():
-      job2 <- WorkerJob.runOnSingleWorker()
-
-  <- Job(run = run)
-
-func haveFun():
-   job2 = () -> Job:
-     run2 = ():
-       Dummy.greeting("hell!")
-
-     <- Job(run = run2)
-
-   worker_job = WorkerJob(runOnSingleWorker = job2)
-   subnet_job <- disjoint_run{worker_job}()
-
-   subnet_job.run()
+func returnSrvAsAbility() -> []string:
+    result: *string
+    MySrvDefault <- mySrvDefault()
+    MySrvResolved <- mySrvResolved()
+    MySrvThird <- mySrvThird()
+    result <- useMyAb{MySrvDefault}()
+    result <- useMyAb{MySrvResolved}()
+    result <- useMyAb{MySrvThird}()
+    <- result
