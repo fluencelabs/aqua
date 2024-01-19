@@ -22,11 +22,7 @@ object Test extends IOApp.Simple {
             "/" -> Map(
               "" -> List(
                 "/home/diemust/git/decider/.fluence/aqua",
-                "/home/diemust/.fluence/npm/@fluencelabs/aqua-lib/0.9.0/node_modules",
-                "/home/diemust/.fluence/npm/@fluencelabs/spell/0.6.0/node_modules",
-                "/home/diemust/.fluence/npm/@fluencelabs/registry/0.8.7/node_modules",
-                "/home/diemust/.fluence/npm/@fluencelabs/aqua-ipfs/0.5.24/node_modules",
-                "/home/diemust/.fluence/npm/@fluencelabs/installation-spell/0.6.0/node_modules"
+                "/home/diemust/git/decider/.fluence/aqua-dependencies/node_modules",
               )
             )
           )
