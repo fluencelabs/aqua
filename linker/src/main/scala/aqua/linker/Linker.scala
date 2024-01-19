@@ -1,16 +1,23 @@
 package aqua.linker
 
+import aqua.errors.Errors.internalError
+
+import cats.MonadError
 import cats.data.{NonEmptyChain, Validated, ValidatedNec}
-import cats.kernel.{Monoid, Semigroup}
-import cats.syntax.semigroup.*
-import cats.syntax.validated.*
-import cats.syntax.functor.*
 import cats.instances.list.*
+import cats.kernel.{Monoid, Semigroup}
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.semigroup.*
+import cats.syntax.traverse.*
+import cats.syntax.validated.*
+import scala.annotation.tailrec
 import scribe.Logging
 
-import scala.annotation.tailrec
-
 object Linker extends Logging {
+
+  type TP = [F[_], T] =>> Map[String, T] => F[T]
 
   // Dependency Cycle, prev element import next
   // and last imports head
@@ -23,8 +30,8 @@ object Linker extends Logging {
    * @return [[List]] of dependecy cycles found
    */
   private def findDepCycles[I, E, T](
-    mods: List[AquaModule[I, E, T => T]]
-  ): List[DepCycle[AquaModule[I, E, T => T]]] = {
+    mods: List[AquaModule[I, E, T]]
+  ): List[DepCycle[I]] = {
     val modsIds = mods.map(_.id).toSet
     // Limit search to only passed modules (there maybe dependencies not from `mods`)
     val deps = mods.map(m => m.id -> m.dependsOn.keySet.intersect(modsIds)).toMap
@@ -56,7 +63,7 @@ object Linker extends Logging {
         )
     }
 
-    val cycles = mods
+    mods
       .flatMap(m =>
         findCycles(
           paths = NonEmptyChain.one(m.id) :: Nil,
@@ -69,73 +76,60 @@ object Linker extends Logging {
         // should not be a lot of cycles
         _.toChain.toList.toSet
       )
-
-    val modsById = mods.fproductLeft(_.id).toMap
-
-    // This should be safe
-    cycles.map(_.map(modsById))
   }
 
-  @tailrec
-  def iter[I, E, T: Semigroup](
-    mods: List[AquaModule[I, E, T => T]],
-    proc: Map[I, T => T],
-    cycleError: DepCycle[AquaModule[I, E, T => T]] => E
-  ): ValidatedNec[E, Map[I, T => T]] =
+  def iter[I, E, F[_], T](
+    mods: List[AquaModule[I, E, TP[F, T]]],
+    proc: Map[I, T],
+    cycle: DepCycle[I] => E
+  )(using me: MonadError[F, NonEmptyChain[E]]): F[Map[I, T]] =
     mods match {
       case Nil =>
-        proc.valid
+        proc.pure
       case _ =>
-        val (canHandle, postpone) = mods.partition(_.dependsOn.keySet.forall(proc.contains))
+        val (canHandle, postpone) = mods.partition(
+          _.dependsOn.keySet.forall(proc.contains)
+        )
         logger.debug("ITERATE, can handle: " + canHandle.map(_.id))
         logger.debug(s"dependsOn = ${mods.map(_.dependsOn.keySet)}")
         logger.debug(s"postpone = ${postpone.map(_.id)}")
         logger.debug(s"proc = ${proc.keySet}")
 
         if (canHandle.isEmpty && postpone.nonEmpty) {
-          findDepCycles(postpone)
-            .map(cycleError)
-            .invalid
-            .leftMap(
-              // This should be safe as cycles should exist at this moment
-              errs => NonEmptyChain.fromSeq(errs).get
-            )
-        } else {
-          val folded = canHandle.foldLeft(proc) { case (acc, m) =>
-            val importKeys = m.dependsOn.keySet
-            logger.debug(s"${m.id} dependsOn $importKeys")
-            val deps: T => T =
-              importKeys.map(acc).foldLeft(identity[T]) { case (fAcc, f) =>
-                logger.debug("COMBINING ONE TIME ")
-                t => {
-                  logger.debug(s"call combine $t")
-                  fAcc(t) |+| f(t)
-                }
-              }
-            acc + (m.id -> m.body.compose(deps))
-          }
-          iter(
-            postpone,
-            // TODO can be done in parallel
-            folded,
-            cycleError
+          me.raiseError(
+            // This should be safe as cycles should exist at this moment
+            NonEmptyChain
+              .fromSeq(findDepCycles(postpone).map(cycle))
+              .get
           )
-        }
+        } else
+          canHandle.traverse { mod =>
+            val imports = mod.imports.mapValues { imp =>
+              proc
+                .get(imp)
+                .getOrElse(
+                  // Should not happen as we check it above
+                  internalError(s"Module $imp not found in $proc")
+                )
+            }.toMap
+
+            mod.body(imports).map(mod.id -> _)
+          }.flatMap(processed =>
+            iter(
+              postpone,
+              proc ++ processed,
+              cycle
+            )
+          )
     }
 
-  def link[I, E, T: Semigroup](
-    modules: Modules[I, E, T => T],
-    cycleError: DepCycle[AquaModule[I, E, T => T]] => E,
-    empty: I => T
-  ): ValidatedNec[E, Map[I, T]] =
-    if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
-    else {
-      val result = iter(modules.loaded.values.toList, Map.empty, cycleError)
-
-      result.map(_.collect {
-        case (i, f) if modules.exports(i) =>
-          i -> f(empty(i))
-      })
-    }
-
+  def link[I, E, F[_], T](
+    modules: Modules[I, E, TP[F, T]],
+    cycle: DepCycle[I] => E
+  )(using me: MonadError[F, NonEmptyChain[E]]): F[Map[I, T]] =
+    if (modules.dependsOn.nonEmpty)
+      me.raiseError(
+        modules.dependsOn.values.reduce(_ ++ _)
+      )
+    else iter(modules.loaded.values.toList, Map.empty, cycle)
 }

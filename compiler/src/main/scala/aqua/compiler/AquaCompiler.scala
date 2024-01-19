@@ -35,75 +35,29 @@ class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
 ) extends Logging {
 
   type Err = AquaError[I, E, S]
-  type Ctx = NonEmptyMap[I, C]
 
   type CompileWarns = [A] =>> CompileWarnings[S][A]
   type CompileRes = [A] =>> CompileResult[I, E, S][A]
 
-  type CompiledCtx = CompileRes[Ctx]
-  type CompiledCtxT = CompiledCtx => CompiledCtx
+  // Transpilation - (Imports => Compilation Result)
+  type TP = Map[String, C] => CompileRes[C]
 
-  private def linkModules(
-    modules: Modules[I, Err, CompiledCtxT],
-    cycleError: Linker.DepCycle[AquaModule[I, Err, CompiledCtxT]] => Err
-  ): CompileRes[Map[I, C]] = {
-    logger.trace("linking modules...")
-
-    // By default, provide an empty context for this module's id
-    val empty: I => CompiledCtx = i => NonEmptyMap.one(i, Monoid[C].empty).pure[CompileRes]
-
-    for {
-      linked <- Linker
-        .link(modules, cycleError, empty)
-        .toEither
-        .toEitherT[CompileWarns]
-      res <- EitherT(
-        linked.toList.traverse { case (id, ctx) =>
-          ctx
-            .map(
-              /**
-               * NOTE: This should be safe
-               * as result for id should contain itself
-               */
-              _.apply(id).map(id -> _).get
-            )
-            .toValidated
-        }.map(_.sequence.toEither)
-      )
-    } yield res.toMap
-  }
-
-  private def transpileModule(
-    mod: AquaModule[I, Err, Ast[S]],
-    context: CompiledCtx
-  ): CompiledCtx = for {
-    // Context with prepared imports
-    ctx <- context
-    imports = mod.imports.flatMap { case (fn, id) =>
-      ctx.apply(id).map(fn -> _)
-    }
-    header = mod.body.head
-    headerSem <- headerHandler
-      .sem(imports, header)
-      .toCompileRes
-    // Analyze the body, with prepared initial context
-    _ = logger.trace("semantic processing...")
-    processed <- semantics
-      .process(
-        mod.body,
-        headerSem.initCtx
-      )
-      .toCompileRes
-    // Handle exports, declares - finalize the resulting context
-    rc <- headerSem
-      .finCtx(processed)
-      .toCompileRes
-    /**
-     * Here we build a map of contexts while processing modules.
-     * Should not linker provide this info inside this process?
-     * Building this map complicates things a lot.
-     */
-  } yield NonEmptyMap.one(mod.id, rc)
+  private def transpile(body: Ast[S]): TP =
+    imports =>
+      for {
+        headerSem <- headerHandler
+          .sem(imports, body.head)
+          .toCompileRes
+        // Analyze the body, with prepared initial context
+        _ = logger.trace("semantic processing...")
+        processed <- semantics
+          .process(body, headerSem.initCtx)
+          .toCompileRes
+        // Handle exports, declares - finalize the resulting context
+        rc <- headerSem
+          .finCtx(processed)
+          .toCompileRes
+      } yield rc
 
   def compileRaw(
     sources: AquaSources[F, E, I],
@@ -114,9 +68,7 @@ class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
     val modules = new AquaParser[F, E, I, S](sources, parser).resolve
 
     modules
-      .map(
-        _.mapModuleToBody(mod => ctx => transpileModule(mod, ctx))
-      )
+      .map(_.map(body => transpile(body)))
       .timed
       .semiflatMap { case (time, res) =>
         Sync[F].delay {
@@ -129,10 +81,7 @@ class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
         Sync[F].delay {
           for {
             modules <- resolved.toEitherT[CompileWarns]
-            linked <- linkModules(
-              modules,
-              cycle => CycleError(cycle.map(_.id))
-            )
+            linked <- Linker.link(modules, CycleError.apply)
           } yield linked
         }.timed.flatMap((time, res) =>
           Sync[F].delay {
