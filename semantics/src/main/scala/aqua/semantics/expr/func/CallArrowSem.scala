@@ -27,7 +27,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
   private def getExports[Alg[_]: Monad](codomain: ProductType)(using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
-  ): Alg[List[Call.Export]] = {
+  ): Alg[List[Call.Export]] =
     (variables zip codomain.toList).traverse { case (v, t) =>
       N.read(v, mustBeDefined = false).flatMap {
         case Some(stream @ StreamType(st)) =>
@@ -36,7 +36,6 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
           N.define(v, t).as(Call.Export(v.value, t))
       }
     }
-  }
 
   private def toModel[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
