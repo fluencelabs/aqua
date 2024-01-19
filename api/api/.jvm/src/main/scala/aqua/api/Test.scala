@@ -91,10 +91,10 @@ object Test extends IOApp.Simple {
               errors.toChain.toList.foreach(println)
             },
           compiled => {
-            val content = compiled.get(0).get.compiled.head.content
             IO.delay {
               println(s"Whole compilation took ${time.toMillis} ms")
             }
+            // val content = compiled.get(0).get.compiled.head.content
             // val targetPath = Path("./target/antithesis.ts")
 
             // Stream

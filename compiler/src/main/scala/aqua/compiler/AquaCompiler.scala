@@ -2,6 +2,7 @@ package aqua.compiler
 
 import aqua.backend.Backend
 import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
+import aqua.linker.Linker.link
 import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
 import aqua.parser.lift.{LiftParser, Span}
@@ -16,8 +17,6 @@ import aqua.semantics.{SemanticError, SemanticWarning}
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid, validNec}
-import cats.effect.Sync
-import cats.effect.syntax.clock.*
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.either.*
@@ -29,7 +28,7 @@ import cats.syntax.traverse.*
 import cats.{Comonad, Functor, Monad, Monoid, Order, ~>}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
+class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 ) extends Logging {
@@ -65,31 +64,15 @@ class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   ): F[CompileRes[Map[I, C]]] = {
     logger.trace("starting resolving sources...")
 
-    val modules = new AquaParser[F, E, I, S](sources, parser).resolve
+    val parsing = new AquaParser(sources, parser)
 
-    modules
-      .map(_.map(body => transpile(body)))
-      .timed
-      .semiflatMap { case (time, res) =>
-        Sync[F].delay {
-          println(s"Resolution took ${time.toMillis} ms")
-          res
-        }
-      }
-      .value
-      .flatMap(resolved =>
-        Sync[F].delay {
-          for {
-            modules <- resolved.toEitherT[CompileWarns]
-            linked <- Linker.link(modules, CycleError.apply)
-          } yield linked
-        }.timed.flatMap((time, res) =>
-          Sync[F].delay {
-            println(s"Linking took ${time.toMillis} ms")
-            res
-          }
-        )
-      )
+    parsing.resolve.value.map(resolution =>
+      for {
+        modules <- resolution.toEitherT[CompileWarns]
+        transpiled = modules.map(body => transpile(body))
+        linked <- Linker.link(transpiled, CycleError.apply)
+      } yield linked
+    )
   }
 
   private val warningsK: semantics.Warnings ~> CompileWarns =
