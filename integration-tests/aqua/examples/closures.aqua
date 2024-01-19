@@ -1,8 +1,8 @@
-module Closure declares *
-
-import "@fluencelabs/aqua-lib/builtin.aqua"
+aqua Closure declares *
 
 export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262, lng317Bug
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service MyOp("op"):
   identity(s: string) -> string

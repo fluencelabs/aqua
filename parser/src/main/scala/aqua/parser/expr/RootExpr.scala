@@ -3,12 +3,14 @@ package aqua.parser.expr
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Expr, ParserError}
+
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
 import cats.free.Cofree
-import cats.parse.{Parser0 as P0, Parser as P}
+import cats.parse.{Parser as P, Parser0 as P0}
+import cats.syntax.option.*
 import cats.{Comonad, Eval}
 import cats.~>
 
@@ -24,7 +26,9 @@ object RootExpr extends Expr.Companion {
   def validChildren: List[Expr.Lexem] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: AbilityExpr :: ConstantExpr :: FuncExpr :: Nil
 
-  private def gatherResults[F[_]: LiftParser: Comonad](results: NonEmptyList[ValidatedNec[ParserError[F], Tree[F]]]): (Chain[ParserError[F]], Chain[Tree[F]]) = {
+  private def gatherResults[F[_]: LiftParser: Comonad](
+    results: NonEmptyList[ValidatedNec[ParserError[F], Tree[F]]]
+  ): (Chain[ParserError[F]], Chain[Tree[F]]) = {
     results.foldLeft[(Chain[ParserError[F]], Chain[Tree[F]])](Chain.empty -> Chain.empty) {
       case ((errs, trees), Validated.Valid(tree)) => (errs, trees :+ tree)
       case ((errs, trees), Validated.Invalid(err)) => (errs ++ err.toChain, trees)
@@ -54,12 +58,11 @@ object RootExpr extends Expr.Companion {
     empty.backtrack | ast
 
   override val ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
-    parserSchema
-        .map { case (point, (errs, trees)) =>
+    parserSchema.map { case (point, (errs, trees)) =>
       NonEmptyChain
         .fromChain(errs)
-        .fold[ValidatedNec[ParserError[Span.S], Tree[Span.S]]](
-          Validated.validNec(Cofree(RootExpr[Span.S](point), Eval.now(trees)))
-        )(Validated.invalid)
+        .toInvalid(
+          Cofree(RootExpr(point), Eval.now(trees))
+        )
     }
 }

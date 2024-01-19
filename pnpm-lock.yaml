@@ -39,9 +39,6 @@ importers:
       '@fluencelabs/aqua-api':
         specifier: 0.13.4
         version: link:../api/api-npm
-      '@fluencelabs/aqua-dht':
-        specifier: 0.2.5
-        version: 0.2.5
       '@fluencelabs/aqua-lib':
         specifier: 0.9.0
         version: 0.9.0
@@ -475,16 +472,6 @@ packages:
     engines: {node: '>=12'}
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
-    dev: true
-
-  /@fluencelabs/aqua-dht@0.2.5:
-    resolution: {integrity: sha512-8jWUCeAftRtafqD6MgC7vkCnLOD6pwJspGHykPbXpg2pKbwANAAzAb/w8XbIScBzbIonZ5N7FfSVlTet383A3w==}
-    dependencies:
-      '@fluencelabs/aqua-lib': 0.1.14
-    dev: true
-
-  /@fluencelabs/aqua-lib@0.1.14:
-    resolution: {integrity: sha512-H2Q4gIvociUxc4J2mwmH0D+mrU2N2Z+enKCHgBCanMVEE2wZDsZ80GTbDKsQjEq+gpqbnJIk8lJBYW6lyvLJTg==}
     dev: true
 
   /@fluencelabs/aqua-lib@0.9.0:

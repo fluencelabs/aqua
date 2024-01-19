@@ -1,8 +1,8 @@
 package aqua.types
 
+import cats.syntax.partialOrder._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.syntax.partialOrder._
 
 class UniteTypesSpec extends AnyFlatSpec with Matchers {
 

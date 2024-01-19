@@ -89,7 +89,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val src = Map(
       "index.aqua" ->
-        """module Foo declares X
+        """aqua Foo declares X
           |
           |export foo, foo2 as foo_two, X
           |
@@ -135,7 +135,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   it should "create right topology" in {
     val src = Map(
       "index.aqua" ->
-        """service Op("op"):
+        """aqua Test
+          |
+          |export exec
+          |
+          |service Op("op"):
           |  identity(s: string) -> string
           |
           |func exec(peers: []string) -> []string:
@@ -224,7 +228,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   it should "not generate hop back with empty response" in {
     val src = Map(
       "index.aqua" ->
-        """service Op("op"):
+        """aqua HopBackTest
+          |
+          |export exec
+          |
+          |service Op("op"):
           |  call(s: string)
           |
           |func exec(peers: []string):
@@ -288,7 +296,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val src = Map(
       "index.aqua" ->
-        """module Import
+        """aqua Import
           |import foobar from "export2.aqua"
           |
           |use foo as f from "export2.aqua" as Exp
@@ -307,7 +315,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     )
     val imports = Map(
       "export2.aqua" ->
-        """module Export declares foobar, foo
+        """aqua Export declares foobar, foo
           |
           |func bar() -> string:
           |    <- " I am MyFooBar bar"
@@ -323,7 +331,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
           |
           |""".stripMargin,
       "../gen/OneMore.aqua" ->
-        """
+        """aqua Test declares OneMore
           |service OneMore:
           |  more_call()
           |  consume(s: string)
@@ -379,7 +387,10 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   it should "optimize math inside stream join" in {
     val src = Map(
-      "main.aqua" -> """
+      "main.aqua" -> """aqua Test
+                       |
+                       |export main
+                       |
                        |func main(i: i32):
                        |  stream: *string
                        |  stream <<- "a"
@@ -434,8 +445,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   it should "allow returning and passing services as abilities" in {
     val src = Map(
-      "main.aqua" -> """
-                       |aqua Test
+      "main.aqua" -> """aqua Test
                        |
                        |export test
                        |

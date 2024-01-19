@@ -1,5 +1,10 @@
+aqua CallArrow
+
+export passFunctionAsArg, reproArgsBug426
+
 import "println.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"
+
 
 -- functions like `c` are called an 'arrow function' in Aqua
 -- `c` passed to a function from a client, so, it could be called only on a client

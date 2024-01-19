@@ -1,3 +1,7 @@
+aqua OptionGen
+
+export OptionString, emptyString, checkEmpty, checkNoneEmpty
+
 service OptionString("opt_str"):
   checkOption(str: ?string) -> string
 

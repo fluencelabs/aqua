@@ -1,3 +1,7 @@
+aqua HelloWorld
+
+export StringExtra, helloWorld
+
 service StringExtra("service-id"):
     addNameToHello: string -> string
 
