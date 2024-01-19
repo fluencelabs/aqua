@@ -22,7 +22,7 @@ case class ManglerState(lastNumbers: Map[String, Int] = Map.empty) {
     val newName = genName(name, number)
     lastNumbers.get(newName) match {
       case Some(n) =>
-        val newNumber = n + 1
+        val newNumber = number + 1
         findName(name, newNumber, lastNumbers)
       case None => (newName, number)
     }

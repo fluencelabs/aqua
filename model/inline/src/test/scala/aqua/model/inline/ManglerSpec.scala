@@ -14,8 +14,6 @@ class ManglerSpec extends AnyFlatSpec with Matchers {
       _ <- mangler.forbid(Set("first", "second"))
       fn <- mangler.getForbiddenNames
     } yield fn
-
-    println(a.runA(ManglerState()).value)
   }
 
   "mangler" should "rename right" in {
@@ -59,9 +57,9 @@ class ManglerSpec extends AnyFlatSpec with Matchers {
     val (r1, r2, r3, r4, r5, _) = results.runA(ManglerState()).value
     r1 shouldBe Map()
     r2 shouldBe Map("first" -> "first-2")
-    r3 shouldBe Map("first" -> "first-0-0")
-    r4 shouldBe Map("first" -> "first-1-0")
-    r5 shouldBe Map("first" -> "first-2-0")
+    r3 shouldBe Map("first-0" -> "first-0-0")
+    r4 shouldBe Map("first-1" -> "first-1-0")
+    r5 shouldBe Map("first-2" -> "first-2-0")
   }
 
   "mangler" should "rename multiple times right" in {

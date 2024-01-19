@@ -1,11 +1,11 @@
 package aqua.model.inline
 
+import aqua.mangler.ManglerState
 import aqua.model.*
 import aqua.model.inline.raw.StreamGateInliner
-import aqua.model.inline.state.{InliningState, ManglerState}
+import aqua.model.inline.state.InliningState
 import aqua.raw.value.*
 import aqua.types.*
-
 import cats.Eval
 import cats.data.{Chain, NonEmptyMap}
 import cats.free.Cofree
@@ -13,6 +13,7 @@ import cats.syntax.foldable.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
 import scala.collection.immutable.SortedMap
 import scala.math
 
