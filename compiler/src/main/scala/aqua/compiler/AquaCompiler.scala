@@ -16,6 +16,8 @@ import aqua.semantics.{SemanticError, SemanticWarning}
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.effect.Sync
+import cats.effect.syntax.clock.*
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.either.*
@@ -27,7 +29,7 @@ import cats.syntax.traverse.*
 import cats.{Comonad, Functor, Monad, Monoid, Order, ~>}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
+class AquaCompiler[F[_]: Sync, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 ) extends Logging {
@@ -71,53 +73,73 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
     } yield res.toMap
   }
 
+  private def transpileModule(
+    mod: AquaModule[I, Err, Ast[S]],
+    context: CompiledCtx
+  ): CompiledCtx = for {
+    // Context with prepared imports
+    ctx <- context
+    imports = mod.imports.flatMap { case (fn, id) =>
+      ctx.apply(id).map(fn -> _)
+    }
+    header = mod.body.head
+    headerSem <- headerHandler
+      .sem(imports, header)
+      .toCompileRes
+    // Analyze the body, with prepared initial context
+    _ = logger.trace("semantic processing...")
+    processed <- semantics
+      .process(
+        mod.body,
+        headerSem.initCtx
+      )
+      .toCompileRes
+    // Handle exports, declares - finalize the resulting context
+    rc <- headerSem
+      .finCtx(processed)
+      .toCompileRes
+    /**
+     * Here we build a map of contexts while processing modules.
+     * Should not linker provide this info inside this process?
+     * Building this map complicates things a lot.
+     */
+  } yield NonEmptyMap.one(mod.id, rc)
+
   def compileRaw(
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
   ): F[CompileRes[Map[I, C]]] = {
     logger.trace("starting resolving sources...")
 
-    new AquaParser[F, E, I, S](sources, parser)
-      .resolve[CompiledCtx](mod =>
-        context =>
-          for {
-            // Context with prepared imports
-            ctx <- context
-            imports = mod.imports.flatMap { case (fn, id) =>
-              ctx.apply(id).map(fn -> _)
-            }
-            header = mod.body.head
-            headerSem <- headerHandler
-              .sem(imports, header)
-              .toCompileRes
-            // Analyze the body, with prepared initial context
-            _ = logger.trace("semantic processing...")
-            processed <- semantics
-              .process(
-                mod.body,
-                headerSem.initCtx
-              )
-              .toCompileRes
-            // Handle exports, declares - finalize the resulting context
-            rc <- headerSem
-              .finCtx(processed)
-              .toCompileRes
-            /**
-             * Here we build a map of contexts while processing modules.
-             * Should not linker provide this info inside this process?
-             * Building this map complicates things a lot.
-             */
-          } yield NonEmptyMap.one(mod.id, rc)
+    val modules = new AquaParser[F, E, I, S](sources, parser).resolve
+
+    modules
+      .map(
+        _.mapModuleToBody(mod => ctx => transpileModule(mod, ctx))
       )
+      .timed
+      .semiflatMap { case (time, res) =>
+        Sync[F].delay {
+          println(s"Resolution took ${time.toMillis} ms")
+          res
+        }
+      }
       .value
-      .map(resolved =>
-        for {
-          modules <- resolved.toEitherT[CompileWarns]
-          linked <- linkModules(
-            modules,
-            cycle => CycleError(cycle.map(_.id))
-          )
-        } yield linked
+      .flatMap(resolved =>
+        Sync[F].delay {
+          for {
+            modules <- resolved.toEitherT[CompileWarns]
+            linked <- linkModules(
+              modules,
+              cycle => CycleError(cycle.map(_.id))
+            )
+          } yield linked
+        }.timed.flatMap((time, res) =>
+          Sync[F].delay {
+            println(s"Linking took ${time.toMillis} ms")
+            res
+          }
+        )
       )
   }
 

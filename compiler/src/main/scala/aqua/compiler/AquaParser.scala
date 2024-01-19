@@ -80,17 +80,17 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
         // How filenames correspond to the resolved IDs
         imports = collected.map { case (i, (fn, _)) =>
           fn -> i
-        }.toList.toMap[String, I],
+        }.toList.toMap,
         // Resolved IDs to errors that point to the import in source code
         dependsOn = collected.map { case (i, (_, err)) =>
           i -> err
-        }.toList.toMap[I, Err],
+        }.toList.toMap,
         body = ast
       )
     }
 
   // Parse sources, convert to modules
-  private def sourceModules: FE[Modules[I, Err, Body]] =
+  private lazy val sourceModules: FE[Modules[I, Err, Body]] =
     for {
       srcs <- parseSources
       modules <- srcs.parTraverse(resolveImports.tupled)
@@ -106,10 +106,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       }.map(ms.addAll) // Add all loaded modules to the current modules
     )(_.isResolved)
 
-  def resolve[T](
-    transpile: AquaModule[I, Err, Body] => T => T
-  ): FE[Modules[I, Err, T => T]] =
-    (sourceModules >>= resolveModules)
-      .map(_.mapModuleToBody(transpile))
+  lazy val resolve: FE[Modules[I, Err, Body]] =
+    sourceModules >>= resolveModules
 
 }

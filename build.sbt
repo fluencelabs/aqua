@@ -214,6 +214,11 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect" % catsEffectV
+    )
+  )
   .dependsOn(semantics, linker, backend, transform % "test->test", res % "test->test")
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
