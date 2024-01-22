@@ -1,6 +1,8 @@
 package aqua.linker
 
-import cats.data.NonEmptyChain
+import cats.Foldable
+import cats.data.{Chain, NonEmptyChain}
+import cats.syntax.foldable._
 import cats.syntax.option._
 
 case class Modules[I, E, T](
@@ -23,17 +25,23 @@ case class Modules[I, E, T](
         exports = if (toExport) exports + aquaModule.id else exports
       )
 
+  def addAll[F[_]: Foldable](modules: F[AquaModule[I, E, T]]): Modules[I, E, T] =
+    modules.foldLeft(this)(_ add _)
+
   def isResolved: Boolean = dependsOn.isEmpty
 
   def map[TT](f: T => TT): Modules[I, E, TT] =
     copy(loaded = loaded.view.mapValues(_.map(f)).toMap)
-
-  def mapModuleToBody[TT](f: AquaModule[I, E, T] => TT): Modules[I, E, TT] =
-    copy(loaded = loaded.view.mapValues(v => v.map(_ => f(v))).toMap)
 
   def mapErr[EE](f: E => EE): Modules[I, EE, T] =
     copy(
       loaded = loaded.view.mapValues(_.mapErr(f)).toMap,
       dependsOn = dependsOn.view.mapValues(_.map(f)).toMap
     )
+}
+
+object Modules {
+
+  def from[I, E, T](modules: Chain[AquaModule[I, E, T]]): Modules[I, E, T] =
+    modules.foldLeft(Modules[I, E, T]())(_.add(_, toExport = true))
 }

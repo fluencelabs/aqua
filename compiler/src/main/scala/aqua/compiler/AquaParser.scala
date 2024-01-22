@@ -5,6 +5,7 @@ import aqua.linker.{AquaModule, Modules}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
+import aqua.syntax.eithert.fromValidatedF
 
 import cats.data.Chain.*
 import cats.data.Validated.*
@@ -16,6 +17,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
+import cats.syntax.parallel.*
 import cats.syntax.traverse.*
 import cats.syntax.validated.*
 import cats.{Comonad, Monad, ~>}
@@ -32,108 +34,82 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   private type FE[A] = EitherT[F, NonEmptyChain[Err], A]
 
-  // Parse all the source files
-  private def parseSources: F[ValidatedNec[Err, Chain[(I, Body)]]] =
-    sources.sources.map(
-      _.leftMap(_.map(SourcesError.apply)).andThen(
-        _.traverse { case (i, s) =>
-          parser(i)(s).bimap(
-            _.map(AquaParserError.apply),
-            ast => i -> ast
-          )
-        }
-      )
+  // Parse one source (text)
+  private def parse(id: I, src: String): EitherNec[Err, (I, Body)] =
+    parser(id)(src).toEither.bimap(
+      _.map(AquaParserError.apply),
+      ast => id -> ast
     )
+
+  // Parse all the source files
+  private def parseSources: FE[Chain[(I, Body)]] =
+    for {
+      srcs <- EitherT
+        .fromValidatedF(sources.sources)
+        .leftMap(_.map(SourcesError.apply))
+      parsed <- srcs
+        .parTraverse(parse.tupled)
+        .toEitherT
+    } yield parsed
+
+  // Load one module (parse, resolve imports)
+  private def loadModule(id: I): FE[AquaModule[I, Err, Body]] =
+    for {
+      src <- EitherT
+        .fromValidatedF(sources.load(id))
+        .leftMap(_.map(SourcesError.apply))
+      parsed <- parse(id, src).toEitherT
+      (id, ast) = parsed
+      resolved <- resolveImports(id, ast)
+    } yield resolved
 
   // Resolve imports (not parse, just resolve) of the given file
-  private def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
+  private def resolveImports(id: I, ast: Body): FE[AquaModule[I, Err, Body]] =
     ast.head.collect { case fe: FilenameExpr[S] =>
       fe.fileValue -> fe.token
-    }.traverse { case (filename, token) =>
-      sources
-        .resolveImport(id, filename)
-        .map(
-          _.bimap(
-            _.map(ResolveImportsError(id, token, _): Err),
-            importId => importId -> (filename, ImportError(token): Err)
-          )
+    }.parTraverse { case (filename, token) =>
+      EitherT
+        .fromValidatedF(
+          sources.resolveImport(id, filename)
         )
-    }.map(_.sequence.map { collected =>
-      AquaModule[I, Err, Body](
-        id,
+        .bimap(
+          _.map(ResolveImportsError(id, token, _): Err),
+          importId => importId -> (filename, ImportError(token): Err)
+        )
+    }.map { collected =>
+      AquaModule(
+        id = id,
         // How filenames correspond to the resolved IDs
-        collected.map { case (i, (fn, _)) =>
+        imports = collected.map { case (i, (fn, _)) =>
           fn -> i
-        }.toList.toMap[String, I],
+        }.toList.toMap,
         // Resolved IDs to errors that point to the import in source code
-        collected.map { case (i, (_, err)) =>
+        dependsOn = collected.map { case (i, (_, err)) =>
           i -> err
-        }.toList.toMap[I, Err],
-        ast
+        }.toList.toMap,
+        body = ast
       )
-    })
-
-  // Parse sources, convert to modules
-  private def sourceModules: F[ValidatedNec[Err, Modules[I, Err, Body]]] =
-    parseSources.flatMap {
-      case Validated.Valid(srcs) =>
-        srcs.traverse { case (id, ast) =>
-          resolveImports(id, ast)
-        }.map(_.sequence)
-      case Validated.Invalid(errs) =>
-        errs.invalid.pure[F]
-    }.map(
-      _.map(
-        _.foldLeft(Modules[I, Err, Body]())(
-          _.add(_, toExport = true)
-        )
-      )
-    )
-
-  private def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
-    sources
-      .load(imp)
-      .map(_.leftMap(_.map(SourcesError.apply)).andThen { src =>
-        parser(imp)(src).leftMap(_.map(AquaParserError.apply))
-      })
-      .flatMap {
-        case Validated.Valid(ast) =>
-          resolveImports(imp, ast)
-        case Validated.Invalid(errs) =>
-          errs.invalid.pure[F]
-      }
-
-  private def resolveModules(
-    modules: Modules[I, Err, Body]
-  ): F[ValidatedNec[Err, Modules[I, Err, Ast[S]]]] =
-    modules.dependsOn.toList.traverse { case (moduleId, unresolvedErrors) =>
-      loadModule(moduleId).map(_.leftMap(_ ++ unresolvedErrors))
-    }.map(
-      _.sequence.map(
-        _.foldLeft(modules)(_ add _)
-      )
-    ).flatMap {
-      case Validated.Valid(ms) if ms.isResolved =>
-        ms.validNec.pure[F]
-      case Validated.Valid(ms) =>
-        resolveModules(ms)
-      case err =>
-        err.pure[F]
     }
 
-  private def resolveSources: FE[Modules[I, Err, Ast[S]]] =
+  // Load modules (parse, resolve imports) of all the source files
+  private lazy val loadModules: FE[Modules[I, Err, Body]] =
     for {
-      ms <- EitherT(
-        sourceModules.map(_.toEither)
-      )
-      res <- EitherT(
-        resolveModules(ms).map(_.toEither)
-      )
-    } yield res
+      srcs <- parseSources
+      modules <- srcs.parTraverse(resolveImports.tupled)
+    } yield Modules.from(modules)
 
-  def resolve[T](
-    transpile: AquaModule[I, Err, Body] => T => T
-  ): FE[Modules[I, Err, T => T]] =
-    resolveSources.map(_.mapModuleToBody(transpile))
+  // Resolve modules (load all the dependencies)
+  private def resolveModules(
+    modules: Modules[I, Err, Body]
+  ): FE[Modules[I, Err, Ast[S]]] =
+    modules.iterateUntilM(ms =>
+      // Load all modules that are dependencies of the current modules
+      ms.dependsOn.toList.parTraverse { case (moduleId, unresolvedErrors) =>
+        loadModule(moduleId).leftMap(_ ++ unresolvedErrors)
+      }.map(ms.addAll) // Add all loaded modules to the current modules
+    )(_.isResolved)
+
+  lazy val resolve: FE[Modules[I, Err, Body]] =
+    loadModules >>= resolveModules
 
 }
