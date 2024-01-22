@@ -115,6 +115,7 @@ object Linker extends Logging {
 
             mod.body(imports).map(mod.id -> _)
           }.flatMap(processed =>
+            // flatMap should be stack safe
             iter(
               postpone,
               proc ++ processed,
@@ -131,5 +132,9 @@ object Linker extends Logging {
       me.raiseError(
         modules.dependsOn.values.reduce(_ ++ _)
       )
-    else iter(modules.loaded.values.toList, Map.empty, cycle)
+    else
+      iter(modules.loaded.values.toList, Map.empty, cycle).map(
+        // Remove all modules that are not exported from result
+        _.filterKeys(modules.exports.contains).toMap
+      )
 }
