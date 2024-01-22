@@ -10,7 +10,7 @@ val scalaTestV = "3.2.17"
 val scalaTestScalaCheckV = "3.2.17.0"
 val sourcecodeV = "0.3.0"
 // Snapshot is used to get latest fixes
-val fs2V = "3.9.3-37-8badc91-SNAPSHOT"
+val fs2V = "3.10-365636d"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
