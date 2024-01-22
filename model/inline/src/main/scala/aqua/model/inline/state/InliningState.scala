@@ -36,7 +36,7 @@ object InliningState {
     Counter.Simple.transformS(_.instructionCounter, (acc, i) => acc.copy(instructionCounter = i))
 
   given Mangler[InliningState] =
-    Mangler.Simple.transformS(_.noNames, (acc, nn) => acc.copy(noNames = nn))
+    Mangler[ManglerState].transformS(_.noNames, (acc, nn) => acc.copy(noNames = nn))
 
   given Arrows[InliningState] =
     Arrows.Simple.transformS(_.resolvedArrows, (acc, aa) => acc.copy(resolvedArrows = aa))

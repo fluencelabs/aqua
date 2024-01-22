@@ -10,16 +10,8 @@ class ManglerInterpreter[X](using
 ) extends ManglerAlgebra[State[X, *]] {
 
   override def rename(name: String): State[X, String] =
-    for {
-      state <- get
-      result = state.forbidAndRename(name)
-      (newState, newName) = result
-      _ <- modify(_ => newState)
-    } yield newName
+    apply(_.forbidAndRename(name))
 
-  private lazy val get: State[X, ManglerState] =
-    State.get[X].map(lens.get)
-
-  private def modify(f: ManglerState => ManglerState): State[X, Unit] =
-    State.modify[X](lens.modify(f))
+  private def apply[A](f: ManglerState => (ManglerState, A)): State[X, A] =
+    State.apply(lens.modifyF(f andThen (_.swap)) andThen (_.swap))
 }

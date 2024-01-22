@@ -1,5 +1,6 @@
 package aqua.api
 
+import aqua.api.TargetType.TypeScriptType
 import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.AquaCompiled
 import aqua.files.FileModuleId
@@ -15,19 +16,9 @@ object Test extends IOApp.Simple {
 
     APICompilation
       .compilePath(
-//        "/home/diemust/git/decider/src/aqua/decider/poll.aqua",
         "./aqua-src/antithesis.aqua",
-        Imports.fromMap(
-          Map(
-            "/" -> Map(
-              "" -> List(
-                "/home/diemust/git/decider/.fluence/aqua",
-                "/home/diemust/git/decider/.fluence/aqua-dependencies/node_modules",
-              )
-            )
-          )
-        ),
-        AquaAPIConfig(logLevel = "info"),
+        Imports.fromMap(Map("/" -> Map("" -> List("./aqua")))),
+        AquaAPIConfig(targetType = TypeScriptType),
         TypeScriptBackend(false, "IFluenceClient$$")
       ).timed
       .flatMap { case (duration, res) =>
@@ -35,7 +26,7 @@ object Test extends IOApp.Simple {
         val (warnings, result) = res.value.run
 
         IO.delay {
-          // warnings.toList.foreach(println)
+          warnings.toList.foreach(println)
         } *> result.fold(
           errors =>
             IO.delay {

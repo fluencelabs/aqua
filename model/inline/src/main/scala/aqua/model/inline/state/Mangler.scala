@@ -5,8 +5,6 @@ import aqua.mangler.ManglerState
 
 trait Mangler[S] {
   self =>
-  def getForbiddenNames: State[S, ManglerState]
-
   def findAndForbidName(introduce: String): State[S, String] =
     findAndForbidNames(Set(introduce)).map(_.getOrElse(introduce, introduce))
 
@@ -17,9 +15,6 @@ trait Mangler[S] {
   def transformS[R](f: R => S, g: (R, S) => R): Mangler[R] =
     new Mangler[R] {
 
-      val getForbiddenNames: State[R, ManglerState] =
-        self.getForbiddenNames.transformS(f, g)
-
       def forbid(names: Set[String]): State[R, Unit] =
         self.forbid(names).transformS(f, g)
 
@@ -29,16 +24,11 @@ trait Mangler[S] {
 }
 
 object Mangler {
-  def apply[S](implicit mangler: Mangler[S]): Mangler[S] = mangler
+  def apply[S](using mangler: Mangler[S]): Mangler[S] = mangler
 
-  implicit object Simple extends Mangler[ManglerState] {
-    val getForbiddenNames: State[ManglerState, ManglerState] = State.get
-
+  given Mangler[ManglerState] with {
     def findAndForbidNames(introduce: Set[String]): State[ManglerState, Map[String, String]] =
-      getForbiddenNames.flatMap(forbidden =>
-        val (newState, newNames) = forbidden.findNewNames(introduce)
-        State.modify[ManglerState](_ => newState).map(_ => newNames)
-      )
+      State.apply(_.findNewNames(introduce))
 
     def forbid(names: Set[String]): State[ManglerState, Unit] =
       State.modify(st => st.forbid(names))
