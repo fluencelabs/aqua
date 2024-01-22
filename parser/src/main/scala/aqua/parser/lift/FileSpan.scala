@@ -15,7 +15,8 @@ case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
    * @return FileSpan.Focus
    */
   def focus(ctx: Int): Option[FileSpan.Focus] =
-    span.focus(locationMap.value, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
+    span.
+      focus(locationMap.value, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
 
   override def hashCode(): Int = (name, span).hashCode()
 

@@ -1,40 +1,33 @@
 aqua M
 
-export bugLng317
+export returnSrvAsAbility
 
-service MyOp("op"):
-  identity(s: string) -> string
+ability MyAb:
+    call() -> string
 
-ability WorkerJob:
-  runOnSingleWorker(w: string) -> []string
+service MySrv("default-id"):
+    call() -> string
 
-func runJob(j: -> []string) -> []string:
-  <- j()
+func mySrvDefault() -> MyAb:
+    <- MySrv
 
-func disjoint_run{WorkerJob}() -> -> []string:
-  run = func () -> []string:
-      r <- WorkerJob.runOnSingleWorker("a")
-      <- r
-  <- run
+func mySrvResolved() -> MyAb:
+    MySrv "resolved-id"
+    <- MySrv
 
-func empty() -> string:
-  a = "empty"
-  <- a
+func mySrvThird() -> MyAb:
+    MySrv "third-id"
+    <- MySrv
 
-func bugLng317() -> []string:
+func useMyAb{MyAb}() -> string:
+    <- MyAb.call()
 
-   res: *string
-
-   outer = () -> string:
-     <- empty()
-
-   clos = () -> -> []string:
-     job2 = () -> []string:
-       res <- outer()
-       res <- MyOp.identity("identity")
-       <- res
-     <- job2
-   worker_job = WorkerJob(runOnSingleWorker = clos())
-   subnet_job <- disjoint_run{worker_job}()
-   finalRes <- runJob(subnet_job)
-   <- finalRes
+func returnSrvAsAbility() -> []string:
+    result: *string
+    MySrvDefault <- mySrvDefault()
+    MySrvResolved <- mySrvResolved()
+    MySrvThird <- mySrvThird()
+    result <- useMyAb{MySrvDefault}()
+    result <- useMyAb{MySrvResolved}()
+    result <- useMyAb{MySrvThird}()
+    <- result

@@ -1,5 +1,6 @@
 package aqua.model.inline.state
 
+import aqua.mangler.ManglerState
 import aqua.model.{FuncArrow, ValueModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.raw.arrow.FuncRaw
@@ -23,7 +24,7 @@ import scribe.Logging
  *   for [[Counter]]
  */
 case class InliningState(
-  noNames: Set[String] = Set.empty,
+  noNames: ManglerState = ManglerState(),
   resolvedExports: Map[String, ValueModel] = Map.empty,
   resolvedArrows: Map[String, FuncArrow] = Map.empty,
   instructionCounter: Int = 0
@@ -35,7 +36,7 @@ object InliningState {
     Counter.Simple.transformS(_.instructionCounter, (acc, i) => acc.copy(instructionCounter = i))
 
   given Mangler[InliningState] =
-    Mangler.Simple.transformS(_.noNames, (acc, nn) => acc.copy(noNames = nn))
+    Mangler[ManglerState].transformS(_.noNames, (acc, nn) => acc.copy(noNames = nn))
 
   given Arrows[InliningState] =
     Arrows.Simple.transformS(_.resolvedArrows, (acc, aa) => acc.copy(resolvedArrows = aa))
