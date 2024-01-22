@@ -38,12 +38,14 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   type CompileWarns = [A] =>> CompileWarnings[S][A]
   type CompileRes = [A] =>> CompileResult[I, E, S][A]
 
-  // Transpilation - (Imports => Compilation Result)
+  // Transpilation function for module
+  // (Imports contexts => Compilation result)
   type TP = Map[String, C] => CompileRes[C]
 
   private def transpile(body: Ast[S]): TP =
     imports =>
       for {
+        // Process header, get initial context
         headerSem <- headerHandler
           .sem(imports, body.head)
           .toCompileRes
@@ -68,8 +70,11 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
 
     parsing.resolve.value.map(resolution =>
       for {
+        // Lift resolution to CompileRes
         modules <- resolution.toEitherT[CompileWarns]
+        // Generate transpilation functions for each module
         transpiled = modules.map(body => transpile(body))
+        // Link modules
         linked <- Linker.link(transpiled, CycleError.apply)
       } yield linked
     )

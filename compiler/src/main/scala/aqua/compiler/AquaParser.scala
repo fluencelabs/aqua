@@ -34,6 +34,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   private type FE[A] = EitherT[F, NonEmptyChain[Err], A]
 
+  // Parse one source (text)
   private def parse(id: I, src: String): EitherNec[Err, (I, Body)] =
     parser(id)(src).toEither.bimap(
       _.map(AquaParserError.apply),
@@ -51,6 +52,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
         .toEitherT
     } yield parsed
 
+  // Load one module (parse, resolve imports)
   private def loadModule(id: I): FE[AquaModule[I, Err, Body]] =
     for {
       src <- EitherT
@@ -89,13 +91,14 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       )
     }
 
-  // Parse sources, convert to modules
-  private lazy val sourceModules: FE[Modules[I, Err, Body]] =
+  // Load modules (parse, resolve imports) of all the source files
+  private lazy val loadModules: FE[Modules[I, Err, Body]] =
     for {
       srcs <- parseSources
       modules <- srcs.parTraverse(resolveImports.tupled)
     } yield Modules.from(modules)
 
+  // Resolve modules (load all the dependencies)
   private def resolveModules(
     modules: Modules[I, Err, Body]
   ): FE[Modules[I, Err, Ast[S]]] =
@@ -107,6 +110,6 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     )(_.isResolved)
 
   lazy val resolve: FE[Modules[I, Err, Body]] =
-    sourceModules >>= resolveModules
+    loadModules >>= resolveModules
 
 }
