@@ -21,8 +21,9 @@ case class LocationsState[S[_]](
     name: String,
     token: Token[S]
   ): List[VariableInfo[S]] = {
-    if (!vars.exists(_.definition.name == name))
-      logger.error(s"Unexpected. Cannot add occurrence for $name")
+    // TODO: this code lasts too long, but we can find errors in it.
+    // if (!vars.exists(_.definition.name == name))
+    //   logger.error(s"Unexpected. Cannot add occurrence for $name")
 
     vars.updateFirst(_.definition.name == name, v => v.copy(occurrences = token +: v.occurrences))
   }

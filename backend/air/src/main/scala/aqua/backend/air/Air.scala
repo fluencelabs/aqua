@@ -120,42 +120,77 @@ object Air {
 
   case class Comment(comment: String, air: Air) extends Air(Keyword.NA)
 
-  private def show(depth: Int, air: Air): String = {
-    def showNext(a: Air) = show(depth + 1, a)
+  private def showInternal(space: String, sb: StringBuilder, air: Air): Unit = {
 
-    val space = " " * depth
+    def showNext(a: Air): Unit = showInternal(space + " ", sb, a)
 
     air match {
       case Air.Comment(c, a) =>
-        space + "; " + c.replace("\n", "\n" + space + "; ") + "\n" +
-          show(depth, a)
-      case _ =>
-        s"$space(${air.keyword.value}" +
-          (air match {
-            case Air.Null ⇒ ""
-            case Air.Never ⇒ ""
-            case Air.Next(label) ⇒ s" $label"
-            case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
-            case Air.Fold(iter, label, inst, lastInst) ⇒
-              val l = show(depth + 1, lastInst)
-              s" ${iter.show} $label\n${showNext(inst)}$l$space"
-            case Air.Match(left, right, inst) ⇒
-              s" ${left.show} ${right.show}\n${showNext(inst)}$space"
-            case Air.Mismatch(left, right, inst) ⇒
-              s" ${left.show} ${right.show}\n${showNext(inst)}$space"
-            case Air.Par(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-            case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-            case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-            case Air.Call(triplet, args, res) ⇒
-              s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
-            case Air.Ap(operand, result) ⇒ s" ${operand.show} $result"
-            case Air.ApStreamMap(key, operand, result) ⇒ s" (${key.show} ${operand.show}) $result"
-            case Air.Fail(operand) => s" ${operand.show}"
-            case Air.Canon(operand, peerId, result) ⇒ s" ${peerId.show} ${operand.show}  $result"
-            case Air.Comment(_, _) => ";; Should not be displayed"
-          }) + ")\n"
-    }
+        sb.append(space)
+          .append("; ")
+          .append(c.replace("\n", "\n" + space + "; "))
+          .append("\n")
 
+        showInternal(space, sb, a)
+
+      case _ =>
+        sb.append(s"$space(${air.keyword.value}")
+        (air match {
+          case Air.Null ⇒
+          case Air.Never ⇒
+          case Air.Next(label) ⇒ sb.append(s" $label")
+          case Air.New(item, inst) ⇒
+            sb.append(s" ${item.show}\n")
+            showNext(inst)
+            sb.append(space)
+          case Air.Fold(iter, label, inst, lastInst) ⇒
+            sb.append(" ").append(s" ${iter.show} $label\n")
+            showNext(inst)
+            showNext(lastInst)
+            sb.append(space)
+          case Air.Match(left, right, inst) ⇒
+            sb.append(s" ${left.show} ${right.show}\n")
+            showNext(inst)
+            sb.append(space)
+          case Air.Mismatch(left, right, inst) ⇒
+            sb.append(s" ${left.show} ${right.show}\n")
+            showNext(inst)
+            sb.append(space)
+          case Air.Par(l, r) ⇒
+            sb.append("\n")
+            showNext(l)
+            showNext(r)
+            sb.append(space)
+          case Air.Seq(l, r) ⇒
+            sb.append("\n")
+            showNext(l)
+            showNext(r)
+            sb.append(space)
+          case Air.Xor(l, r) ⇒
+            sb.append("\n")
+            showNext(l)
+            showNext(r)
+            sb.append(space)
+          case Air.Call(triplet, args, res) ⇒
+            sb.append(s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}")
+          case Air.Ap(operand, result) ⇒
+            sb.append(s" ${operand.show} $result")
+          case Air.ApStreamMap(key, operand, result) ⇒
+            sb.append(s" (${key.show} ${operand.show}) $result")
+          case Air.Fail(operand) => sb.append(s" ${operand.show}")
+          case Air.Canon(operand, peerId, result) ⇒
+            sb.append(s" ${peerId.show} ${operand.show}  $result")
+          case Air.Comment(_, _) => ";; Should not be displayed"
+        })
+        sb.append(")\n")
+    }
+  }
+
+  private def show(depth: Int, air: Air): String = {
+    val sb = StringBuilder()
+    val space = " " * depth
+    showInternal(space, sb, air)
+    sb.result()
   }
 
   implicit val s: Show[Air] = Show.show(show(0, _))
