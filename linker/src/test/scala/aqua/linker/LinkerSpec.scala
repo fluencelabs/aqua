@@ -53,8 +53,7 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
 
     Linker.link(withMod2, cycle) should be(
       Map(
-        "mod1" -> "mod2 | mod1",
-        "mod2" -> "mod2"
+        "mod1" -> "mod2 | mod1"
       ).asRight.toEitherNec
     )
   }
