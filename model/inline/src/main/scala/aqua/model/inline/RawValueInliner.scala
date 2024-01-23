@@ -113,20 +113,29 @@ object RawValueInliner extends Logging {
     call: Call,
     flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
-    valueListToModel(call.args).flatMap { args =>
-      if (flatStreamArguments)
-        args.map { arg =>
-          TagInliner.flat(arg._1, arg._2)
-        }.sequence
-      else
-        State.pure(args)
-    }.map { list =>
+    for {
+      args <- valueListToModel(call.args)
+      args <- {
+        if (flatStreamArguments)
+          args.map { arg =>
+            TagInliner.flat(arg._1, arg._2)
+          }.sequence
+        else
+          State.pure(args)
+      }
+      // TODO: making Raw from exportTo is a hack, maybe store ValueRaw in Call.Export?
+      exportTo <- valueListToModel(call.exportTo.map(_.toRaw))
+    } yield {
+      val exportModel = exportTo.map(_._1).collect {
+        // exportTo can be only a variable
+        case VarModel(name, baseType, _) => CallModel.Export(name, baseType)
+      }
       (
         CallModel(
-          list.map(_._1),
-          call.exportTo.map(CallModel.callExport)
+          args.map(_._1),
+          exportModel
         ),
-        parDesugarPrefix(list.flatMap(_._2))
+        parDesugarPrefix(exportTo.flatMap(_._2) ++ args.flatMap(_._2))
       )
     }
   }

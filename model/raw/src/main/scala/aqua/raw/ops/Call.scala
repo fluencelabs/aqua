@@ -27,7 +27,7 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
 object Call {
 
   // TODO docs
-  case class Export(name: String, `type`: Type) {
+  case class Export(name: String, `type`: Type, isExistingStream: Boolean = false) {
     def mapName(f: String => String): Export = copy(f(name))
 
     def toRaw: VarRaw = VarRaw(name, `type`)

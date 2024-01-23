@@ -2,8 +2,6 @@ package aqua.mangler
 
 import cats.Monoid
 
-import scala.annotation.tailrec
-
 case class ManglerState(namesNumbers: Map[String, Int] = Map.empty) {
 
   private def genName(name: String, n: Int) =

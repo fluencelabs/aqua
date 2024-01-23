@@ -1,33 +1,27 @@
-aqua M
+aqua A
 
-export returnSrvAsAbility
+export haveFun
 
-ability MyAb:
-    call() -> string
+service Dummy("dummy"):
+    greeting(s: string) -> string
 
-service MySrv("default-id"):
-    call() -> string
+ability Job:
+    run(s: string) -> string
 
-func mySrvDefault() -> MyAb:
-    <- MySrv
+func disrun(getJob: -> Job) -> Job:
+   j <- getJob()
+   <- j
 
-func mySrvResolved() -> MyAb:
-    MySrv "resolved-id"
-    <- MySrv
+func haveFun() -> string:
+   brokenStream: *string
 
-func mySrvThird() -> MyAb:
-    MySrv "third-id"
-    <- MySrv
+   job = () -> Job:
+     run = (str: string) -> string:
+       brokenStream <- Dummy.greeting(str)
+       <- "run"
 
-func useMyAb{MyAb}() -> string:
-    <- MyAb.call()
+     <- Job(run = run)
 
-func returnSrvAsAbility() -> []string:
-    result: *string
-    MySrvDefault <- mySrvDefault()
-    MySrvResolved <- mySrvResolved()
-    MySrvThird <- mySrvThird()
-    result <- useMyAb{MySrvDefault}()
-    result <- useMyAb{MySrvResolved}()
-    result <- useMyAb{MySrvThird}()
-    <- result
+   subnetJob <- disrun(job)
+   subnetJob.run("string for dummy")
+   <- brokenStream!
