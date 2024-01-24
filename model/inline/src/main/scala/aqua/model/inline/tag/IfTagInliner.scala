@@ -1,17 +1,17 @@
 package aqua.model.inline.tag
 
-import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
-import aqua.model.ValueModel
 import aqua.model.*
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.ValueModel
+import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.canonicalizeIfStream
-import aqua.model.inline.Inline.parDesugarPrefixOpt
+import aqua.model.inline.state.{Exports, Mangler}
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
 
 import cats.data.Chain
-import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 
 final case class IfTagInliner(
   valueRaw: ValueRaw

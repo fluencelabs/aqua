@@ -4,10 +4,11 @@ import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.model.inline.{Inline, MakeStructRawInliner}
 import aqua.raw.value.IntoCopyRaw
 import aqua.types.{StreamMapType, StructType}
+
 import cats.data.{Chain, NonEmptyMap, State}
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
@@ -40,10 +41,16 @@ object ApplyIntoCopyRawInliner extends Logging {
     }
 
     MakeStructRawInliner
-      .constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields, nonCopiedValues)
+      .constructThroughMap(
+        mapName,
+        mapType,
+        CallModel.Export(resultName, resultType),
+        fields,
+        nonCopiedValues
+      )
   }
 
-  def apply[S: Mangler: Exports: Arrows](
+  def apply[S: Mangler: Exports](
     value: VarModel,
     intoCopy: IntoCopyRaw
   ): State[S, (VarModel, Inline)] = {

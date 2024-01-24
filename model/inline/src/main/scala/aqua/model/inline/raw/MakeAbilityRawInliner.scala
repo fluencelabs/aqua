@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.model.ValueModel.Ability
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.model.{SeqModel, ValueModel, VarModel}
 import aqua.raw.value.AbilityRaw
 import aqua.types.AbilityType
@@ -15,7 +15,7 @@ import cats.syntax.functor.*
 
 object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
 
-  private def updateFields[S: Mangler: Exports: Arrows](
+  private def updateFields[S: Mangler: Exports](
     name: String,
     fields: NonEmptyMap[String, (ValueModel, Inline)]
   ): State[S, Unit] =
@@ -27,7 +27,7 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
         Exports[S].resolveAbilityField(name, n, vm)
     }.as(())
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports](
     raw: AbilityRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

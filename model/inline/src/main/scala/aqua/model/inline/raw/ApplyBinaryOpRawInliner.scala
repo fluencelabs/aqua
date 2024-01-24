@@ -2,32 +2,32 @@ package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
 import aqua.model.*
-import aqua.model.inline.raw.RawInliner
-import aqua.model.inline.TagInliner
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
-import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
+import aqua.model.inline.Inline.MergeMode
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ArrowType, ScalarType, Type}
+import aqua.model.inline.TagInliner
+import aqua.model.inline.raw.RawInliner
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.raw.value.ApplyBinaryOpRaw
 import aqua.raw.value.ApplyBinaryOpRaw.Op
 import aqua.raw.value.ApplyBinaryOpRaw.Op.*
-import aqua.model.inline.Inline.MergeMode
+import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
+import aqua.types.LiteralType
+import aqua.types.{ArrowType, ScalarType, Type}
 
 import cats.data.Chain
-import cats.syntax.traverse.*
-import cats.syntax.monoid.*
-import cats.syntax.functor.*
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
-import cats.syntax.foldable.*
+import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.applicative.*
-import aqua.types.LiteralType
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.monoid.*
+import cats.syntax.traverse.*
 
 object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports](
     raw: ApplyBinaryOpRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = for {
@@ -83,7 +83,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     }
   } yield result
 
-  private def inlineEqOp[S: Mangler: Exports: Arrows](
+  private def inlineEqOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,
@@ -106,7 +106,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     case _ => fullInlineEqOp(lmodel, rmodel, linline, rinline, op, resType)
   }
 
-  private def fullInlineEqOp[S: Mangler: Exports: Arrows](
+  private def fullInlineEqOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,
@@ -152,7 +152,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     result(name, resType, predo)
   }
 
-  private def inlineBoolOp[S: Mangler: Exports: Arrows](
+  private def inlineBoolOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,
@@ -178,7 +178,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     case _ => fullInlineBoolOp(lmodel, rmodel, linline, rinline, op, resType)
   }
 
-  private def fullInlineBoolOp[S: Mangler: Exports: Arrows](
+  private def fullInlineBoolOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,
@@ -230,7 +230,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     result(name, resType, predo)
   }
 
-  private def inlineCmpOp[S: Mangler: Exports: Arrows](
+  private def inlineCmpOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,
@@ -276,7 +276,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
       result(fn, resType, predo)
   }
 
-  private def inlineMathOp[S: Mangler: Exports: Arrows](
+  private def inlineMathOp[S: Mangler: Exports](
     lmodel: ValueModel,
     rmodel: ValueModel,
     linline: Inline,

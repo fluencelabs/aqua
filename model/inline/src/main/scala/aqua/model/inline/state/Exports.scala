@@ -7,6 +7,7 @@ import aqua.types.ServiceType
 import aqua.types.{AbilityType, GeneralAbilityType, NamedType}
 
 import cats.data.{NonEmptyList, State}
+import cats.syntax.functor.*
 
 /**
  * Exports – trace values available in the scope
@@ -86,11 +87,28 @@ object Exports {
     }
   }
 
+  final case class ExportsState(
+    global: Export.Context = Export.Context(Map.empty)
+  ) {
+
+    def resolved(name: String, exp: Export): ExportsState =
+      copy(global = global.resolved(name, exp))
+
+    def resolved(exports: Map[String, Export]): ExportsState =
+      copy(global = global.resolved(exports))
+
+    def renameExports(renames: Map[String, String]): ExportsState =
+      copy(global = global.renameExports(renames))
+
+    def values: Map[String, Export] =
+      global.values
+  }
+
   def apply[S](using exports: Exports[S]): Exports[S] = exports
 
-  object Simple extends Exports[Export.Context] {
+  given Exports[ExportsState] with {
 
-    type ST[A] = State[Export.Context, A]
+    type ST[A] = State[ExportsState, A]
 
     override def resolved(name: String, exp: Export): ST[Unit] =
       State.modify(_.resolved(name, exp))
@@ -99,7 +117,7 @@ object Exports {
       State.modify(_.resolved(exports))
 
     override def renameExports(renames: Map[String, String]): ST[Unit] =
-      State.modify(_.renameExports(renames))
+      State.modify[ExportsState](_.renameExports(renames)).void
 
     override def get(name: String): ST[Option[Export]] =
       State.inspect(_.values.get(name))

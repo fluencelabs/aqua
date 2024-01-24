@@ -4,7 +4,7 @@ import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
 import cats.data.Chain

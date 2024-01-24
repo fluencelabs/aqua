@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.model.inline.tag.IfTagInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
@@ -193,7 +193,7 @@ object TagInliner extends Logging {
    * @tparam S Current state
    * @return Model (if any), and prefix (if any)
    */
-  def tagToModel[S: Mangler: Arrows: Exports](
+  def tagToModel[S: Mangler: Exports](
     tag: RawTag
   ): State[S, TagInlined[S]] =
     tag match {
@@ -374,11 +374,13 @@ object TagInliner extends Logging {
         } yield TagInlined.Empty(prefix = prefix)
 
       case ClosureTag(arrow, detach) =>
-        if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())
-        else
-          Arrows[S]
-            .resolved(arrow, arrow.name.some)
-            .as(TagInlined.Single(model = CaptureTopologyModel(arrow.name)))
+        ???
+      // TODO: Rewrite
+      // if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())
+      // else
+      //   Arrows[S]
+      //     .resolved(arrow, arrow.name.some)
+      //     .as(TagInlined.Single(model = CaptureTopologyModel(arrow.name)))
 
       case NextTag(item) =>
         for {
@@ -431,12 +433,13 @@ object TagInliner extends Logging {
               } yield methodName -> fn
           }
 
+          // TODO: Rewrite
           // Resolve wrappers in arrows
-          _ <- Arrows[S].resolved(
-            methods.map { case (_, fn) =>
-              fn.funcName -> fn
-            }.toMap
-          )
+          // _ <- Arrows[S].resolved(
+          //   methods.map { case (_, fn) =>
+          //     fn.funcName -> fn
+          //   }.toMap
+          // )
 
           // Resolve wrappers in exports
           _ <- methods.traverse { case (methodName, fn) =>
@@ -475,7 +478,7 @@ object TagInliner extends Logging {
       inlined <- headInlined.build(children)
     } yield inlined
 
-  def handleTree[S: Exports: Mangler: Arrows](
+  def handleTree[S: Exports: Mangler](
     tree: RawTag.Tree
   ): State[S, OpModel.Tree] =
     traverseS(tree, tagToModel(_))

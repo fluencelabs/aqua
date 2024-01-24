@@ -75,7 +75,7 @@ object RawValueInliner extends Logging {
     }
   } yield result
 
-  private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
+  private[inline] def inlineToTree[S: Mangler: Exports](
     inline: Inline
   ): State[S, List[OpModel.Tree]] =
     (inline.mergeMode match {
@@ -83,7 +83,7 @@ object RawValueInliner extends Logging {
       case ParMode => inline.predo.toList
     }).pure
 
-  private[inline] def toModel[S: Mangler: Exports: Arrows](
+  private[inline] def toModel[S: Mangler: Exports](
     unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -98,7 +98,7 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
-  def valueToModel[S: Mangler: Exports: Arrows](
+  def valueToModel[S: Mangler: Exports](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
@@ -106,7 +106,7 @@ object RawValueInliner extends Logging {
     model <- toModel(unfold(value, propertiesAllowed))
   } yield model
 
-  def valueListToModel[S: Mangler: Exports: Arrows](
+  def valueListToModel[S: Mangler: Exports](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
@@ -115,7 +115,7 @@ object RawValueInliner extends Logging {
    * Unfold all arguments and make CallModel
    * @param flatStreamArguments canonicalize and flatten all stream arguments if true
    */
-  def callToModel[S: Mangler: Exports: Arrows](
+  def callToModel[S: Mangler: Exports](
     call: Call,
     flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
