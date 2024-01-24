@@ -6,7 +6,9 @@ import {
   closureOut2,
   lng58Bug,
   lng317Bug,
-  multipleClosuresBugLNG262
+  multipleClosuresBugLNG262,
+  lng325Bug,
+  lng325BugTwoFuncs
 } from "../compiled/examples/closures.js";
 import { config } from "../config.js";
 
@@ -41,4 +43,12 @@ export async function multipleClosuresLNG262BugCall(): Promise<[number, number]>
 
 export async function lng317BugCall(): Promise<string[]> {
   return lng317Bug();
+}
+
+export async function lng325BugCall(): Promise<string> {
+  return lng325Bug();
+}
+
+export async function lng325BugTwoFuncsCall(): Promise<[string, string]> {
+  return lng325BugTwoFuncs();
 }

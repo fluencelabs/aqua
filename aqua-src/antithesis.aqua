@@ -2,22 +2,6 @@ aqua A
 
 export haveFun
 
--- ability SSS:
---     arrow(x: i8) -> bool
---
--- ability CCCC:
---     arrow(x: i8) -> bool
---     simple: SSS
---
--- func checkAbCalls(a: i8) -> bool, bool, bool:
---     closure = (x: i8) -> bool:
---         <- x > 20
---     MySSS = SSS(arrow = closure)
---     MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
---     res1 <- MySSS.arrow(42)
---     res2 = MyCCCC.arrow(a)
---     <- res1, res2, MySSS.arrow(25)
-
 service Dummy("dummy"):
     greeting(s: string) -> string
 
