@@ -128,7 +128,7 @@ func lng325Bug() -> string:
 
    job = () -> Job:
      run = (str: string) -> string:
-       brokenStream <- Op.identity(str)
+       brokenStream <- MyOp.identity(str)
        <- "run"
 
      <- Job(run = run)
@@ -142,7 +142,7 @@ func secondStream() -> string:
 
    secondJob = () -> Job:
      secondRun = (str: string) -> string:
-       brokenStream <- Op.identity(str)
+       brokenStream <- MyOp.identity(str)
        <- "run"
 
      <- Job(run = secondRun)
