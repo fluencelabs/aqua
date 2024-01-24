@@ -1,6 +1,7 @@
 aqua Closure declares *
 
 export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262, lng317Bug
+export lng325Bug, lng325BugTwoFuncs
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
