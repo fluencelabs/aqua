@@ -2,6 +2,22 @@ aqua A
 
 export haveFun
 
+-- ability SSS:
+--     arrow(x: i8) -> bool
+--
+-- ability CCCC:
+--     arrow(x: i8) -> bool
+--     simple: SSS
+--
+-- func checkAbCalls(a: i8) -> bool, bool, bool:
+--     closure = (x: i8) -> bool:
+--         <- x > 20
+--     MySSS = SSS(arrow = closure)
+--     MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
+--     res1 <- MySSS.arrow(42)
+--     res2 = MyCCCC.arrow(a)
+--     <- res1, res2, MySSS.arrow(25)
+
 service Dummy("dummy"):
     greeting(s: string) -> string
 
@@ -12,7 +28,7 @@ func disrun(getJob: -> Job) -> Job:
    j <- getJob()
    <- j
 
-func haveFun() -> string:
+func firstStream() -> string:
    brokenStream: *string
 
    job = () -> Job:
@@ -23,5 +39,24 @@ func haveFun() -> string:
      <- Job(run = run)
 
    subnetJob <- disrun(job)
-   subnetJob.run("string for dummy")
+   subnetJob.run("firstStream string")
    <- brokenStream!
+
+func secondStream() -> string:
+   brokenStream: *string
+
+   secondJob = () -> Job:
+     secondRun = (str: string) -> string:
+       brokenStream <- Dummy.greeting(str)
+       <- "run"
+
+     <- Job(run = secondRun)
+
+   subnetJob <- disrun(secondJob)
+   subnetJob.run("secondStream string")
+   <- brokenStream!
+
+func haveFun() -> string, string:
+  res1 <- firstStream()
+  res2 <- secondStream()
+  <- res1, res2

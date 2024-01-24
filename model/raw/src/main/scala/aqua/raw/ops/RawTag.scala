@@ -308,7 +308,10 @@ case class ClosureTag(
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func =
       func.copy(
-        name = map.getOrElse(func.name, func.name)
+        name = map.getOrElse(func.name, func.name),
+        arrow = func.arrow.copy(
+          body = func.arrow.body.renameExports(map)
+        )
       )
     )
 

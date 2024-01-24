@@ -123,8 +123,13 @@ object RawValueInliner extends Logging {
         else
           State.pure(args)
       }
-      // TODO: making Raw from exportTo is a hack, maybe store ValueRaw in Call.Export?
-      exportTo <- valueListToModel(call.exportTo.map(_.toRaw))
+      // process separately exportTo that is a stream where function will push a result
+      exportTo <- call.exportTo.traverse {
+        case c@Call.Export(_, _, true) =>
+          valueToModel(c.toRaw)
+        case ce =>
+          State.pure[S, (ValueModel, Option[OpModel.Tree])]((VarModel(ce.name, ce.`type`), None))
+      }
     } yield {
       val exportModel = exportTo.map(_._1).collect {
         // exportTo can be only a variable
