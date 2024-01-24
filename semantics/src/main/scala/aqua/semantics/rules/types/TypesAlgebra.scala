@@ -40,25 +40,94 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineAlias(name: NamedTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[PropertyRaw]]
-
-  def resolveCopy(
-    token: IntoCopy[S],
+  /**
+   * Resolve `IntoIndex` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @param idxType type of the index
+   * @return type of the value at given index if property application is valid
+   */
+  def resolveIntoIndex(
+    op: IntoIndex[S],
     rootT: Type,
-    fields: NonEmptyList[(NamedArg[S], ValueRaw)]
-  ): Alg[Option[PropertyRaw]]
+    idxType: Type
+  ): Alg[Option[DataType]]
 
-  def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
-
-  def resolveArrow(
+  /**
+   * Resolve `IntoCopy` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @param types types of arguments passed
+   * @return struct type if property application is valid
+   * @note `types` should correspond to `op.args`
+   */
+  def resolveIntoCopy(
+    op: IntoCopy[S],
     rootT: Type,
+    types: NonEmptyList[Type]
+  ): Alg[Option[StructType]]
+
+  enum IntoFieldRes(`type`: Type) {
+    case Field(`type`: Type) extends IntoFieldRes(`type`)
+    case Property(`type`: Type) extends IntoFieldRes(`type`)
+
+    def fold[A](field: Type => A, property: Type => A): A =
+      this match {
+        case Field(t) => field(t)
+        case Property(t) => property(t)
+      }
+  }
+
+  /**
+   * Resolve `IntoField` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @return if property application is valid, return
+   *         Field(type) if it's a field of rootT (fields of structs or abilities),
+   *         Property(type) if it's a property of rootT (functors of collections)
+   */
+  def resolveIntoField(
+    op: IntoField[S],
+    rootT: Type
+  ): Alg[Option[IntoFieldRes]]
+
+  /**
+   * Resolve `IntoArrow` property on value with `rootT` type
+   *
+   * @param op property to resolve
+   * @param rootT type of the value to which property is applied
+   * @param types types of arguments passed
+   * @return arrow type if property application is valid
+   * @note `types` should correspond to `op.arguments`
+   */
+  def resolveIntoArrow(
     op: IntoArrow[S],
-    arguments: List[ValueRaw]
-  ): Alg[Option[PropertyRaw]]
+    rootT: Type,
+    types: List[Type]
+  ): Alg[Option[ArrowType]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
+
+  /**
+   * Check if given type (ability or struct)
+   * can be constructed from given arguments
+   *
+   * @param token token of construction expression (for error reporting)
+   * @param expected type to construct
+   * @param arguments arguments to construct with (name -> (named arg, type))
+   * @return true if type can be constructed from given arguments
+   * reports error and warnings if necessary
+   */
+  def ensureTypeConstructibleFrom(
+    token: Token[S],
+    expected: AbilityType | StructType,
+    arguments: NonEmptyMap[String, (NamedArg[S], Type)]
+  ): Alg[Boolean]
 
   def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, CollectibleType]
 

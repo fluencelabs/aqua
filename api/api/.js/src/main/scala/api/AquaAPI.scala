@@ -19,8 +19,6 @@ import aqua.logging.{LogFormatter, LogLevels}
 import aqua.model.AquaContext
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.parser.lift.FileSpan.F
-import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ops.Call
 import aqua.raw.ops.CallArrowRawTag

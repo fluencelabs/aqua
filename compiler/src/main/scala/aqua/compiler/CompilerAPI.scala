@@ -1,32 +1,21 @@
 package aqua.compiler
 
+import aqua.backend.Backend
 import aqua.compiler.AquaError.*
-import aqua.backend.{AirFunction, Backend}
-import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
-import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.RawPart.Parts
-import aqua.raw.{RawContext, RawPart}
-import aqua.res.AquaRes
+import aqua.raw.RawContext
+import aqua.semantics.RawSemantics
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
-import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 
 import cats.data.*
-import cats.data.Validated.{invalid, validNec, Invalid, Valid}
-import cats.parse.Parser0
 import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.foldable.*
-import cats.syntax.functor.*
-import cats.syntax.monoid.*
-import cats.syntax.semigroup.*
-import cats.syntax.traverse.*
 import cats.syntax.either.*
-import cats.{~>, Comonad, Monad, Monoid, Order}
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
+import cats.{Comonad, Monad, Monoid, Order}
 import scribe.Logging
-
-import scala.collection.MapView
 
 object CompilerAPI extends Logging {
 

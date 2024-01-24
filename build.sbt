@@ -1,6 +1,6 @@
 import BundleJS.*
 
-val aquaVersion = "0.13.3"
+val aquaVersion = "0.13.4"
 
 val scalaV = "3.3.1"
 val catsV = "2.10.0"
@@ -10,7 +10,7 @@ val scalaTestV = "3.2.17"
 val scalaTestScalaCheckV = "3.2.17.0"
 val sourcecodeV = "0.3.0"
 // Snapshot is used to get latest fixes
-val fs2V = "3.9.3-37-8badc91-SNAPSHOT"
+val fs2V = "3.10-365636d"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
@@ -188,7 +188,7 @@ lazy val inline = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/inline"))
   .settings(commons)
-  .dependsOn(raw, model)
+  .dependsOn(raw, model, mangler)
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -207,7 +207,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, parser, errors)
+  .dependsOn(raw, parser, errors, mangler)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -246,6 +246,17 @@ lazy val logging = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("utils/logging"))
+  .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  )
+
+lazy val mangler = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/mangler"))
   .settings(commons)
   .settings(
     libraryDependencies ++= Seq(

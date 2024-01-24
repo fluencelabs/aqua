@@ -1,27 +1,27 @@
 package aqua.model.inline
 
-import aqua.model.inline.raw.{ApplyPropertiesRawInliner, StreamGateInliner}
+import aqua.mangler.ManglerState
 import aqua.model.*
+import aqua.model.inline.raw.StreamGateInliner
 import aqua.model.inline.state.InliningState
-import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
-import aqua.types.*
 import aqua.raw.value.*
-
+import aqua.types.*
 import cats.Eval
-import cats.data.NonEmptyMap
-import cats.data.Chain
-import cats.syntax.show.*
-import cats.syntax.foldable.*
+import cats.data.{Chain, NonEmptyMap}
 import cats.free.Cofree
-import scala.collection.immutable.SortedMap
-import scala.math
+import cats.syntax.foldable.*
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
+
+import scala.collection.immutable.SortedMap
+import scala.math
 
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   import RawValueInliner.valueToModel
+
+  def toMangler(noNames: Set[String]) = ManglerState(noNames.map(_ -> 0).toMap)
 
   def join(stream: VarModel, size: ValueModel) =
     stream match {
@@ -188,7 +188,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   "raw value inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
     valueToModel[InliningState](`raw x[y]`)
-      .runA(InliningState(noNames = Set("x", "y")))
+      .runA(InliningState(noNames = toMangler(Set("x", "y"))))
       .value shouldBe (
       VarModel(
         "x",
@@ -200,7 +200,6 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   // TODO: unignore and fix after stream restrictions will be implemented
   ignore /*"raw value inliner"*/ should "unfold an IntoField PropertyModel" in {
-    import aqua.model.inline.state.Mangler.Simple
     // a.field1.field2
     valueToModel[InliningState](`raw res.c`)
       .runA(
@@ -222,7 +221,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[ys[0]]`
     )
-      .runA(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = toMangler(Set("x", "ys"))))
       .value
 
     resVal should be(
@@ -250,7 +249,9 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   it should "desugarize properties with functors x[ys[ys.length]][2] and make proper flattener tags" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `x[xs[ys.length]][xss[yss.length]]`
-    ).runA(InliningState(noNames = Set("x", "ys", "xs", "yss", "xss"))).value
+    ).runA(
+      InliningState(noNames = toMangler(Set("x", "ys", "xs", "yss", "xss")))
+    ).value
 
     resVal should be(
       VarModel(
@@ -325,7 +326,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[ys[0]][ys[1]]`
     )
-      .runA(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = toMangler(Set("x", "ys"))))
       .value
 
     resVal should be(
@@ -371,7 +372,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       IntoIndexRaw(idxRaw, ScalarType.string)
     )
 
-    val initState = InliningState(noNames = Set("x", "ys"))
+    val initState = InliningState(noNames = toMangler(Set("x", "ys")))
 
     // Here retrieve how size is inlined
     val (afterSizeState, (sizeModel, sizeTree)) =
@@ -420,7 +421,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       )
 
     val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
-      .runA(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = toMangler(Set("x", "ys"))))
       .value
   }
 
@@ -428,7 +429,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[zs[ys[0]]][ys[1]]`
     )
-      .runA(InliningState(noNames = Set("x", "ys", "zs")))
+      .runA(InliningState(noNames = toMangler(Set("x", "ys", "zs"))))
       .value
 
     // This is x[zs-0][ys-0]

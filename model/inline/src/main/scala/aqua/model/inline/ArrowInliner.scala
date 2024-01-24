@@ -348,7 +348,7 @@ object ArrowInliner extends Logging {
 
       // Rename arrows according to values
       arrowsRenamed = Renamed(
-        valuesRenamed.renames.filterKeys(abilitiesArrows.keySet).toMap,
+        valuesRenamed.renames.view.filterKeys(abilitiesArrows.keySet).toMap,
         abilitiesArrows.renamed(valuesRenamed.renames)
       )
 
@@ -497,7 +497,7 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
-
+    
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {

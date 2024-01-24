@@ -1,12 +1,12 @@
 package aqua.semantics
 
+import aqua.mangler.ManglerState
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
 import aqua.raw.RawContext
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.definitions.DefinitionsState
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.rules.mangler.ManglerState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.report.ReportState
 import aqua.semantics.rules.types.TypesState

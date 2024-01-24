@@ -1,4 +1,4 @@
-module Ret declares *
+aqua Ret declares *
 
 export someFunc
 

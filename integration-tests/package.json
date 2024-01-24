@@ -31,8 +31,7 @@
   },
   "prettier": {},
   "devDependencies": {
-    "@fluencelabs/aqua-api": "0.13.3",
-    "@fluencelabs/aqua-dht": "0.2.5",
+    "@fluencelabs/aqua-api": "0.13.4",
     "@fluencelabs/aqua-lib": "0.9.0",
     "@types/jest": "29.5.2",
     "@types/node": "18.19.3",
@@ -44,7 +43,7 @@
   },
   "dependencies": {
     "@fluencelabs/fluence-network-environment": "1.1.2",
-    "@fluencelabs/js-client": "0.5.5",
+    "@fluencelabs/js-client": "0.6.0",
     "deep-equal": "2.2.1",
     "loglevel": "1.8.1"
   },

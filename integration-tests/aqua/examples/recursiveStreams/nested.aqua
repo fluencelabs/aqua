@@ -1,0 +1,19 @@
+aqua Nested
+
+export nested
+
+func nested(n: u32) -> []u32:
+    result: *u32
+    iterator: *u32
+
+    iterator <<- 0
+    for i <- iterator rec:
+        if i < n:
+            for j <- iterator rec:
+                result <<- j
+            iterator <<- i + 1
+
+    if n > 0:
+        join result[n * (n + 1) / 2 - 1]
+
+    <- result

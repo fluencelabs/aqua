@@ -1,2 +1,6 @@
+aqua ReturnLiteral
+
+export returnLiteral
+
 func returnLiteral() -> string:
     <- "some literal"

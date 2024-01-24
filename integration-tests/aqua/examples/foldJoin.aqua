@@ -1,8 +1,8 @@
-module FoldJoin
-
-import "@fluencelabs/aqua-lib/builtin.aqua"
+aqua FoldJoin
 
 export getTwoResults
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service Op2("op"):
     identity(s: u64)

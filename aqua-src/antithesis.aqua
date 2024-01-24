@@ -1,3 +1,33 @@
-func arr() -> string:
-  n = "str"
-  <- n
+aqua M
+
+export returnSrvAsAbility
+
+ability MyAb:
+    call() -> string
+
+service MySrv("default-id"):
+    call() -> string
+
+func mySrvDefault() -> MyAb:
+    <- MySrv
+
+func mySrvResolved() -> MyAb:
+    MySrv "resolved-id"
+    <- MySrv
+
+func mySrvThird() -> MyAb:
+    MySrv "third-id"
+    <- MySrv
+
+func useMyAb{MyAb}() -> string:
+    <- MyAb.call()
+
+func returnSrvAsAbility() -> []string:
+    result: *string
+    MySrvDefault <- mySrvDefault()
+    MySrvResolved <- mySrvResolved()
+    MySrvThird <- mySrvThird()
+    result <- useMyAb{MySrvDefault}()
+    result <- useMyAb{MySrvResolved}()
+    result <- useMyAb{MySrvThird}()
+    <- result
