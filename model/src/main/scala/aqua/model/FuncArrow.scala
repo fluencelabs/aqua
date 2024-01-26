@@ -3,8 +3,7 @@ package aqua.model
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.{Call, CallArrowRawTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, Type}
-
+import aqua.types.{ArrowType, MutableStreamType, Type}
 import cats.syntax.option.*
 
 case class FuncArrow(
@@ -73,7 +72,9 @@ object FuncArrow {
 
     val call = Call(
       methodType.domain.toLabelledList().map(VarRaw.apply),
-      retVar.map(r => Call.Export(r.name, r.`type`)).toList
+      retVar.map { r =>
+        Call.Export(r.name, r.`type`, Type.isStreamType(r.`type`))
+      }.toList
     )
 
     val body = CallArrowRawTag.service(

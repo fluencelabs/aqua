@@ -8,17 +8,17 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.canonicalizeIfStream
 import aqua.model.inline.Inline.parDesugarPrefixOpt
-
-import cats.data.Chain
+import cats.data.{Chain, State}
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.Eval
 
 final case class IfTagInliner(
   valueRaw: ValueRaw
 ) {
   import IfTagInliner.*
 
-  def inlined[S: Mangler: Exports: Arrows] =
+  def inlined[S: Mangler: Exports: Arrows]: State[S, IfTagInlined] =
     (valueRaw match {
       // Optimize in case last operation is equality check
       case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>

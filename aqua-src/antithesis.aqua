@@ -1,9 +1,55 @@
 aqua A
 
-export haveFun
+export get_logs, lng317Bug, lng325Bug, lng325BugTwoFuncs
 
-service Dummy("dummy"):
-    greeting(s: string) -> string
+service Op("op"):
+    id(s1: string)
+    identity(s: string) -> string
+
+service MyOp("op"):
+    id(s1: string)
+    identity(s: string) -> string
+
+func get_logs(a: string):
+    if a == "sdf":
+        error <- Op.identity("some serv")
+        Op.id(error)
+    error: *string
+    error <- Op.identity("stream")
+
+ability WorkerJob:
+  runOnSingleWorker(w: string) -> []string
+
+func runJob(j: -> []string) -> []string:
+  <- j()
+
+func disjoint_run{WorkerJob}() -> -> []string:
+  run = func () -> []string:
+      r <- WorkerJob.runOnSingleWorker("a")
+      <- r
+  <- run
+
+func empty() -> string:
+  a = "empty"
+  <- a
+
+func lng317Bug() -> []string:
+
+   res: *string
+
+   outer = () -> string:
+     <- empty()
+
+   clos = () -> -> []string:
+     job2 = () -> []string:
+       res <- outer()
+       res <- MyOp.identity("identity")
+       <- res
+     <- job2
+   worker_job = WorkerJob(runOnSingleWorker = clos())
+   subnet_job <- disjoint_run{worker_job}()
+   finalRes <- runJob(subnet_job)
+   <- finalRes
 
 ability Job:
     run(s: string) -> string
@@ -12,12 +58,12 @@ func disrun(getJob: -> Job) -> Job:
    j <- getJob()
    <- j
 
-func firstStream() -> string:
+func lng325Bug() -> string:
    brokenStream: *string
 
    job = () -> Job:
      run = (str: string) -> string:
-       brokenStream <- Dummy.greeting(str)
+       brokenStream <- MyOp.identity(str)
        <- "run"
 
      <- Job(run = run)
@@ -31,7 +77,7 @@ func secondStream() -> string:
 
    secondJob = () -> Job:
      secondRun = (str: string) -> string:
-       brokenStream <- Dummy.greeting(str)
+       brokenStream <- MyOp.identity(str)
        <- "run"
 
      <- Job(run = secondRun)
@@ -40,7 +86,7 @@ func secondStream() -> string:
    subnetJob.run("secondStream string")
    <- brokenStream!
 
-func haveFun() -> string, string:
-  res1 <- firstStream()
+func lng325BugTwoFuncs() -> string, string:
+  res1 <- lng325Bug()
   res2 <- secondStream()
   <- res1, res2
