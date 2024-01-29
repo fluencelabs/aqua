@@ -3,7 +3,8 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.raw.*
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.Exports.Export
+import aqua.model.inline.state.{Counter, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -23,21 +24,26 @@ object RawValueInliner extends Logging {
 
   import aqua.model.inline.Inline.*
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Inline)] = for {
+  ): State[S, (Export, Inline)] = for {
     optimized <- StateT.liftF(Optimization.optimize(raw))
     _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
     result <- optimized match {
+      case LiteralRaw(value, t) =>
+        val model = LiteralModel(value, t)
+        val exp = Export.Value(model)
+        State.pure(exp -> Inline.empty)
+
       case VarRaw(name, t) =>
         for {
-          exports <- Exports[S].exports
-          model = VarModel(name, t, Chain.empty).resolveWith(exports)
-        } yield model -> Inline.empty
-
-      case LiteralRaw(value, t) =>
-        State.pure(LiteralModel(value, t) -> Inline.empty)
+          maybeExport <- Exports[S].get(name)
+          model = VarModel(name, t)
+          exp = maybeExport.getOrElse(
+            Export.Value(model)
+          )
+        } yield exp -> Inline.empty
 
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
@@ -69,7 +75,7 @@ object RawValueInliner extends Logging {
     }
   } yield result
 
-  private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
+  private[inline] def inlineToTree[S: Mangler: Exports](
     inline: Inline
   ): State[S, List[OpModel.Tree]] =
     (inline.mergeMode match {
@@ -77,7 +83,7 @@ object RawValueInliner extends Logging {
       case ParMode => inline.predo.toList
     }).pure
 
-  private[inline] def toModel[S: Mangler: Exports: Arrows](
+  private[inline] def toModel[S: Mangler: Exports](
     unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -92,7 +98,7 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
-  def valueToModel[S: Mangler: Exports: Arrows](
+  def valueToModel[S: Mangler: Exports](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
@@ -100,7 +106,7 @@ object RawValueInliner extends Logging {
     model <- toModel(unfold(value, propertiesAllowed))
   } yield model
 
-  def valueListToModel[S: Mangler: Exports: Arrows](
+  def valueListToModel[S: Mangler: Exports](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
@@ -109,14 +115,14 @@ object RawValueInliner extends Logging {
    * Unfold all arguments and make CallModel
    * @param flatStreamArguments canonicalize and flatten all stream arguments if true
    */
-  def callToModel[S: Mangler: Exports: Arrows](
+  def callToModel[S: Mangler: Exports](
     call: Call,
     flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
     valueListToModel(call.args).flatMap { args =>
       if (flatStreamArguments)
         args.map { arg =>
-          TagInliner.flat(arg._1, arg._2)
+          TagInliner.flat(arg._1, arg._2, true)
         }.sequence
       else
         State.pure(args)

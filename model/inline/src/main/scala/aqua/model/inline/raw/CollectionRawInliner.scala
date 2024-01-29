@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.raw.value.CollectionRaw
 import aqua.types.StreamMapType
 import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
@@ -12,7 +12,7 @@ import cats.data.{Chain, State}
 
 object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =

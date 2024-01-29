@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.model.inline.Inline
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.model.{
   CallModel,
   CanonicalizeModel,
@@ -24,7 +24,7 @@ import scribe.Logging
 
 object ApplyFunctorRawInliner extends Logging {
 
-  def apply[S: Mangler: Exports: Arrows](
+  def apply[S: Mangler: Exports](
     value: ValueModel,
     functor: FunctorRaw
   ): State[S, (VarModel, Inline)] = {

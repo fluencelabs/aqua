@@ -3,17 +3,17 @@ package aqua.model.inline.raw
 import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.RawValueInliner.unfold
+import aqua.model.inline.state.{Exports, Mangler}
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
-import cats.data.State
 import cats.data.Chain
+import cats.data.State
+import cats.instances.stream
+import cats.syntax.applicative.*
 import cats.syntax.monoid.*
 import cats.syntax.option.*
-import cats.syntax.applicative.*
 import scribe.Logging
-import cats.instances.stream
 
 object StreamGateInliner extends Logging {
 
@@ -88,7 +88,7 @@ object StreamGateInliner extends Logging {
     )
   }
 
-  def apply[S: Mangler: Exports: Arrows](
+  def apply[S: Mangler: Exports](
     streamName: String,
     streamType: StreamType,
     sizeModel: ValueModel
