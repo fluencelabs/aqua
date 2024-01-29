@@ -123,9 +123,9 @@ object RawValueInliner extends Logging {
         else
           State.pure(args)
       }
-      // process separately exportTo that is a stream where function will push a result
       exportTo <- call.exportTo.traverse {
         case c@Call.Export(_, _, true) =>
+          // process streams from exportTo
           valueToModel(c.toRaw)
         case ce =>
           State.pure[S, (ValueModel, Option[OpModel.Tree])]((VarModel(ce.name, ce.`type`), None))

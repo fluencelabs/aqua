@@ -1,5 +1,6 @@
 package aqua.raw.ops
 
+import aqua.errors.Errors.internalError
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, ProductType, Type}
 
@@ -33,5 +34,24 @@ object Call {
     def toRaw: VarRaw = VarRaw(name, `type`)
 
     override def toString: String = s"$name:${`type`} <-"
+  }
+  
+  extension (exportTo: List[Call.Export]) {
+    def mapStreams(f: ValueRaw => ValueRaw): List[Call.Export] =
+      exportTo.flatMap {
+        // map streams from "exportTo", because they are not exports, but variables
+        case ce@Call.Export(_, _, true) =>
+          f(ce.toRaw) match {
+            case VarRaw(name, baseType) => Some(Call.Export(name, baseType, true))
+            case _ => internalError(s"Stream '$ce' can be only VarRaw")
+          }
+        case ce => Some(ce)
+      }
+
+    def renameExports(map: Map[String, String]): List[Call.Export] =
+      exportTo.map {
+        case ce@Call.Export(_, _, true) => ce
+        case ce => ce.mapName(n => map.getOrElse(n, n))
+      }
   }
 }

@@ -215,24 +215,11 @@ case class CallArrowRawTag(
 
   override def usesVarNames: Set[String] = value.varNames ++ usesExportStreams
 
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag = {
-    val newExportTo = exportTo.flatMap {
-      case ce@Call.Export(_, _, true) =>
-        f(ce.toRaw) match {
-          case VarRaw(name, baseType) => Some(Call.Export(name, baseType, true))
-          // unreachable
-          case _ => None
-        }
-      case ce => Some(ce)
-    }
-    CallArrowRawTag(newExportTo, value.map(f))
-  }
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    CallArrowRawTag(exportTo.mapStreams(f), value.map(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.map {
-      case ce@Call.Export(_, _, true) => ce
-      case ce => ce.mapName(n => map.getOrElse(n, n))
-    })
+    copy(exportTo = exportTo.renameExports(map))
 }
 
 object CallArrowRawTag {
