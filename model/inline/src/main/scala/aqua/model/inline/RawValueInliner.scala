@@ -125,9 +125,8 @@ object RawValueInliner extends Logging {
       }
       // process separately exportTo that is a stream where function will push a result
       exportTo <- call.exportTo.traverse {
-        case Call.Export(name, t, true) =>
-          val model = VarModel(name, t, Chain.empty)
-          Exports[S].resolved(name, model).as(model -> None)
+        case c@Call.Export(_, _, true) =>
+          valueToModel(c.toRaw)
         case ce =>
           State.pure[S, (ValueModel, Option[OpModel.Tree])]((VarModel(ce.name, ce.`type`), None))
       }
