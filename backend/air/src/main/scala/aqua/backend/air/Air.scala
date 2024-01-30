@@ -144,7 +144,7 @@ object Air {
             showNext(inst)
             sb.append(space)
           case Air.Fold(iter, label, inst, lastInst) ⇒
-            sb.append(" ").append(s" ${iter.show} $label\n")
+            sb.append(s" ${iter.show} $label\n")
             showNext(inst)
             showNext(lastInst)
             sb.append(space)

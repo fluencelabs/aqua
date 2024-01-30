@@ -636,7 +636,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         stream.`type` shouldBe StreamType(ScalarType.i32)
         matchChildren(forTag) { case (ParTag, parTag) =>
           matchChildren(parTag)(
-            { case (PushToStreamTag(VarRaw(varName, _), Call.Export(streamName, _)), _) =>
+            { case (PushToStreamTag(VarRaw(varName, _), Call.Export(streamName, _, _)), _) =>
               varName shouldBe "i"
               streamName shouldBe "stream"
             },

@@ -1,11 +1,9 @@
 package aqua.raw.ops
 
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.RawTag.Tree
-import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw}
+import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw, VarRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.*
-
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
@@ -208,15 +206,20 @@ case class CallArrowRawTag(
   value: ValueRaw
 ) extends RawTag {
 
-  override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet
+  private lazy val usesExportStreams = exportTo.collect { case Call.Export(name, _, true) =>
+    name
+  }.toSet
 
-  override def usesVarNames: Set[String] = value.varNames
+  // don't use existing streams in exports
+  override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet -- usesExportStreams
+
+  override def usesVarNames: Set[String] = value.varNames ++ usesExportStreams
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CallArrowRawTag(exportTo, value.map(f))
+    CallArrowRawTag(exportTo.map(_.mapStream(f)), value.map(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.map(_.mapName(n => map.getOrElse(n, n))))
+    copy(exportTo = exportTo.map(_.renameNonStream(map)))
 }
 
 object CallArrowRawTag {

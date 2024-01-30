@@ -519,6 +519,12 @@ object Type {
    * `StreamType` is collectible with canonicalization
    */
   type CollectibleType = DataType | StreamType
+  
+  def isStreamType(t: Type): Boolean =
+    t match {
+      case _: MutableStreamType => true
+      case _ => false
+    }
 
   given PartialOrder[Type] =
     CompareTypes.partialOrder

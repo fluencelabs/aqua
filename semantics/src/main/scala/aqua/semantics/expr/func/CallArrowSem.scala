@@ -31,7 +31,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     (variables zip codomain.toList).traverse { case (v, t) =>
       N.read(v, mustBeDefined = false).flatMap {
         case Some(stream @ StreamType(st)) =>
-          T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream))
+          T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream, isExistingStream = true))
         case _ =>
           N.define(v, t).as(Call.Export(v.value, t))
       }

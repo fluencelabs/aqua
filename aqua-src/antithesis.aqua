@@ -1,33 +1,92 @@
-aqua M
+aqua A
 
-export returnSrvAsAbility
+export get_logs
 
-ability MyAb:
-    call() -> string
+service Op("op"):
+    id(s1: string)
+    identity(s: string) -> string
 
-service MySrv("default-id"):
-    call() -> string
+service MyOp("op"):
+    id(s1: string)
+    identity(s: string) -> string
 
-func mySrvDefault() -> MyAb:
-    <- MySrv
+func get_logs(a: string):
+    if a == "sdf":
+        streamA <- Op.identity("some serv")
+        Op.id(streamA)
+    streamA: *string
+    streamA <- Op.identity("stream")
 
-func mySrvResolved() -> MyAb:
-    MySrv "resolved-id"
-    <- MySrv
-
-func mySrvThird() -> MyAb:
-    MySrv "third-id"
-    <- MySrv
-
-func useMyAb{MyAb}() -> string:
-    <- MyAb.call()
-
-func returnSrvAsAbility() -> []string:
-    result: *string
-    MySrvDefault <- mySrvDefault()
-    MySrvResolved <- mySrvResolved()
-    MySrvThird <- mySrvThird()
-    result <- useMyAb{MySrvDefault}()
-    result <- useMyAb{MySrvResolved}()
-    result <- useMyAb{MySrvThird}()
-    <- result
+-- ability WorkerJob:
+--   runOnSingleWorker(w: string) -> []string
+--
+-- func runJob(j: -> []string) -> []string:
+--   <- j()
+--
+-- func disjoint_run{WorkerJob}() -> -> []string:
+--   run = func () -> []string:
+--       r <- WorkerJob.runOnSingleWorker("a")
+--       <- r
+--   <- run
+--
+-- func empty() -> string:
+--   a = "empty"
+--   <- a
+--
+-- func lng317Bug() -> []string:
+--
+--    res: *string
+--
+--    outer = () -> string:
+--      <- empty()
+--
+--    clos = () -> -> []string:
+--      job2 = () -> []string:
+--        res <- outer()
+--        res <- MyOp.identity("identity")
+--        <- res
+--      <- job2
+--    worker_job = WorkerJob(runOnSingleWorker = clos())
+--    subnet_job <- disjoint_run{worker_job}()
+--    finalRes <- runJob(subnet_job)
+--    <- finalRes
+--
+-- ability Job:
+--     run(s: string) -> string
+--
+-- func disrun(getJob: -> Job) -> Job:
+--    j <- getJob()
+--    <- j
+--
+-- func lng325Bug() -> string:
+--    brokenStream: *string
+--
+--    job = () -> Job:
+--      run = (str: string) -> string:
+--        brokenStream <- MyOp.identity(str)
+--        <- "run"
+--
+--      <- Job(run = run)
+--
+--    subnetJob <- disrun(job)
+--    subnetJob.run("firstStream string")
+--    <- brokenStream!
+--
+-- func secondStream() -> string:
+--    brokenStream: *string
+--
+--    secondJob = () -> Job:
+--      secondRun = (str: string) -> string:
+--        brokenStream <- MyOp.identity(str)
+--        <- "run"
+--
+--      <- Job(run = secondRun)
+--
+--    subnetJob <- disrun(secondJob)
+--    subnetJob.run("secondStream string")
+--    <- brokenStream!
+--
+-- func lng325BugTwoFuncs() -> string, string:
+--   res1 <- lng325Bug()
+--   res2 <- secondStream()
+--   <- res1, res2

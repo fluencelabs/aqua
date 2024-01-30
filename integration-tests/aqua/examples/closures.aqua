@@ -1,6 +1,7 @@
 aqua Closure declares *
 
 export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262, lng317Bug
+export lng325Bug, lng325BugTwoFuncs
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
@@ -115,3 +116,43 @@ func lng317Bug() -> []string:
    subnet_job <- disjoint_run{worker_job}()
    finalRes <- runJob(subnet_job)
    <- finalRes
+
+ability Job:
+    run(s: string) -> string
+
+func disrun(getJob: -> Job) -> Job:
+   j <- getJob()
+   <- j
+
+func lng325Bug() -> string:
+   brokenStream: *string
+
+   job = () -> Job:
+     run = (str: string) -> string:
+       brokenStream <- MyOp.identity(str)
+       <- "run"
+
+     <- Job(run = run)
+
+   subnetJob <- disrun(job)
+   subnetJob.run("firstStream string")
+   <- brokenStream!
+
+func secondStream() -> string:
+   brokenStream: *string
+
+   secondJob = () -> Job:
+     secondRun = (str: string) -> string:
+       brokenStream <- MyOp.identity(str)
+       <- "run"
+
+     <- Job(run = secondRun)
+
+   subnetJob <- disrun(secondJob)
+   subnetJob.run("secondStream string")
+   <- brokenStream!
+
+func lng325BugTwoFuncs() -> string, string:
+  res1 <- lng325Bug()
+  res2 <- secondStream()
+  <- res1, res2
