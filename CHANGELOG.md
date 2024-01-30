@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.14.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.4...aqua-v0.14.0) (2024-01-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* **compiler:** Force `aqua` header [LNG-308]  ([#1028](https://github.com/fluencelabs/aqua/issues/1028))
+
+### Features
+
+* **compiler:** Force `aqua` header [LNG-308]  ([#1028](https://github.com/fluencelabs/aqua/issues/1028)) ([d057a5e](https://github.com/fluencelabs/aqua/commit/d057a5e69583872f93cdb4d1220d62fe9dfdea50))
+
+
+### Bug Fixes
+
+* **compiler:** Streams in closures generates wrong AIR ([#1055](https://github.com/fluencelabs/aqua/issues/1055)) ([1a0b3a2](https://github.com/fluencelabs/aqua/commit/1a0b3a22c1ccfd07f884d04ba442899b84f1d7e2))
+* **deps:** update dependency @fluencelabs/js-client to v0.6.0 ([#1050](https://github.com/fluencelabs/aqua/issues/1050)) ([f94f383](https://github.com/fluencelabs/aqua/commit/f94f38327a6c9d31ee54f44e35568aa23c8b4597))
+* **deps:** update dependency @fluencelabs/js-client to v0.7.0 ([#1056](https://github.com/fluencelabs/aqua/issues/1056)) ([11f8d3b](https://github.com/fluencelabs/aqua/commit/11f8d3b11b17d682602750133d620b827cc926cf))
+
+
+### Performance Improvements
+
+* **compiler:** Inliner optimization [LNG-322] ([#1047](https://github.com/fluencelabs/aqua/issues/1047)) ([abcb63d](https://github.com/fluencelabs/aqua/commit/abcb63db3b1acbe68dd49539016b807071b24a4c))
+* **compiler:** Optimize `Linker` [LNG-321] ([#1049](https://github.com/fluencelabs/aqua/issues/1049)) ([7b6c724](https://github.com/fluencelabs/aqua/commit/7b6c7245ecbce719027fffd97709b5648e15ed92))
+
 ## [0.13.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.3...aqua-v0.13.4) (2024-01-11)
 
 
