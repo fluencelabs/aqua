@@ -37,7 +37,7 @@ importers:
         version: 1.9.1
     devDependencies:
       '@fluencelabs/aqua-api':
-        specifier: 0.13.4
+        specifier: 0.14.0
         version: link:../api/api-npm
       '@fluencelabs/aqua-lib':
         specifier: 0.9.0
@@ -487,15 +487,9 @@ packages:
     resolution: {integrity: sha512-1Bp2gBy3oMEILMynFpOIFK/q2Pj792xpnb3AJs5QcTQAaHz9V2nrEI8OOPwBAFTmjmLBirXBqQQX63O+ePH7yg==}
     dev: false
 
-  /@fluencelabs/interfaces@0.10.0:
-    resolution: {integrity: sha512-KD6GKk4whhQyt0fYpD1EFoi1JidQ6w37edS+akrHritySl9gxVAZqd7Ho6AolLEVHkMMBVQYC6sSjU9DcNueRg==}
-    engines: {node: '>=10', pnpm: '>=3'}
-    dev: true
-
   /@fluencelabs/interfaces@0.11.0:
     resolution: {integrity: sha512-gUW5CYGgmA7r/9WB79VXQh6Udvg7/ywPk5fu5OI5VsL37CGD+NnJW1l+tRcl0qhgl9CwI/sfjNoxo3JgHD1Llw==}
     engines: {node: '>=10', pnpm: '>=3'}
-    dev: false
 
   /@fluencelabs/js-client-isomorphic@0.5.0:
     resolution: {integrity: sha512-MhguhGQShDF6ErCFxP0RhQ366xjJ50RPp7a+D9KR5nUtbLIFCht/EDsPm0io+IE5lBYYDemhP8Rus0RBreCtyQ==}

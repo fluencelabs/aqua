@@ -31,7 +31,7 @@
   },
   "prettier": {},
   "devDependencies": {
-    "@fluencelabs/aqua-api": "0.13.4",
+    "@fluencelabs/aqua-api": "0.14.0",
     "@fluencelabs/aqua-lib": "0.9.0",
     "@types/jest": "29.5.11",
     "@types/node": "18.19.10",
