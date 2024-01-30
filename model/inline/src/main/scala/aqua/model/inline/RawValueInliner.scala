@@ -117,30 +117,30 @@ object RawValueInliner extends Logging {
       args <- valueListToModel(call.args)
       args <- {
         if (flatStreamArguments)
-          args.map { arg =>
-            TagInliner.flat(arg._1, arg._2)
-          }.sequence
+          args.traverse(TagInliner.flat.tupled)
         else
           State.pure(args)
       }
       exportTo <- call.exportTo.traverse {
-        case c@Call.Export(_, _, true) =>
-          // process streams from exportTo
+        case c@Call.Export(_, _, isExistingStream) if isExistingStream =>
+          // process streams, because they can be stored in Exports outside function/closure with different name
           valueToModel(c.toRaw)
         case ce =>
-          State.pure[S, (ValueModel, Option[OpModel.Tree])]((VarModel(ce.name, ce.`type`), None))
+          State.pure((VarModel(ce.name, ce.`type`), None))
       }
     } yield {
-      val exportModel = exportTo.map(_._1).collect {
+      val (argsVars, argsOps) = args.unzip.map(_.flatten)
+      val (exportVars, exportOps) = exportTo.unzip.map(_.flatten)
+      val exportModel = exportVars.collect {
         // exportTo can be only a variable
         case VarModel(name, baseType, _) => CallModel.Export(name, baseType)
       }
       (
         CallModel(
-          args.map(_._1),
+          argsVars,
           exportModel
         ),
-        parDesugarPrefix(exportTo.flatMap(_._2) ++ args.flatMap(_._2))
+        parDesugarPrefix(exportOps ++ argsOps)
       )
     }
   }

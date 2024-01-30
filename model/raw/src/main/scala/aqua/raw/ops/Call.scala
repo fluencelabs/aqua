@@ -31,27 +31,25 @@ object Call {
   case class Export(name: String, `type`: Type, isExistingStream: Boolean = false) {
     def mapName(f: String => String): Export = copy(f(name))
 
+    def mapStream(f: ValueRaw => ValueRaw): Call.Export =
+      this match {
+        // map streams from "exportTo", because they are not exports, but variables
+        case ce @ Call.Export(_, _, true) =>
+          f(ce.toRaw) match {
+            case VarRaw(name, baseType) => Call.Export(name, baseType, true)
+            case _ => internalError(s"Stream '$ce' can be only VarRaw")
+          }
+        case ce => ce
+      }
+      
+    def renameNonStream(map: Map[String, String]): Call.Export =
+      this match {
+        case ce @ Call.Export(_, _, true) => ce
+        case ce => ce.mapName(n => map.getOrElse(n, n))
+      }
+
     def toRaw: VarRaw = VarRaw(name, `type`)
 
     override def toString: String = s"$name:${`type`} <-"
-  }
-  
-  extension (exportTo: List[Call.Export]) {
-    def mapStreams(f: ValueRaw => ValueRaw): List[Call.Export] =
-      exportTo.flatMap {
-        // map streams from "exportTo", because they are not exports, but variables
-        case ce@Call.Export(_, _, true) =>
-          f(ce.toRaw) match {
-            case VarRaw(name, baseType) => Some(Call.Export(name, baseType, true))
-            case _ => internalError(s"Stream '$ce' can be only VarRaw")
-          }
-        case ce => Some(ce)
-      }
-
-    def renameExports(map: Map[String, String]): List[Call.Export] =
-      exportTo.map {
-        case ce@Call.Export(_, _, true) => ce
-        case ce => ce.mapName(n => map.getOrElse(n, n))
-      }
   }
 }

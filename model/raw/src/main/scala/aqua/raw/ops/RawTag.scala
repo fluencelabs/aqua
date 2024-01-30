@@ -216,10 +216,10 @@ case class CallArrowRawTag(
   override def usesVarNames: Set[String] = value.varNames ++ usesExportStreams
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CallArrowRawTag(exportTo.mapStreams(f), value.map(f))
+    CallArrowRawTag(exportTo.map(_.mapStream(f)), value.map(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.renameExports(map))
+    copy(exportTo = exportTo.map(_.renameNonStream(map)))
 }
 
 object CallArrowRawTag {
@@ -307,10 +307,7 @@ case class ClosureTag(
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func =
       func.copy(
-        name = map.getOrElse(func.name, func.name),
-        arrow = func.arrow.copy(
-          body = func.arrow.body.renameExports(map)
-        )
+        name = map.getOrElse(func.name, func.name)
       )
     )
 
