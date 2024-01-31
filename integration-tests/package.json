@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "tsc & npm run compile-aqua",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles",
     "examples": "jest",
     "pubsub": "node -r ts-node/register src/pubsub.ts",
     "exec": "npm run compile-aqua && npm run prettify-compiled && node -r ts-node/register src/index.ts",
@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@fluencelabs/fluence-network-environment": "1.1.2",
-    "@fluencelabs/js-client": "0.7.0",
+    "@fluencelabs/js-client": "0.8.0",
     "deep-equal": "2.2.1",
     "loglevel": "1.9.1"
   },
