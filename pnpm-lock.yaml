@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.7.0
-        version: 0.7.0
+        specifier: 0.8.0
+        version: 0.8.0
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -443,6 +443,8 @@ packages:
       uint8arraylist: 2.4.8
       uint8arrays: 4.0.6
       wherearewe: 2.0.1
+    transitivePeerDependencies:
+      - supports-color
     dev: false
 
   /@chainsafe/libp2p-yamux@6.0.1:
@@ -502,8 +504,8 @@ packages:
       - supports-color
     dev: false
 
-  /@fluencelabs/js-client@0.7.0:
-    resolution: {integrity: sha512-ZGsb9W0G9o8ql7i0SXmk/mqhsSvCwDEVmdM/G9EzhlYo5R7O7eLBRyimqKf2USQpojjlIW1uwRz1IR/F0yLSxw==}
+  /@fluencelabs/js-client@0.8.0:
+    resolution: {integrity: sha512-D0zmIaCZw1z+TwGQlF2KVQt2UQMP72IwfDS72xGJicv1xS0OihZNKwtOO9C+Gp+/PHRVMzsyjY1p0I2p9u1KYQ==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 14.0.0
@@ -524,6 +526,7 @@ packages:
       '@multiformats/multiaddr': 12.1.12
       bs58: 5.0.0
       debug: 4.3.4
+      int64-buffer: 1.0.1
       it-length-prefixed: 9.0.3
       it-map: 3.0.5
       it-pipe: 3.0.1
@@ -884,6 +887,8 @@ packages:
       protons-runtime: 5.0.0(uint8arraylist@2.4.8)
       uint8arraylist: 2.4.8
       uint8arrays: 5.0.1
+    transitivePeerDependencies:
+      - supports-color
     dev: false
 
   /@libp2p/crypto@4.0.1:
@@ -2181,6 +2186,11 @@ packages:
 
   /int64-buffer@0.1.10:
     resolution: {integrity: sha512-v7cSY1J8ydZ0GyjUHqF+1bshJ6cnEVLo9EnjB8p+4HDRPZc9N5jjmvUV7NvEsqQOKyH0pmIBFWXVQbiS0+OBbA==}
+    dev: false
+
+  /int64-buffer@1.0.1:
+    resolution: {integrity: sha512-+3azY4pXrjAupJHU1V9uGERWlhoqNswJNji6aD/02xac7oxol508AsMC5lxKhEqyZeDFy3enq5OGWXF4u75hiw==}
+    engines: {node: '>= 4.5.0'}
     dev: false
 
   /interface-datastore@8.2.3:
