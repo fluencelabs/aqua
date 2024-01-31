@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "tsc & npm run compile-aqua",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles",
     "examples": "jest",
     "pubsub": "node -r ts-node/register src/pubsub.ts",
     "exec": "npm run compile-aqua && npm run prettify-compiled && node -r ts-node/register src/index.ts",
