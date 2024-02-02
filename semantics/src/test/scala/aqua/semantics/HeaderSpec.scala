@@ -8,9 +8,8 @@ import aqua.raw.RawContext
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.VarRaw
-import aqua.semantics.header.{HeaderHandler, HeaderSem}
+import aqua.semantics.header.{HeaderHandler, HeaderSem, LocationHandler, LocationHandlerRaw}
 import aqua.types.{AbilityType, ArrowType, NilType, ProductType, ScalarType}
-
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, Validated}
 import cats.free.Cofree
 import cats.syntax.applicative.*
@@ -22,6 +21,8 @@ import org.scalatest.matchers.should.Matchers
 class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
 
   given Monoid[RawContext] = RawContext.implicits(RawContext.blank).rawContextMonoid
+
+  given LocationHandler[Id, RawContext] = LocationHandlerRaw[Id]()
 
   val handler = new HeaderHandler[Id, RawContext]()
 

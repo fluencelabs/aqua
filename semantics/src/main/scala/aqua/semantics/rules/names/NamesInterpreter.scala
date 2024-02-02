@@ -139,7 +139,7 @@ class NamesInterpreter[S[_], X](using
             constants = st.constants.updated(name.value, `type`)
           )
         ).as(true)
-    }.flatTap(_ => locations.addDefinition(DefinitionInfo(name.value, name, `type`)))
+    }.flatTap(_ => locations.addDefinition(DefinitionInfo(name.value, name, `type`, isRoot = true)))
 
   override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
@@ -164,7 +164,7 @@ class NamesInterpreter[S[_], X](using
               .error(name, "Cannot define a variable in the root scope")
               .as(false)
         )(fr => (fr.addArrow(name, arrowType) -> true).pure).flatTap(_ =>
-          locations.addDefinition(DefinitionInfo[S](name.value, name, arrowType))
+          locations.addDefinition(DefinitionInfo[S](name.value, name, arrowType, isRoot))
         )
     }
 

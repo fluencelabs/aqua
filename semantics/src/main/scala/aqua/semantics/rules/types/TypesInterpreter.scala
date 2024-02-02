@@ -145,7 +145,7 @@ class TypesInterpreter[S[_], X](using
     fields: Map[String, (Name[S], Type)]
   ) =
     locations.addDefinitionWithFields(
-      DefinitionInfo[S](name.value, name, t),
+      DefinitionInfo[S](name.value, name, t, isRoot = true),
       fields.map { case (n, (t, ty)) => DefinitionInfo[S](n, t, ty) }.toList
     )
 
@@ -185,7 +185,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target)))
+          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target, isRoot = true)))
           .as(true)
     }
 

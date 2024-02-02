@@ -3,8 +3,7 @@ package aqua.lsp
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, AquaError, AquaSources}
 import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawContext
-import aqua.semantics.header.{HeaderHandler, HeaderSem}
-
+import aqua.semantics.header.{HeaderHandler, HeaderSem, LocationHandler}
 import cats.data.Validated.validNec
 import cats.data.{Chain, Validated, ValidatedNec}
 import cats.syntax.either.*
@@ -46,6 +45,8 @@ object LSPCompiler {
     }
 
     val semantics = new LspSemantics[S]()
+
+    given LocationHandler[S, LspContext[S]] = LocationHandlerLsp[S]()
 
     new AquaCompiler[F, E, I, S, LspContext[S]](
       new HeaderHandler(),

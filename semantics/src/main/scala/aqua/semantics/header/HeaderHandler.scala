@@ -2,68 +2,31 @@ package aqua.semantics.header
 
 import aqua.parser.Ast
 import aqua.parser.head.*
-import aqua.parser.lexer.{Ability, Name, Token}
+import aqua.parser.lexer.{Ability, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
 
 import cats.data.*
 import cats.data.Validated.*
-import cats.free.Cofree
-import cats.instances.list.*
-import cats.instances.option.*
-import cats.kernel.Semigroup
-import cats.syntax.apply.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
-import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
-import cats.syntax.traverse.*
 import cats.syntax.validated.*
-import cats.{Comonad, Eval, Monoid}
+import cats.{Comonad, Monoid}
 
 class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
-  picker: Picker[C]
+  picker: Picker[C],
+  locationHandler: LocationHandler[S, C]
 ) {
 
-  type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
-  type ResAC[S[_]] = ValidatedNec[SemanticError[S], C]
-  type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
-
-  // Helper: monoidal combine of all the childrens after parent res
-  private def combineAnd(children: Chain[Res[S, C]])(
-    parent: Res[S, C]
-  ): Eval[Res[S, C]] =
-    Eval.later(parent |+| children.combineAll)
-
-  // Error generator with token pointer
-  private def error[T](
-    token: Token[S],
-    msg: String
-  ): SemanticError[S] = HeaderError(token, msg)
-
-  private def exportFuncChecks(ctx: C, token: Token[S], name: String): ResT[S, Unit] =
-    Validated.condNec(
-      !ctx.funcReturnAbilityOrArrow(name),
-      (),
-      error(
-        token,
-        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
-      )
-    ) combine Validated.condNec(
-      !ctx.funcAcceptAbility(name),
-      (),
-      error(
-        token,
-        s"The function '$name' cannot be exported, because it accepts an ability"
-      )
-    )
+  import HeaderHandler.*
 
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
-    def resolve(f: FilenameExpr[S]): ResAC[S] =
+    def resolve(f: FilenameExpr[S]): ResAC[S, C] =
       imports
         .get(f.fileValue)
         .map(_.pickDeclared)
@@ -72,7 +35,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         )
 
     // Get part of the declared context (for import/use ... from ... expressions)
-    def getFrom(f: FromExpr[S], ctx: C): ResAC[S] =
+    def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
       ctx.pickHeader.validNec |+| f.imports
         .map(
           _.bimap(
@@ -93,7 +56,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         .combineAll
 
     // Convert an imported context into a module (ability)
-    def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
+    def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S, C] =
       rename
         .map(_.value)
         .orElse(ctx.module)
@@ -105,46 +68,8 @@ class HeaderHandler[S[_]: Comonad, C](using
           )
         )
 
-    val handleModule: ModuleExpr[S] => Res[S, C] = {
-      case ModuleExpr(word, name, declareAll, declareNames, declareCustom) =>
-        val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
-
-        lazy val sem = HeaderSem(
-          // Save module header info
-          acm.empty.setModule(
-            name.value,
-            shouldDeclare
-          ),
-          (ctx, _) =>
-            // When file is handled, check that all the declarations exists
-            if (declareAll.nonEmpty)
-              ctx.setModule(name.value, declares = ctx.all).validNec
-            else
-              (
-                declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-              ).map { case (n, t) =>
-                ctx
-                  .pick(n, None, ctx.module.nonEmpty)
-                  .toValidNec(
-                    error(
-                      t,
-                      s"`$n` is expected to be declared, but declaration is not found in the file"
-                    )
-                  )
-                  .void
-              }.combineAll.as(
-                // TODO: why module name and declares is lost? where is it lost?
-                ctx.setModule(name.value, declares = shouldDeclare)
-              )
-        )
-
-        word.value.fold(
-          module = error(
-            word,
-            "Keyword `module` is deprecated, use `aqua` instead"
-          ).invalidNec,
-          aqua = sem.validNec
-        )
+    val handleModule: ModuleExpr[S] => Res[S, C] = { me =>
+      ModuleSem(me).headerSem
     }
 
     // Handler for every header expression, will be combined later
@@ -181,44 +106,8 @@ class HeaderHandler[S[_]: Comonad, C](using
             HeaderSem(fc, (c, _) => validNec(c))
           }
 
-      case ExportExpr(pubs) =>
-        // Save exports, finally handle them
-        HeaderSem(
-          // Nothing there
-          picker.blank,
-          (ctx, initCtx) =>
-            val sumCtx = initCtx |+| ctx
-
-            pubs
-              .map(
-                _.bimap(
-                  _.bimap(n => (n, n.value), _.map(_.value)),
-                  _.bimap(n => (n, n.value), _.map(_.value))
-                ).merge
-              )
-              .map { case ((token, name), rename) =>
-                sumCtx
-                  .pick(name, rename, declared = false)
-                  .as(Map(name -> rename))
-                  .toValid(
-                    error(
-                      token,
-                      s"File has no $name declaration or import, " +
-                        s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
-                    )
-                  )
-                  .ensure(
-                    error(
-                      token,
-                      s"Can not export '$name' as it is an ability"
-                    )
-                  )(_ => !sumCtx.isAbility(name))
-                  .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
-              }
-              .prepend(validNec(ctx.exports))
-              .combineAll
-              .map(ctx.setExports)
-        ).validNec
+      case ee: ExportExpr[S] =>
+        ExportSem(ee).headerSem
 
       case f: FilenameExpr[S] =>
         resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
@@ -240,4 +129,16 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     module |+| other
   }
+}
+
+object HeaderHandler {
+
+  type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
+  type ResAC[S[_], C] = ValidatedNec[SemanticError[S], C]
+
+  // Error generator with token pointer
+  def error[S[_], T](
+    token: Token[S],
+    msg: String
+  ): SemanticError[S] = HeaderError(token, msg)
 }

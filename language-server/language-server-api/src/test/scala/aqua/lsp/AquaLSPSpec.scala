@@ -75,7 +75,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
             c.variables
               .map(_.definition)
               .filter(v => v.name == fullName.getOrElse(checkName) && v.`type` == `type`)
-              .map { case DefinitionInfo(name, token, t) =>
+              .map { case DefinitionInfo(name, token, t, _) =>
                 val span = token.unit._1
                 s"$name(${span.startIndex}:${span.endIndex}) $t"
               }
@@ -118,11 +118,13 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
   it should "return right tokens" in {
     val main =
-      """aqua Import
+      """aqua Import declares foo_wrapper, Ab, Str, useAbAndStruct, SOME_CONST
         |
         |import foo, strFunc, num from "export2.aqua"
         |
         |import "../gen/OneMore.aqua"
+        |
+        |export foo_wrapper, SOME_CONST
         |
         |func foo_wrapper() -> string:
         |    fooResult <- foo()
@@ -145,6 +147,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |    s = Str(someField = "asd")
         |    strFunc(s.someField)
         |    num(Ab.someField)
+        |
+        |const SOME_CONST = 1
         |
         |""".stripMargin
     val src = Map(
@@ -192,6 +196,31 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         ("consume", ArrowType(ProductType.labelled(("s", ScalarType.string) :: Nil), NilType))
       )
     )
+
+
+    res.checkTokenLoc(
+      main,
+      "foo_wrapper",
+      2,
+      ArrowType(
+        NilType,
+        ProductType(ScalarType.string :: Nil)
+      )
+    ) shouldBe true
+    res.checkTokenLoc(
+      main,
+      "SOME_CONST",
+      2,
+      LiteralType.unsigned
+    ) shouldBe true
+
+    // exports
+    res.checkLocations("foo_wrapper", 2, 1, main) shouldBe true
+    res.checkLocations("SOME_CONST", 2, 1, main) shouldBe true
+
+    // declares
+    res.checkLocations("foo_wrapper", 2, 0, main) shouldBe true
+    res.checkLocations("SOME_CONST", 2, 0, main) shouldBe true
 
     // inside `foo_wrapper` func
     res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true
