@@ -39,12 +39,18 @@ class HeaderHandler[S[_]: Comonad, C](using
       ctx.pickHeader.validNec |+| f.imports
         .map(
           _.bimap(
-            _.bimap(n => (n, n.value), _.map(_.value)),
-            _.bimap(n => (n, n.value), _.map(_.value))
+            _.bimap(n => (n, n.value), n => (n, n.map(_.value))),
+            _.bimap(n => (n, n.value), n => (n, n.map(_.value)))
           ).merge match {
-            case ((token, name), rename) =>
+            case ((token, name), (renameToken, rename)) =>
               ctx
                 .pick(name, rename, ctx.module.nonEmpty)
+                .map { ctx =>
+                  val defName = rename.getOrElse(name)
+                  val occs = renameToken.map(defName -> _).toList :+ (defName, token)
+                  locationHandler
+                    .addOccurences(ctx, occs)
+                }
                 .toValidNec(
                   error(
                     token,

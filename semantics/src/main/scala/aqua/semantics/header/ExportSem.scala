@@ -57,10 +57,10 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
 
   private def finSem(ctx: C, initCtx: C): ValidatedNec[SemanticError[S], C] = {
 
-    val a: List[(String, Token[S])] =
+    val tokens: List[(String, Token[S])] =
       expr.pubs.map(e => e.fold(n => (n._1.value, n._1), n => (n._1.value, n._1))).toList
       
-    val ctxWithExportLocations = locationHandler.addOccurences(ctx, a, isRoot = true)
+    val ctxWithExportLocations = locationHandler.addOccurences(ctx, tokens)
 
     val sumCtx = initCtx |+| ctxWithExportLocations
     

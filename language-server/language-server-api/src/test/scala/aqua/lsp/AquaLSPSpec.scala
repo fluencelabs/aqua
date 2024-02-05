@@ -29,18 +29,29 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       usePosition: Int,
       defCode: String,
       useCode: Option[String] = None,
-      fieldName: Option[String] = None
+      fieldOrSynonym: Option[String] = None
     ): Boolean = {
       (for {
         defPos <- getByPosition(defCode, name, defPosition)
-        usePos <- getByPosition(useCode.getOrElse(defCode), fieldName.getOrElse(name), usePosition)
+        usePos <- getByPosition(
+          useCode.getOrElse(defCode),
+          fieldOrSynonym.getOrElse(name),
+          usePosition
+        )
       } yield {
         val (defStart, defEnd) = defPos
         val (useStart, useEnd) = usePos
-        c.allLocations.exists { case TokenLocation(useT, defT) =>
-          val defSpan = defT.unit._1
-          val useSpan = useT.unit._1
-          defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+        c.variables.exists { case VariableInfo(defI, occs) =>
+          val defSpan = defI.token.unit._1
+          if (defSpan.startIndex == defStart && defSpan.endIndex == defEnd) {
+            occs.exists { useT =>
+              val useSpan = useT.unit._1
+              useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+            }
+          } else {
+            false
+          }
+
         }
       }).getOrElse(false)
     }
@@ -120,7 +131,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     val main =
       """aqua Import declares foo_wrapper, Ab, Str, useAbAndStruct, SOME_CONST
         |
-        |import foo, strFunc, num from "export2.aqua"
+        |import foo, strFunc, num, absb as otherName from "export2.aqua"
         |
         |import "../gen/OneMore.aqua"
         |
@@ -156,7 +167,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val firstImport =
-      """aqua Export declares strFunc, num, foo
+      """aqua Export declares strFunc, num, foo, absb
         |
         |func absb() -> string:
         |    <- "ff"
@@ -197,7 +208,6 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       )
     )
 
-
     res.checkTokenLoc(
       main,
       "foo_wrapper",
@@ -221,6 +231,13 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     // declares
     res.checkLocations("foo_wrapper", 2, 0, main) shouldBe true
     res.checkLocations("SOME_CONST", 2, 0, main) shouldBe true
+
+    // imports
+    res.checkLocations("foo", 1, 1, firstImport, Some(main)) shouldBe true
+    res.checkLocations("strFunc", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("num", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("absb", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("absb", 1, 0, firstImport, Some(main), Some("otherName")) shouldBe true
 
     // inside `foo_wrapper` func
     res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true
