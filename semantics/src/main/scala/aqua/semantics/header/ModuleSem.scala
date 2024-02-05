@@ -48,7 +48,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
               .void
           }.combineAll.as {
             val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = locationHandler.addOccurences(ctx, tokens, isRoot = true)
+            val ctxWithDeclaresLoc = locationHandler.addOccurences(ctx, tokens)
             // TODO: why module name and declares is lost? where is it lost?
             ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
           }
