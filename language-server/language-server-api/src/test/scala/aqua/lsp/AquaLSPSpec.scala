@@ -86,7 +86,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
             c.variables
               .map(_.definition)
               .filter(v => v.name == fullName.getOrElse(checkName) && v.`type` == `type`)
-              .map { case DefinitionInfo(name, token, t, _) =>
+              .map { case DefinitionInfo(name, token, t) =>
                 val span = token.unit._1
                 s"$name(${span.startIndex}:${span.endIndex}) $t"
               }

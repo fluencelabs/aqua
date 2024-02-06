@@ -13,7 +13,7 @@ class LocationHandlerLsp[S[_]] extends LocationHandler[S, LspContext[S]] {
     val variables = ctx.variables
     val variablesWithNewOccurences = tokens.foldLeft(variables) { case (vars, (n, t)) =>
       vars.map { vi =>
-        if (vi.definition.name == n && vi.definition.isRoot == isRoot)
+        if (vi.definition.name == n)
           vi.copy(occurrences = vi.occurrences :+ t)
         else
           vi
