@@ -5,6 +5,7 @@ import aqua.parser.lexer.Token
 import aqua.semantics.SemanticError
 import aqua.semantics.header.HeaderHandler.*
 import aqua.semantics.header.Picker.*
+import aqua.semantics.rules.locations.LocationsAlgebra
 
 import cats.data.*
 import cats.data.Validated.*
@@ -22,7 +23,7 @@ import cats.{Comonad, Monoid}
 class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
   acm: Monoid[C],
   picker: Picker[C],
-  locationHandler: LocationHandler[S, C]
+  locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
   private def exportFuncChecks(
@@ -69,7 +70,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
         renameToken.map(name -> _).toList :+ (name, token)
     }
 
-    val ctxWithExportLocations = locationHandler.addOccurences(ctx, tokens)
+    val ctxWithExportLocations = ctx.addOccurences(tokens)
     val sumCtx = initCtx |+| ctxWithExportLocations
 
     pubs.map { case ((token, name), (_, rename)) =>

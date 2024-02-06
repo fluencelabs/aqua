@@ -5,6 +5,7 @@ import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
+import aqua.semantics.rules.locations.LocationsAlgebra
 
 import cats.data.*
 import cats.data.Validated.*
@@ -19,7 +20,7 @@ class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C],
-  locationHandler: LocationHandler[S, C]
+  locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
   import HeaderHandler.*
@@ -48,8 +49,7 @@ class HeaderHandler[S[_]: Comonad, C](using
                 .map { ctx =>
                   val defName = rename.getOrElse(name)
                   val occs = renameToken.map(defName -> _).toList :+ (defName, token)
-                  locationHandler
-                    .addOccurences(ctx, occs)
+                  ctx.addOccurences(occs)
                 }
                 .toValidNec(
                   error(

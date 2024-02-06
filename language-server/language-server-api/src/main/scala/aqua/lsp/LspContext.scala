@@ -6,8 +6,11 @@ import aqua.semantics.header.Picker
 import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
 import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.types.{AbilityType, ArrowType, Type}
+import aqua.semantics.rules.locations.LocationsState
+
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
+import monocle.Lens
 
 // Context with info that necessary for language server
 case class LspContext[S[_]](
@@ -149,5 +152,14 @@ object LspContext {
       ctx: LspContext[S]
     )(using Semigroup[LspContext[S]]): LspContext[S] =
       ctx.copy(raw = ctx.raw.pickDeclared)
+  }
+
+  given [S[_]]: Lens[LspContext[S], LocationsState[S]] = {
+    val get: LspContext[S] => LocationsState[S] = 
+      ctx => LocationsState(ctx.variables)
+    val replace: LocationsState[S] => LspContext[S] => LspContext[S] =
+      locs => ctx => ctx.copy(variables = locs.variables)
+    
+    Lens(get)(replace)
   }
 }

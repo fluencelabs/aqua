@@ -3,6 +3,7 @@ package aqua.semantics.header
 import aqua.parser.head.ModuleExpr
 import aqua.semantics.header.HeaderHandler.{Res, error}
 import aqua.semantics.header.Picker.*
+import aqua.semantics.rules.locations.LocationsAlgebra
 
 import cats.data.*
 import cats.data.Validated.*
@@ -15,7 +16,7 @@ import cats.{Comonad, Monoid}
 
 class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
   acm: Monoid[C],
-  locationHandler: LocationHandler[S, C]
+  locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
   import expr.*
@@ -48,7 +49,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
               .void
           }.combineAll.as {
             val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = locationHandler.addOccurences(ctx, tokens)
+            val ctxWithDeclaresLoc = ctx.addOccurences(tokens)
             // TODO: why module name and declares is lost? where is it lost?
             ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
           }
