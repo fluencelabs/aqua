@@ -56,42 +56,43 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
   }
 
   private def finSem(ctx: C, initCtx: C): ValidatedNec[SemanticError[S], C] = {
-
-    val tokens: List[(String, Token[S])] =
-      expr.pubs.map(e => e.fold(n => (n._1.value, n._1), n => (n._1.value, n._1))).toList
-      
-    val ctxWithExportLocations = locationHandler.addOccurences(ctx, tokens)
-
-    val sumCtx = initCtx |+| ctxWithExportLocations
-    
-    expr.pubs
+    val pubs = expr.pubs
       .map(
         _.bimap(
-          _.bimap(n => (n, n.value), _.map(_.value)),
-          _.bimap(n => (n, n.value), _.map(_.value))
+          _.bimap(n => (n, n.value), n => (n, n.map(_.value))),
+          _.bimap(n => (n, n.value), n => (n, n.map(_.value)))
         ).merge
       )
-      .map { case ((token, name), rename) =>
-        sumCtx
-          .pick(name, rename, declared = false)
-          .as(Map(name -> rename))
-          .toValid(
-            error(
-              token,
-              s"File has no $name declaration or import, " +
-                s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
-            )
+
+    val tokens = pubs.toList.flatMap {
+      case ((token, name), (renameToken, _)) =>
+        renameToken.map(name -> _).toList :+ (name, token)
+    }
+
+    val ctxWithExportLocations = locationHandler.addOccurences(ctx, tokens)
+    val sumCtx = initCtx |+| ctxWithExportLocations
+
+    pubs.map { case ((token, name), (_, rename)) =>
+      sumCtx
+        .pick(name, rename, declared = false)
+        .as(Map(name -> rename))
+        .toValid(
+          error(
+            token,
+            s"Files has no $name declaration or import, " +
+              s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
           )
-          .ensure(
-            error(
-              token,
-              s"Can not export '$name' as it is an ability"
-            )
-          )(_ => !sumCtx.isAbility(name))
-          .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
-      }
-      .prepend(validNec(ctxWithExportLocations.exports))
+        )
+        .ensure(
+          error(
+            token,
+            s"Can not export '$name' as it is an ability"
+          )
+        )(_ => !sumCtx.isAbility(name))
+        .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
+    }
+      .prepend(validNec(sumCtx.exports))
       .combineAll
-      .map(ctxWithExportLocations.setExports)
+      .map(sumCtx.setExports)
   }
 }

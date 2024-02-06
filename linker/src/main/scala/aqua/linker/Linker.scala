@@ -3,15 +3,12 @@ package aqua.linker
 import aqua.errors.Errors.internalError
 
 import cats.MonadError
-import cats.data.{NonEmptyChain, Validated, ValidatedNec}
+import cats.data.NonEmptyChain
 import cats.instances.list.*
-import cats.kernel.{Monoid, Semigroup}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.syntax.validated.*
 import scala.annotation.tailrec
 import scribe.Logging
 

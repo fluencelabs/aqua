@@ -126,6 +126,10 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
+      .leftMap { ee =>
+        println(ee)
+        ee
+      }
 
   it should "return right tokens" in {
     val main =
@@ -133,9 +137,11 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |
         |import foo, strFunc, num, absb as otherName from "export2.aqua"
         |
+        |use thirdFunc as thirdRenamed from "third.aqua" as Third
+        |
         |import "../gen/OneMore.aqua"
         |
-        |export foo_wrapper, SOME_CONST
+        |export foo_wrapper, SOME_CONST, EXPORTED as NEW_NAME
         |
         |func foo_wrapper() -> string:
         |    fooResult <- foo()
@@ -160,6 +166,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |    num(Ab.someField)
         |
         |const SOME_CONST = 1
+        |const EXPORTED = 1
         |
         |""".stripMargin
     val src = Map(
@@ -191,11 +198,21 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |  consume(s: string)
         |""".stripMargin
 
+    val thirdImport =
+      """aqua Third declares thirdFunc
+        |
+        |func thirdFunc() -> string:
+        |    <- "I am MyFooBar foo"
+        |
+        |""".stripMargin
+
     val imports = Map(
       "export2.aqua" ->
         firstImport,
       "../gen/OneMore.aqua" ->
-        secondImport
+        secondImport,
+      "third.aqua" ->
+        thirdImport
     )
 
     val res = compile(src, imports).toOption.get.values.head
@@ -227,6 +244,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     // exports
     res.checkLocations("foo_wrapper", 2, 1, main) shouldBe true
     res.checkLocations("SOME_CONST", 2, 1, main) shouldBe true
+    res.checkLocations("EXPORTED", 1, 0, main) shouldBe true
+    res.checkLocations("EXPORTED", 1, 0, main, None, Some("NEW_NAME")) shouldBe true
 
     // declares
     res.checkLocations("foo_wrapper", 2, 0, main) shouldBe true
@@ -238,6 +257,17 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkLocations("num", 1, 0, firstImport, Some(main)) shouldBe true
     res.checkLocations("absb", 1, 0, firstImport, Some(main)) shouldBe true
     res.checkLocations("absb", 1, 0, firstImport, Some(main), Some("otherName")) shouldBe true
+
+    // use
+    res.checkLocations("thirdFunc", 1, 0, thirdImport, Some(main)) shouldBe true
+    res.checkLocations(
+      "thirdFunc",
+      1,
+      0,
+      thirdImport,
+      Some(main),
+      Some("thirdRenamed")
+    ) shouldBe true
 
     // inside `foo_wrapper` func
     res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true

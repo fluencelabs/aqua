@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
+import aqua.compiler.AquaError.*
 import aqua.linker.Linker
 import aqua.parser.{Ast, ParserError}
 import aqua.semantics.header.{HeaderHandler, Picker}

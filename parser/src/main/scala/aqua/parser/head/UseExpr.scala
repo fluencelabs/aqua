@@ -18,7 +18,7 @@ case class UseExpr[F[_]](
   override def mapK[K[_]: Comonad](fk: F ~> K): UseExpr[K] =
     copy(filename.mapK(fk), asModule.map(_.mapK(fk)))
 
-  override def toString(): String =
+  override def toString: String =
     s"use ${filename.value}${asModule.map(_.value).fold("")(" as " + _)}"
 }
 
