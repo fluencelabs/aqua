@@ -180,8 +180,7 @@ class TypesInterpreter[S[_], X](using
     )
 
   override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
-    getState.map(_.definitions.get(name.value)).flatMap {
-      case Some(n) if n == name => State.pure(false)
+    getState.map(_.strict.get(name.value)).flatMap {
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
@@ -720,7 +719,7 @@ class TypesInterpreter[S[_], X](using
   )(
     ifNotDefined: => State[X, A]
   ): State[X, A] = getState
-    .map(_.definitions.get(name))
+    .map(_.strict.get(name))
     .flatMap {
       case Some(_) =>
         // TODO: Point to both locations here

@@ -2,18 +2,10 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.RawContext
-import aqua.raw.value.{FunctorRaw, IntoIndexRaw, LiteralRaw, PropertyRaw, ValueRaw}
+import aqua.raw.value.ValueRaw
 import aqua.types.*
 
-import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
-import cats.syntax.apply.*
-import cats.syntax.bifunctor.*
-import cats.syntax.functor.*
-import cats.syntax.option.*
-import cats.syntax.traverse.*
-import cats.syntax.validated.*
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map(),
