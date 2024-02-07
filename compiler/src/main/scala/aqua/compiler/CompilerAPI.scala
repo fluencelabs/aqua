@@ -7,6 +7,8 @@ import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawContext
 import aqua.semantics.RawSemantics
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
+import aqua.semantics.rules.locations.{LocationsAlgebra, DummyLocationsInterpreter}
+
 import cats.data.*
 import cats.syntax.either.*
 import cats.syntax.flatMap.*
@@ -14,8 +16,6 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{Comonad, Monad, Monoid, Order}
 import scribe.Logging
-import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.locations.DummyLocationsInterpreter
 
 object CompilerAPI extends Logging {
 
