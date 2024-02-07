@@ -10,7 +10,7 @@ import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
 import aqua.types.Type.*
-
+import cats.Applicative
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
@@ -18,12 +18,12 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
-import cats.syntax.monad.*
 import cats.syntax.option.*
 import cats.syntax.traverse.*
-import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
+
+import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
 import scala.reflect.TypeTest
 
@@ -47,7 +47,7 @@ class TypesInterpreter[S[_], X](using
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(TypeResolution.resolveTypeToken(token)).flatMap {
       case Valid(TypeResolution(typ, tokens)) =>
-        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        val tokensLocs = tokens.map { case (t, n) => n -> t }
         locations.pointLocations(tokensLocs).as(typ.some)
       case Invalid(errors) =>
         errors.traverse_ { case TypeResolutionError(token, hint) =>
@@ -70,7 +70,7 @@ class TypesInterpreter[S[_], X](using
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(TypeResolution.resolveArrowDef(arrowDef)).flatMap {
       case Valid(TypeResolution(tt, tokens)) =>
-        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        val tokensLocs = tokens.map { case (t, n) => n -> t }
         locations.pointLocations(tokensLocs).as(tt.some)
       case Invalid(errs) =>
         errs.traverse_ { case TypeResolutionError(token, hint) =>
@@ -155,7 +155,7 @@ class TypesInterpreter[S[_], X](using
   ): State[X, Option[StructType]] =
     ensureNameNotDefined(name.value, name, ifDefined = none)(
       fields.toList.traverse {
-        case (field, (fieldName, t: DataType)) =>
+        case (field, (_, t: DataType)) =>
           (field -> t).some.pure[ST]
         case (field, (fieldName, t)) =>
           report
@@ -366,6 +366,7 @@ class TypesInterpreter[S[_], X](using
     right: Type
   ): State[X, Boolean] = {
     // TODO: This needs more comprehensive logic
+    @tailrec
     def isComparable(lt: Type, rt: Type): Boolean =
       (lt, rt) match {
         // All numbers are comparable
@@ -484,7 +485,7 @@ class TypesInterpreter[S[_], X](using
     }
     expectedKeys = expected.fields.keys.toNonEmptyList
     /* Report unexpected arguments */
-    _ <- arguments.toNel.traverse_ { case (name, arg -> typ) =>
+    _ <- arguments.toNel.traverse_ { case (name, arg -> _) =>
       expected.fields.lookup(name) match {
         case Some(_) => State.pure(())
         case None =>
@@ -604,7 +605,7 @@ class TypesInterpreter[S[_], X](using
       report
         .error(
           token,
-          s"Number of arguments doesn't match the function type, expected: ${expected}, given: $givenNum"
+          s"Number of arguments doesn't match the function type, expected: $expected, given: $givenNum"
         )
         .as(false)
 

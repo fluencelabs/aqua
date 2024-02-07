@@ -10,22 +10,17 @@ import cats.kernel.Monoid
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map(),
   strict: Map[String, Type] = Map.empty,
-  definitions: Map[String, NamedTypeToken[S]] = Map(),
   stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 
   def defineType(name: NamedTypeToken[S], `type`: Type): TypesState[S] =
     copy(
-      strict = strict.updated(name.value, `type`),
-      definitions = definitions.updated(name.value, name)
+      strict = strict.updated(name.value, `type`)
     )
 
   def getType(name: String): Option[Type] =
     strict.get(name)
-
-  def getTypeDefinition(name: String): Option[NamedTypeToken[S]] =
-    definitions.get(name)
 }
 
 object TypesState {
@@ -47,7 +42,6 @@ object TypesState {
     override def combine(x: TypesState[S], y: TypesState[S]): TypesState[S] =
       TypesState(
         strict = x.strict ++ y.strict,
-        definitions = x.definitions ++ y.definitions
       )
   }
 
