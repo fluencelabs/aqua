@@ -18,6 +18,7 @@ case class LspContext[S[_]](
   abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
+  // TODO: Can this field be refactored into LocationsState?
   variables: List[VariableInfo[S]] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
   errors: List[SemanticError[S]] = Nil,
@@ -154,6 +155,10 @@ object LspContext {
       ctx.copy(raw = ctx.raw.pickDeclared)
   }
 
+  /*
+    NOTE: This instance is used to generate LocationsAlgebra[S, State[LspContext[S], *]]
+          to reuse the code from the body semantics in the header semantics 
+   */
   given [S[_]]: Lens[LspContext[S], LocationsState[S]] = {
     val get: LspContext[S] => LocationsState[S] = 
       ctx => LocationsState(ctx.variables)

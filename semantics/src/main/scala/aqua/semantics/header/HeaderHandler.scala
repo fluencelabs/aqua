@@ -20,6 +20,8 @@ class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C],
+  // NOTE: This typeclass is here to reuse 
+  // the code from the body semantics
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
