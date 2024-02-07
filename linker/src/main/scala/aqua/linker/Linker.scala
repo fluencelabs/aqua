@@ -3,15 +3,12 @@ package aqua.linker
 import aqua.errors.Errors.internalError
 
 import cats.MonadError
-import cats.data.{NonEmptyChain, Validated, ValidatedNec}
+import cats.data.NonEmptyChain
 import cats.instances.list.*
-import cats.kernel.{Monoid, Semigroup}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.syntax.validated.*
 import scala.annotation.tailrec
 import scribe.Logging
 
@@ -116,10 +113,10 @@ object Linker extends Logging {
         } else
           canHandle.traverse { mod =>
             // Gather all imports for module
-            val imports = mod.imports.mapValues { imp =>
+            val imports = mod.imports.view.mapValues { imp =>
               proc
-                .get(imp)
                 .getOrElse(
+                  imp,
                   // Should not happen as we check it above
                   internalError(s"Module $imp not found in $proc")
                 )
@@ -155,6 +152,6 @@ object Linker extends Logging {
     else
       iter(modules.loaded.values.toList, Map.empty, cycle).map(
         // Remove all modules that are not exported from result
-        _.filterKeys(modules.exports.contains).toMap
+        _.view.filterKeys(modules.exports.contains).toMap
       )
 }

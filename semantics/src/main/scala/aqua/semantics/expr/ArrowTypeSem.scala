@@ -15,7 +15,6 @@ class ArrowTypeSem[S[_]](val expr: ArrowTypeExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     D: DefinitionsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     T.resolveArrowDef(expr.`type`).flatMap {

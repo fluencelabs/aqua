@@ -23,8 +23,6 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
         imports = Map("mod2" -> "mod2"),
         dependsOn = Map("mod2" -> "unresolved mod2 in mod1"),
         body = imports => {
-          println(s"mod1: $imports")
-
           imports
             .get("mod2")
             .toRight("mod2 not found in mod1")

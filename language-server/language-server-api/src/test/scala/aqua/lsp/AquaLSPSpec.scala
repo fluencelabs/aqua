@@ -29,18 +29,29 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       usePosition: Int,
       defCode: String,
       useCode: Option[String] = None,
-      fieldName: Option[String] = None
+      fieldOrSynonym: Option[String] = None
     ): Boolean = {
       (for {
         defPos <- getByPosition(defCode, name, defPosition)
-        usePos <- getByPosition(useCode.getOrElse(defCode), fieldName.getOrElse(name), usePosition)
+        usePos <- getByPosition(
+          useCode.getOrElse(defCode),
+          fieldOrSynonym.getOrElse(name),
+          usePosition
+        )
       } yield {
         val (defStart, defEnd) = defPos
         val (useStart, useEnd) = usePos
-        c.allLocations.exists { case TokenLocation(useT, defT) =>
-          val defSpan = defT.unit._1
-          val useSpan = useT.unit._1
-          defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+        c.variables.exists { case VariableInfo(defI, occs) =>
+          val defSpan = defI.token.unit._1
+          if (defSpan.startIndex == defStart && defSpan.endIndex == defEnd) {
+            occs.exists { useT =>
+              val useSpan = useT.unit._1
+              useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+            }
+          } else {
+            false
+          }
+
         }
       }).getOrElse(false)
     }
@@ -115,14 +126,22 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
+      .leftMap { ee =>
+        println(ee)
+        ee
+      }
 
   it should "return right tokens" in {
     val main =
-      """aqua Import
+      """aqua Import declares foo_wrapper, Ab, Str, useAbAndStruct, SOME_CONST
         |
-        |import foo, strFunc, num from "export2.aqua"
+        |import foo, strFunc, num, absb as otherName from "export2.aqua"
+        |
+        |use thirdFunc as thirdRenamed from "third.aqua" as Third
         |
         |import "../gen/OneMore.aqua"
+        |
+        |export foo_wrapper, SOME_CONST, EXPORTED as NEW_NAME
         |
         |func foo_wrapper() -> string:
         |    fooResult <- foo()
@@ -146,13 +165,16 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |    strFunc(s.someField)
         |    num(Ab.someField)
         |
+        |const SOME_CONST = 1
+        |const EXPORTED = 1
+        |
         |""".stripMargin
     val src = Map(
       "index.aqua" -> main
     )
 
     val firstImport =
-      """aqua Export declares strFunc, num, foo
+      """aqua Export declares strFunc, num, foo, absb
         |
         |func absb() -> string:
         |    <- "ff"
@@ -176,11 +198,21 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |  consume(s: string)
         |""".stripMargin
 
+    val thirdImport =
+      """aqua Third declares thirdFunc
+        |
+        |func thirdFunc() -> string:
+        |    <- "I am MyFooBar foo"
+        |
+        |""".stripMargin
+
     val imports = Map(
       "export2.aqua" ->
         firstImport,
       "../gen/OneMore.aqua" ->
-        secondImport
+        secondImport,
+      "third.aqua" ->
+        thirdImport
     )
 
     val res = compile(src, imports).toOption.get.values.head
@@ -192,6 +224,50 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         ("consume", ArrowType(ProductType.labelled(("s", ScalarType.string) :: Nil), NilType))
       )
     )
+
+    res.checkTokenLoc(
+      main,
+      "foo_wrapper",
+      2,
+      ArrowType(
+        NilType,
+        ProductType(ScalarType.string :: Nil)
+      )
+    ) shouldBe true
+    res.checkTokenLoc(
+      main,
+      "SOME_CONST",
+      2,
+      LiteralType.unsigned
+    ) shouldBe true
+
+    // exports
+    res.checkLocations("foo_wrapper", 2, 1, main) shouldBe true
+    res.checkLocations("SOME_CONST", 2, 1, main) shouldBe true
+    res.checkLocations("EXPORTED", 1, 0, main) shouldBe true
+    res.checkLocations("EXPORTED", 1, 0, main, None, Some("NEW_NAME")) shouldBe true
+
+    // declares
+    res.checkLocations("foo_wrapper", 2, 0, main) shouldBe true
+    res.checkLocations("SOME_CONST", 2, 0, main) shouldBe true
+
+    // imports
+    res.checkLocations("foo", 1, 1, firstImport, Some(main)) shouldBe true
+    res.checkLocations("strFunc", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("num", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("absb", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("absb", 1, 0, firstImport, Some(main), Some("otherName")) shouldBe true
+
+    // use
+    res.checkLocations("thirdFunc", 1, 0, thirdImport, Some(main)) shouldBe true
+    res.checkLocations(
+      "thirdFunc",
+      1,
+      0,
+      thirdImport,
+      Some(main),
+      Some("thirdRenamed")
+    ) shouldBe true
 
     // inside `foo_wrapper` func
     res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true

@@ -24,7 +24,6 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
 
   private def define[Alg[_]: Monad](using
     A: AbilitiesAlgebra[S, Alg],
-    N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg],
     D: DefinitionsAlgebra[S, Alg]
