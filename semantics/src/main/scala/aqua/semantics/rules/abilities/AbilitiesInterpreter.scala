@@ -4,12 +4,11 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra}
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
-import aqua.semantics.rules.{StackInterpreter, abilities}
+import aqua.semantics.rules.{abilities, StackInterpreter}
 import aqua.types.ArrowType
-
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*

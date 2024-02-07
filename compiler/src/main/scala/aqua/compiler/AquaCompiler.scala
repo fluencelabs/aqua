@@ -1,19 +1,15 @@
 package aqua.compiler
 
-import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
-import aqua.linker.Linker.link
-import aqua.linker.{AquaModule, Linker, Modules}
+import aqua.compiler.AquaError.*
+import aqua.linker.Linker
 import aqua.parser.{Ast, ParserError}
 import aqua.semantics.header.{HeaderHandler, Picker}
 import aqua.semantics.{SemanticError, Semantics}
 
 import cats.arrow.FunctionK
 import cats.data.*
-import cats.syntax.applicative.*
 import cats.syntax.either.*
-import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.{Comonad, Monad, Monoid, Order, ~>}
 import scribe.Logging
 
