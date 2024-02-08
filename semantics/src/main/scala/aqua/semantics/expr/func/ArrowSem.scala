@@ -1,6 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.ArrowExpr
+import aqua.parser.lexer.NamedTypeToken
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.*
@@ -29,11 +30,12 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
   def before[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
-    N: NamesAlgebra[S, Alg]
+    N: NamesAlgebra[S, Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Alg[ArrowType] = for {
     arrowType <- T.beginArrowScope(arrowTypeExpr)
     // Create local variables
-    _ <- expr.arrowTypeExpr.args.flatMap { case (name, _) => name }
+    _ <- arrowTypeExpr.args.flatMap { case (name, _) => name }
       .zip(arrowType.domain.toList)
       .traverse {
         case (argName, t: ArrowType) =>
@@ -41,6 +43,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
         case (argName, t) =>
           N.define(argName, t)
       }
+    _ <- L.pointLocations(expr.abilities)
   } yield arrowType
 
   def after[Alg[_]: Monad](
@@ -137,7 +140,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
-    M: ManglerAlgebra[Alg]
+    M: ManglerAlgebra[Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     Prog
       .around(

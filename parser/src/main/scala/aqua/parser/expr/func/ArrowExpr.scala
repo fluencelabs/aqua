@@ -1,11 +1,10 @@
 package aqua.parser.expr.func
 
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, TypeToken, ValueToken}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, NamedTypeToken, TypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.parser.{ArrowReturnError, Ast, Expr, ParserError}
-
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
@@ -15,6 +14,10 @@ case class ArrowExpr[F[_]](arrowTypeExpr: ArrowTypeToken[F])
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ArrowExpr[K] =
     copy(arrowTypeExpr.mapK(fk))
+
+  lazy val abilities: List[(String, NamedTypeToken[F])] = arrowTypeExpr.args.collect {
+    case (Some(n), nt @ NamedTypeToken(_)) if n.value == nt.value => (n.value, nt)
+  }
 
 }
 

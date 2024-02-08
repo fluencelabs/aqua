@@ -85,7 +85,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
           println(
             c.variables
               .map(_.definition)
-              .filter(v => v.name == fullName.getOrElse(checkName) && v.`type` == `type`)
+              .filter(v => v.name == fullName.getOrElse(checkName))
               .map { case DefinitionInfo(name, token, t) =>
                 val span = token.unit._1
                 s"$name(${span.startIndex}:${span.endIndex}) $t"
@@ -347,5 +347,82 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       1,
       ArrowType(NilType, ProductType(ScalarType.string :: Nil))
     ) shouldBe true
+  }
+
+  it should "resolve type tokens in one file correctly" in {
+    val main =
+      """
+        |aqua A declares withAb
+        |
+        |export main
+        |
+        |alias SomeAlias: string
+        |
+        |data NestedStruct:
+        |  a: SomeAlias
+        |
+        |data SomeStruct:
+        |  al: SomeAlias
+        |  nested: NestedStruct
+        |
+        |ability SomeAbility:
+        |  someStr: SomeStruct
+        |  nested: NestedStruct
+        |  al: SomeAlias
+        |  someFunc(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
+        |
+        |service Srv("a"):
+        |  check(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct
+        |  check2() -> SomeStruct
+        |  check3() -> SomeAlias
+        |
+        |func withAb{SomeAbility}() -> SomeStruct:
+        |  <- SomeAbility.someStr
+        |
+        |func main(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> string:
+        |  <- ""
+        |""".stripMargin
+
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val res = compile(src, Map.empty).toOption.get.values.head
+
+    val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
+    val someStr =
+      StructType("SomeStruct", NonEmptyMap.of(("nested", nestedType), ("al", ScalarType.string)))
+
+    val abFuncType = ArrowType(
+      ProductType.labelled(
+        ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+      ),
+      ProductType(nestedType :: someStr :: ScalarType.string :: Nil)
+    )
+    val someAb = AbilityType(
+      "SomeAbility",
+      NonEmptyMap.of(("someStr", someStr), ("nested", nestedType), ("al", ScalarType.string), ("someFunc", abFuncType))
+    )
+
+    res.checkTokenLoc(main, "SomeAlias", 0, ScalarType.string) shouldBe true
+    Range.inclusive(1, 8).foreach { n =>
+      res.checkLocations("SomeAlias", 0, n, main) shouldBe true
+    }
+
+    res.checkTokenLoc(main, "NestedStruct", 0, nestedType, printFiltered = true) shouldBe true
+    Range.inclusive(1, 7).foreach { n =>
+      res.checkLocations("NestedStruct", 0, n, main) shouldBe true
+    }
+
+    res.checkTokenLoc(main, "SomeStruct", 0, someStr, printFiltered = true) shouldBe true
+    Range.inclusive(1, 7).foreach { n =>
+      res.checkLocations("SomeStruct", 0, n, main) shouldBe true
+    }
+
+    res.checkTokenLoc(main, "SomeAbility", 0, someAb, printFiltered = true) shouldBe true
+    res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
+    res.checkLocations("SomeAbility", 1, 2, main) shouldBe true
+
+
   }
 }
