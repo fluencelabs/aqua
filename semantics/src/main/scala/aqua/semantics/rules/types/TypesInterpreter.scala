@@ -10,6 +10,7 @@ import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
 import aqua.types.Type.*
+
 import cats.Applicative
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
@@ -22,7 +23,6 @@ import cats.syntax.option.*
 import cats.syntax.traverse.*
 import monocle.Lens
 import monocle.macros.GenLens
-
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
 import scala.reflect.TypeTest
@@ -41,8 +41,10 @@ class TypesInterpreter[S[_], X](using
 
   type ST[A] = State[X, A]
 
-  override def getType(name: String): State[X, Option[Type]] =
-    getState.map(st => st.strict.get(name))
+  override def getType(name: String, token: Token[S]): State[X, Option[Type]] =
+    OptionT(getState.map(st => st.strict.get(name)))
+      .semiflatTap(_ => locations.pointLocation(name, token))
+      .value
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(TypeResolution.resolveTypeToken(token)).flatMap {

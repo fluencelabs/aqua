@@ -377,9 +377,12 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |  check3() -> SomeAlias
         |
         |func withAb{SomeAbility}() -> SomeStruct:
+        |  Srv.check()
+        |  Srv.check2()
         |  <- SomeAbility.someStr
         |
         |func main(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> string:
+        |  Srv.check3()
         |  <- ""
         |""".stripMargin
 
@@ -401,7 +404,28 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
     val someAb = AbilityType(
       "SomeAbility",
-      NonEmptyMap.of(("someStr", someStr), ("nested", nestedType), ("al", ScalarType.string), ("someFunc", abFuncType))
+      NonEmptyMap.of(
+        ("someStr", someStr),
+        ("nested", nestedType),
+        ("al", ScalarType.string),
+        ("someFunc", abFuncType)
+      )
+    )
+
+    val srvType = ServiceType(
+      "Srv",
+      NonEmptyMap.of(
+        (
+          "check",
+          ArrowType(
+            ProductType.labelled(
+              ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+            ),
+            ProductType(nestedType :: Nil)
+          )
+        ), ("check2", ArrowType(NilType, ProductType(someStr :: Nil))),
+        ("check3", ArrowType(NilType, ProductType(ScalarType.string :: Nil)))
+      )
     )
 
     res.checkTokenLoc(main, "SomeAlias", 0, ScalarType.string) shouldBe true
@@ -409,20 +433,26 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       res.checkLocations("SomeAlias", 0, n, main) shouldBe true
     }
 
-    res.checkTokenLoc(main, "NestedStruct", 0, nestedType, printFiltered = true) shouldBe true
+    res.checkTokenLoc(main, "NestedStruct", 0, nestedType) shouldBe true
     Range.inclusive(1, 7).foreach { n =>
       res.checkLocations("NestedStruct", 0, n, main) shouldBe true
     }
 
-    res.checkTokenLoc(main, "SomeStruct", 0, someStr, printFiltered = true) shouldBe true
+    res.checkTokenLoc(main, "SomeStruct", 0, someStr) shouldBe true
     Range.inclusive(1, 7).foreach { n =>
       res.checkLocations("SomeStruct", 0, n, main) shouldBe true
     }
 
     res.checkTokenLoc(main, "SomeAbility", 0, someAb, printFiltered = true) shouldBe true
+    // from {SomeAbility} to 'ability SomeAbility'
     res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
+    // from 'SomeAbility.someStr' to {SomeAbility}
     res.checkLocations("SomeAbility", 1, 2, main) shouldBe true
 
-
+    res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
+    Range.inclusive(1, 3).foreach { n =>
+      println(n)
+      res.checkLocations("Srv", 0, n, main) shouldBe true
+    }
   }
 }

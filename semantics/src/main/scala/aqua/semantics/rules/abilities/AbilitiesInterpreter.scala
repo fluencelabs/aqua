@@ -10,10 +10,11 @@ import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.{StackInterpreter, abilities}
 import aqua.types.ArrowType
 
-import cats.data.{NonEmptyMap, State}
+import cats.data.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.functor.*
+import cats.syntax.flatMap.*
 import cats.syntax.option.*
 import monocle.Lens
 import monocle.macros.GenLens
@@ -63,10 +64,9 @@ class AbilitiesInterpreter[S[_], X](using
   }
 
   override def isDefinedAbility(name: NamedTypeToken[S]): State[X, Boolean] =
-    getState.map(_.abilities.contains(name.value)).flatMap { isAb =>
-      if (isAb) locations.pointLocation(name.value, name).as(isAb)
-      else isAb.pure
-    }
+    OptionT(getState.map(_.abilities.get(name.value))).semiflatTap { _ =>
+      locations.pointLocation(name.value, name)
+    }.isDefined
 
   override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getAbility(name.value).flatMap {
