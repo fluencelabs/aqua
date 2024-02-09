@@ -11,13 +11,11 @@ import cats.data.OptionT
 
 trait TypesAlgebra[S[_], Alg[_]] {
 
-  def resolveType(token: TypeToken[S]): Alg[Option[Type]]
+  def resolveType(token: TypeToken[S], mustBeDefined: Boolean = true): Alg[Option[Type]]
 
   def resolveStreamType(token: TypeToken[S]): Alg[Option[StreamType]]
 
   def resolveNamedType(token: TypeToken[S]): Alg[Option[AbilityType | StructType]]
-
-  def getType(name: String, token: Token[S]): Alg[Option[Type]]
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 

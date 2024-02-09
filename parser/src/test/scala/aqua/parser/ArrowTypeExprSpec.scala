@@ -33,11 +33,11 @@ class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         "onIn",
         toNamedArrow(
           List(
-            "SomeAb" -> toNamedType("SomeAb"),
             "a" -> toNamedType("Custom"),
             "b" -> toNamedType("Custom2")
           ),
-          Nil
+          Nil,
+          toNamedType("SomeAb") :: Nil
         )
       )
     )

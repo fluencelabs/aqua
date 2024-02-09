@@ -443,7 +443,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       res.checkLocations("SomeStruct", 0, n, main) shouldBe true
     }
 
-    res.checkTokenLoc(main, "SomeAbility", 0, someAb, printFiltered = true) shouldBe true
+    res.checkTokenLoc(main, "SomeAbility", 0, someAb) shouldBe true
     // from {SomeAbility} to 'ability SomeAbility'
     res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
     // from 'SomeAbility.someStr' to {SomeAbility}
@@ -451,7 +451,6 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
     Range.inclusive(1, 3).foreach { n =>
-      println(n)
       res.checkLocations("Srv", 0, n, main) shouldBe true
     }
   }

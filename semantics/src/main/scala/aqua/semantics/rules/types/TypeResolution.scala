@@ -14,7 +14,7 @@ import cats.syntax.validated.*
 
 final case class TypeResolution[S[_], +T](
   `type`: T,
-  definitions: List[(Token[S], String)]
+  occurrences: List[(Token[S], String)]
 )
 
 object TypeResolution {

@@ -41,20 +41,16 @@ class TypesInterpreter[S[_], X](using
 
   type ST[A] = State[X, A]
 
-  override def getType(name: String, token: Token[S]): State[X, Option[Type]] =
-    OptionT(getState.map(st => st.strict.get(name)))
-      .semiflatTap(_ => locations.pointLocation(name, token))
-      .value
-
-  override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
+  override def resolveType(token: TypeToken[S], mustBeDefined: Boolean = true): State[X, Option[Type]] =
     getState.map(TypeResolution.resolveTypeToken(token)).flatMap {
       case Valid(TypeResolution(typ, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n -> t }
         locations.pointLocations(tokensLocs).as(typ.some)
-      case Invalid(errors) =>
+      case Invalid(errors) if mustBeDefined =>
         errors.traverse_ { case TypeResolutionError(token, hint) =>
           report.error(token, hint)
         }.as(none)
+      case _ => none.pure
     }
 
   override def resolveStreamType(token: TypeToken[S]): State[X, Option[StreamType]] =
@@ -182,7 +178,7 @@ class TypesInterpreter[S[_], X](using
     )
 
   override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
-    getState.map(_.strict.get(name.value)).flatMap {
+    getState.map(_.getType(name.value)).flatMap {
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
@@ -722,7 +718,7 @@ class TypesInterpreter[S[_], X](using
   )(
     ifNotDefined: => State[X, A]
   ): State[X, A] = getState
-    .map(_.strict.get(name))
+    .map(_.getType(name))
     .flatMap {
       case Some(_) =>
         // TODO: Point to both locations here

@@ -110,7 +110,8 @@ object ScalarTypeToken {
 case class ArrowTypeToken[S[_]: Comonad](
   override val unit: S[Unit],
   args: List[(Option[Name[S]], TypeToken[S])],
-  res: List[TypeToken[S]]
+  res: List[TypeToken[S]],
+  abilities: List[NamedTypeToken[S]] = Nil
 ) extends TypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
 
@@ -118,8 +119,9 @@ case class ArrowTypeToken[S[_]: Comonad](
     copy(
       fk(unit),
       args.map { case (n, t) => (n.map(_.mapK(fk)), t.mapK(fk)) },
-      res.map(_.mapK(fk))
-    )
+      res.map(_.mapK(fk)),
+      abilities.map(_.mapK(fk))
+  )
   def argTypes: List[TypeToken[S]] = args.map(_._2)
 }
 
@@ -133,8 +135,8 @@ object ArrowTypeToken {
   ).map(_.toList)
 
   // {SomeAb, SecondAb} for NamedTypeToken
-  def abilities(): P0[List[(Option[Name[S]], NamedTypeToken[S])]] =
-    (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(s => Option(Name(s)) -> NamedTypeToken(s)))
+  def abilities(): P0[List[NamedTypeToken[S]]] =
+    (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(NamedTypeToken(_)))
       .map(_.toList) <* `}`).?.map(_.getOrElse(List.empty))
 
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
@@ -144,8 +146,9 @@ object ArrowTypeToken {
       val args = argsList.map(Option.empty[Name[Span.S]] -> _)
       ArrowTypeToken(
         point,
-        abs ++ args,
-        res
+        args,
+        res,
+        abs
       )
     }
 
@@ -155,7 +158,7 @@ object ArrowTypeToken {
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)` <* ` `.?)) ~
       (` -> ` *> returnDef()).?).map { case (((abilities, point), args), res) =>
-      ArrowTypeToken(point, abilities ++ args, res.toList.flatMap(_.toList))
+      ArrowTypeToken(point, args, res.toList.flatMap(_.toList), abilities)
     }
 }
 

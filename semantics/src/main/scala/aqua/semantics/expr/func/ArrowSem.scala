@@ -1,7 +1,6 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.ArrowExpr
-import aqua.parser.lexer.NamedTypeToken
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.*
@@ -35,9 +34,10 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   ): Alg[ArrowType] = for {
     arrowType <- T.beginArrowScope(arrowTypeExpr)
     // add locations before ability will be defined as new variable definition
-    _ <- L.pointLocations(expr.abilities)
+    _ <- L.pointLocations(arrowTypeExpr.abilities.map(n => n.value -> n))
+    absAsArgs = arrowTypeExpr.abilities.map(_.asName)
     // Create local variables
-    _ <- arrowTypeExpr.args.flatMap { case (name, _) => name }
+    _ <- (absAsArgs ++ arrowTypeExpr.args.flatMap { case (name, _) => name })
       .zip(arrowType.domain.toList)
       .traverse {
         case (argName, t: ArrowType) =>
