@@ -81,7 +81,7 @@ object TypeResolution {
   )(state: TypesState[S]): Res[S, ArrowType] = {
     val res = arrowTypeToken.res
       .traverse(typeToken => resolveTypeToken(typeToken)(state).toEither)
-    val args = arrowTypeToken.args.traverse { case (argName, typeToken) =>
+    val args = arrowTypeToken.absWithArgs.traverse { case (argName, typeToken) =>
       resolveTypeToken(typeToken)(state)
         .map(argName.map(_.value) -> _)
         .toEither

@@ -37,7 +37,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     _ <- L.pointLocations(arrowTypeExpr.abilities.map(n => n.value -> n))
     absAsArgs = arrowTypeExpr.abilities.map(_.asName)
     // Create local variables
-    _ <- (absAsArgs ++ arrowTypeExpr.args.flatMap { case (name, _) => name })
+    _ <- arrowTypeExpr.absWithArgs.flatMap { case (name, _) => name }
       .zip(arrowType.domain.toList)
       .traverse {
         case (argName, t: ArrowType) =>

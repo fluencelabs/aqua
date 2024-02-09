@@ -611,7 +611,7 @@ class TypesInterpreter[S[_], X](using
     Applicative[ST]
       .product(
         // Collect argument types
-        token.args
+        token.absWithArgs
           .foldLeft(Chain.empty[(String, Type)].pure[ST]) {
             case (f, (Some(argName), argType)) =>
               f.flatMap(acc =>

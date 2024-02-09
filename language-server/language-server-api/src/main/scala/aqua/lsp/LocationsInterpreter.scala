@@ -53,6 +53,7 @@ class LocationsInterpreter[S[_], X](using
 
   def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] =
     modify { st =>
+      println("add locations: " + locations)
       st.addLocations(locations)
     }
 
