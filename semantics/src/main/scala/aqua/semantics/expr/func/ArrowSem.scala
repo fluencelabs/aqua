@@ -34,6 +34,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     L: LocationsAlgebra[S, Alg]
   ): Alg[ArrowType] = for {
     arrowType <- T.beginArrowScope(arrowTypeExpr)
+    // add locations before ability will be defined as new variable definition
+    _ <- L.pointLocations(expr.abilities)
     // Create local variables
     _ <- arrowTypeExpr.args.flatMap { case (name, _) => name }
       .zip(arrowType.domain.toList)
@@ -43,7 +45,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
         case (argName, t) =>
           N.define(argName, t)
       }
-    _ <- L.pointLocations(expr.abilities)
   } yield arrowType
 
   def after[Alg[_]: Monad](

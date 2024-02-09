@@ -270,7 +270,7 @@ class TypesInterpreter[S[_], X](using
                   ensureTypeMatches(arg, expectedType, argType)
                 }
 
-            locations.pointFieldLocation(abName, opName, op) *>
+            locations.pointFieldLocation(ab.name, opName, op) *>
               reportNotEnoughArguments *>
               reportTooManyArguments *>
               checkArgumentTypes.map(typesMatch =>
