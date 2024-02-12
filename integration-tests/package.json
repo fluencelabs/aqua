@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@fluencelabs/fluence-network-environment": "1.1.2",
-    "@fluencelabs/js-client": "0.8.1",
+    "@fluencelabs/js-client": "0.8.3",
     "deep-equal": "2.2.1",
     "loglevel": "1.9.1"
   },
