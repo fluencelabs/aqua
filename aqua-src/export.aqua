@@ -1,7 +1,15 @@
-module FooBars declares *
+aqua FooBars declares *
 
 const DECLARE_CONST = "declare_const"
 const DECLARE_CONST2 = "declare_const2"
+
+-- alias SomeStruct: string
+
+data SomeStruct:
+  a: string
+
+-- service SomeStruct("ss"):
+--   a() -> string
 
 func foo() -> string:
     <- "I am MyFooBar foo"

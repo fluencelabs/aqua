@@ -78,7 +78,7 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
       base <- baseTypes
       (token, expected) = base
     } inside(resolve(token, Map("Struct" -> structType))) {
-      case Valid(TypeResolution(result, Nil)) =>
+      case Valid(TypeResolution(result, _)) =>
         result shouldEqual expected
     }
   }
@@ -100,7 +100,7 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
           (btoken, btype) = base
           (mod, typ) = modifier
         } inside(resolve(mod(btoken), Map("Struct" -> structType))) {
-          case Valid(TypeResolution(result, Nil)) =>
+          case Valid(TypeResolution(result, _)) =>
             result shouldEqual typ(btype)
         }
       )

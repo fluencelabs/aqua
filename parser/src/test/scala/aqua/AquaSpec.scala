@@ -75,15 +75,17 @@ object AquaSpec {
 
   def toArrowType(
     args: List[BasicTypeToken[Id]],
-    res: Option[BasicTypeToken[Id]]
+    res: Option[BasicTypeToken[Id]],
+    abilities: List[NamedTypeToken[Id]] = Nil
   ): ArrowTypeToken[Id] =
-    ArrowTypeToken[Id]((), args.map(None -> _), res.toList)
+    ArrowTypeToken[Id]((), args.map(None -> _), res.toList, abilities)
 
   def toNamedArrow(
     args: List[(String, TypeToken[Id])],
-    res: List[BasicTypeToken[Id]]
+    res: List[BasicTypeToken[Id]],
+    abilities: List[NamedTypeToken[Id]] = Nil
   ): ArrowTypeToken[Id] =
-    ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res)
+    ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res, abilities)
 
   def toNamedArg(str: String, customType: String): Arg[Id] =
     Arg[Id](str, toNamedType(customType))

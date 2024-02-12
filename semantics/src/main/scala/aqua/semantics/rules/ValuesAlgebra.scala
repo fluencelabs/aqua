@@ -99,7 +99,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           case None =>
             (for {
               t <- OptionT(
-                T.getType(name.value)
+                T.resolveType(name.asTypeToken, mustBeDefined = false)
               ).collect { case st: ServiceType => st }
                 // A hack to report name error, better to refactor
                 .flatTapNone(N.read(name))
@@ -429,7 +429,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
     lazy val nameTypeFromService = for {
       st <- OptionT(
-        T.getType(ab.value)
+        T.resolveType(ab, mustBeDefined = false)
       ).collect { case st: ServiceType => st }
       rename <- OptionT(
         A.getServiceRename(ab)

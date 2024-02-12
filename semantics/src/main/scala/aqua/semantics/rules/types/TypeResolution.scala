@@ -14,7 +14,7 @@ import cats.syntax.validated.*
 
 final case class TypeResolution[S[_], +T](
   `type`: T,
-  definitions: List[(Token[S], NamedTypeToken[S])]
+  occurrences: List[(Token[S], String)]
 )
 
 object TypeResolution {
@@ -59,10 +59,7 @@ object TypeResolution {
       case OptionTypeToken(_, dtt) =>
         resolveCollection(dtt, "Option", OptionType.apply)(state)
       case ntt: NamedTypeToken[S] =>
-        val defs = state
-          .getTypeDefinition(ntt.value)
-          .toList
-          .map(ntt -> _)
+        val defs = (ntt -> ntt.value) :: Nil
 
         state
           .getType(ntt.value)
@@ -84,7 +81,7 @@ object TypeResolution {
   )(state: TypesState[S]): Res[S, ArrowType] = {
     val res = arrowTypeToken.res
       .traverse(typeToken => resolveTypeToken(typeToken)(state).toEither)
-    val args = arrowTypeToken.args.traverse { case (argName, typeToken) =>
+    val args = arrowTypeToken.absWithArgs.traverse { case (argName, typeToken) =>
       resolveTypeToken(typeToken)(state)
         .map(argName.map(_.value) -> _)
         .toEither
@@ -104,7 +101,7 @@ object TypeResolution {
         ProductType.maybeLabelled(argsLabeledTypes),
         ProductType(resTypes)
       )
-      val defs = (argsTokens ++ resTokens)
+      val defs = argsTokens ++ resTokens
 
       TypeResolution(typ, defs)
     }.toValidated
