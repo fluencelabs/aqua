@@ -35,6 +35,11 @@ enum NamedArg[F[_]] extends Token[F] {
       case Full(name, value) => Full(name.mapK(fk), value.mapK(fk))
       case Short(variable) => Short(variable.mapK(fk))
     }
+
+  override def toString: String = this match {
+    case Full(name, value) => s"$name = $value"
+    case Short(variable) => variable.toString
+  }
 }
 
 object NamedArg {

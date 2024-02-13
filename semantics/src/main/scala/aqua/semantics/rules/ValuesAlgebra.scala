@@ -85,7 +85,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
           valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
         } yield IntoIndexRaw(idx, valueType)).value
-    }
+      case op: IntoApply[S] => ???
+      }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     v match {
