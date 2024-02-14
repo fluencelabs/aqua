@@ -53,55 +53,31 @@ case class PropertyToken[F[_]: Comonad](
    * ^^^^^^^^^^^^^^^^^^^^^^^^
    * this part is transformed to dotted name.
    */
-  def toDottedName: Option[(NamedTypeToken[F], ValueToken[F])] = value match {
-    case VarToken(name) =>
-      // Pattern `Class (field)*` is ability access
-      // and should not be transformed
-      val isAbility = isClass(name.value) && properties.forall {
-        case f @ IntoField(_) => isField(f.value)
-        case _ => true
-      }
+  def toDottedName: List[(NamedTypeToken[F], ValueToken[F])] = (
+    value,
+    properties.traverse {
+      case p @ IntoField(_) => p.some
+      case _ => none
+    }
+  ) match {
+    case (VarToken(name), Some(fields)) if !name.value.contains(".") =>
+      val names = name.value :: fields.map(_.value)
 
-      if (isAbility) none
-      else {
-        // Gather prefix of properties that are IntoField
-        val props = name.value +: properties.toList.view.map {
-          case IntoField(name) => name.extract.some
-          case _ => none
-        }.takeWhile(_.isDefined).flatten.toList
-
-        val propsWithIndex = props.zipWithIndex
-
-        // Find first property that is not Class
-        val classesTill = propsWithIndex.collectFirst {
-          case (name, idx) if !isClass(name) => idx
-        }.getOrElse(props.length)
-
-        // Find last property after classes
-        // that is CONST or field
-        val lastSuitable = propsWithIndex
-          .take(classesTill)
-          .collect {
-            case (name, idx) if isConst(name) || isField(name) => idx
-          }
-          .lastOption
-
-        lastSuitable.map(last =>
-          val newProps = NonEmptyList.fromList(
-            properties.toList.drop(last + 1)
-          )
-
-          val importAbility = props.take(last).mkString(".")
-          val importAbilityToken = name.rename(importAbility).asTypeToken
-
-          val newName = name.rename(props.take(last + 1).mkString("."))
-          val varToken = VarToken(newName)
-          val resultToken = newProps.fold(varToken)(props => PropertyToken(varToken, props))
-
-          importAbilityToken -> resultToken
+      fields.toList.inits.drop(1).map { init =>
+        val abilityLength = init.length + 1
+        val variableLength = abilityLength + 1
+        val newProps = NonEmptyList.fromList(
+          fields.toList.drop(abilityLength)
         )
-      }
-    case _ => none
+        val variableName = name.rename(names.take(variableLength).mkString("."))
+        val importAbility = name.rename(names.take(abilityLength).mkString("."))
+
+        val varToken = VarToken(variableName)
+        val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
+
+        importAbility.asTypeToken -> token
+      }.toList.reverse
+    case _ => Nil
   }
 
   /**

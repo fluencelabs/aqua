@@ -144,14 +144,11 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .map { case (_, ca) => ca }
           .widen[ValueToken[S]]
 
-        val dottedName = OptionT
-          .fromOption(
-            prop.toDottedName
-          )
-          .filterF { case (ability, _) =>
+        val dottedName = OptionT(
+          prop.toDottedName.findM { case (ability, _) =>
             A.isDefinedAbility(ability)
           }
-          .map { case (_, t) => t }
+        ).map { case (_, token) => token }
 
         val namedValue = OptionT
           .fromOption(

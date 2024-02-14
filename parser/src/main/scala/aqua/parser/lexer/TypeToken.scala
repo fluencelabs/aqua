@@ -121,9 +121,11 @@ case class ArrowTypeToken[S[_]: Comonad](
       args.map { case (n, t) => (n.map(_.mapK(fk)), t.mapK(fk)) },
       res.map(_.mapK(fk)),
       abilities.map(_.mapK(fk))
-  )
+    )
   def argTypes: List[TypeToken[S]] = abilities ++ args.map(_._2)
-  lazy val absWithArgs: List[(Option[Name[S]], TypeToken[S])] = abilities.map(n => Some(n.asName) -> n) ++ args
+
+  lazy val absWithArgs: List[(Option[Name[S]], TypeToken[S])] =
+    abilities.map(n => Some(n.asName) -> n) ++ args
 }
 
 object ArrowTypeToken {
@@ -136,9 +138,9 @@ object ArrowTypeToken {
   ).map(_.toList)
 
   // {SomeAb, SecondAb} for NamedTypeToken
-  def abilities(): P0[List[NamedTypeToken[S]]] =
-    (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(NamedTypeToken(_)))
-      .map(_.toList) <* `}`).?.map(_.getOrElse(List.empty))
+  def abilities(): P0[List[NamedTypeToken[S]]] = (
+    `{` *> comma(NamedTypeToken.dotted).map(_.toList) <* `}`
+  ).?.map(_.getOrElse(List.empty))
 
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
     ((abilities() ~ comma0(argTypeP)).with1 ~ ` -> `.lift ~
