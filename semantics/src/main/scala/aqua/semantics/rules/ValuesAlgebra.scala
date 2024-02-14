@@ -135,14 +135,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .fromOption(
             prop.toCallArrow
           )
-          .filterF(ca =>
-            ca.ability.fold(false.pure)(ab =>
-              (
-                A.isDefinedAbility(ab),
-                T.resolveServiceType(ab, mustBeDefined = false).map(_.isDefined)
-              ).mapN(_ || _)
-            )
-          )
+          .filterF { case (ability, ca) =>
+            (
+              ability.existsM(A.isDefinedAbility),
+              ca.ability.existsM(A.isDefinedAbility)
+            ).mapN(_ || _)
+          }
+          .map { case (_, ca) => ca }
           .widen[ValueToken[S]]
 
         val dottedName = OptionT

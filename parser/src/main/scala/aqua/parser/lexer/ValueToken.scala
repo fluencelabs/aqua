@@ -90,15 +90,15 @@ case class PropertyToken[F[_]: Comonad](
           val newProps = NonEmptyList.fromList(
             properties.toList.drop(last + 1)
           )
-          
-          val abilityName = props.take(last).mkString(".")
-          val abilityToken = name.rename(abilityName).asTypeToken
+
+          val importAbility = props.take(last).mkString(".")
+          val importAbilityToken = name.rename(importAbility).asTypeToken
 
           val newName = name.rename(props.take(last + 1).mkString("."))
           val varToken = VarToken(newName)
-          val result = newProps.fold(varToken)(props => PropertyToken(varToken, props))
+          val resultToken = newProps.fold(varToken)(props => PropertyToken(varToken, props))
 
-          abilityToken -> result
+          importAbilityToken -> resultToken
         )
       }
     case _ => none
@@ -113,28 +113,33 @@ case class PropertyToken[F[_]: Comonad](
    * ^^^^^^^
    * this part is transformed to ability name.
    */
-  def toCallArrow: Option[CallArrowToken[F]] = value match {
-    case VarToken(name) =>
-      val ability = properties.init.traverse {
-        case f @ IntoField(_) => f.value.some
-        case _ => none
-      }.map(
-        name.value +: _
-      ).filter(
-        _.forall(isClass)
-      ).map(props => name.rename(props.mkString(".")))
+  def toCallArrow: Option[(Option[NamedTypeToken[F]], CallArrowToken[F])] =
+    (value, properties.last) match {
+      case (VarToken(name), IntoArrow(funcName, args)) =>
+        val fields = properties.init.traverse {
+          case f @ IntoField(_) => f.value.some
+          case _ => none
+        }.map(
+          name.value +: _
+        ).filter(
+          _.forall(isClass)
+        )
 
-      (properties.last, ability) match {
-        case (IntoArrow(funcName, args), Some(ability)) =>
-          CallArrowToken(
-            ability.asTypeToken.some,
+        fields.map { props =>
+          val callAbility = name.rename(props.mkString("."))
+          val importAbility = (props.init match {
+            case Nil => none
+            case init => init.mkString(".").some
+          }).map(name.rename).map(_.asTypeToken)
+
+          importAbility -> CallArrowToken(
+            callAbility.asTypeToken.some,
             funcName,
             args
-          ).some
-        case _ => none
-      }
-    case _ => none
-  }
+          )
+        }
+      case _ => none
+    }
 
   def toNamedValue: Option[NamedValueToken[F]] =
     (value, properties.last) match {
