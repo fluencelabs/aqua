@@ -132,32 +132,26 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
          */
 
         val callArrow = OptionT
-          .fromOption(
-            prop.toCallArrow
+          .fromOption(prop.toCallArrow)
+          .filterF(ca =>
+            ca.ability.fold(false.pure)(
+              A.isDefinedAbility
+            )
           )
-          .filterF { case (ability, ca) =>
-            (
-              ability.existsM(A.isDefinedAbility),
-              ca.ability.existsM(A.isDefinedAbility)
-            ).mapN(_ || _)
-          }
-          .map { case (_, ca) => ca }
           .widen[ValueToken[S]]
 
-        val dottedName = OptionT(
-          prop.toDottedName.findM { case (ability, _) =>
-            A.isDefinedAbility(ability)
+        val ability = OptionT(
+          prop.toAbility.findM { case (ab, _) =>
+            A.isDefinedAbility(ab)
           }
         ).map { case (_, token) => token }
 
         val namedValue = OptionT
-          .fromOption(
-            prop.toNamedValue
-          )
+          .fromOption(prop.toNamedValue)
           .filterF(nv => T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined))
           .widen[ValueToken[S]]
 
-        callArrow.orElse(dottedName).orElse(namedValue).foldF(default)(valueToRaw)
+        callArrow.orElse(ability).orElse(namedValue).foldF(default)(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {

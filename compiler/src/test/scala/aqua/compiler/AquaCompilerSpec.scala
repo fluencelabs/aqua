@@ -539,4 +539,55 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     test("Imp", "Imported".some)
     test("Test.Imp", "Imported".some)
   }
+
+  it should "import ability with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val abName = rename.getOrElse(name) + ".Ab"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func useAb{$abName}() -> i32:
+             |  <- $abName.a
+             |
+             |func main() -> i32:
+             |  ab = $abName(a = 42)
+             |  <- useAb{ab}()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |ability Ab:
+             |  a: i32
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42),ap).leaf,
+            ApRes(ap.asVar,props).leaf,
+            respCall(transformCfg, props.asVar, initPeer),
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test("Imp", None)
+    test("Test.Imp", None)
+    test("Imp", "Imported".some)
+    test("Test.Imp", "Imported".some)
+  }
 }

@@ -41,81 +41,55 @@ case class PropertyToken[F[_]: Comonad](
   private def isConst(name: String): Boolean =
     name.forall(c => !c.isLetter || c.isUpper)
 
-  /**
-   * This method tries to convert property token to
-   * property token with dotted var name inside value token.
-   *
-   * Next properties pattern is untouched:
-   * Class (field)*
-   *
-   * Next properties pattern is transformed:
-   * (Class)* (CONST | field) ..props..
-   * ^^^^^^^^^^^^^^^^^^^^^^^^
-   * this part is transformed to dotted name.
-   */
-  def toDottedName: List[(NamedTypeToken[F], ValueToken[F])] = (
-    value,
-    properties.traverse {
-      case p @ IntoField(_) => p.some
-      case _ => none
-    }
-  ) match {
-    case (VarToken(name), Some(fields)) if !name.value.contains(".") =>
-      val names = name.value :: fields.map(_.value)
+  def toAbility: List[(NamedTypeToken[F], ValueToken[F])] =
+    value match {
+      case VarToken(name) if !name.value.contains(".") =>
+        val fields = properties.init.view.takeWhile {
+          case IntoField(_) => true
+          case _ => false
+        }.collect { case f @ IntoField(_) => f.value }.toList
+        val names = name.value +: fields
 
-      fields.toList.inits.drop(1).map { init =>
-        val abilityLength = init.length + 1
-        val variableLength = abilityLength + 1
-        val newProps = NonEmptyList.fromList(
-          fields.toList.drop(abilityLength)
-        )
-        val variableName = name.rename(names.take(variableLength).mkString("."))
-        val importAbility = name.rename(names.take(abilityLength).mkString("."))
-
-        val varToken = VarToken(variableName)
-        val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
-
-        importAbility.asTypeToken -> token
-      }.toList.reverse
-    case _ => Nil
-  }
-
-  /**
-   * This method tries to convert property token to
-   * call arrow token.
-   *
-   * Next properties pattern is transformed:
-   * (Class)+ arrow()
-   * ^^^^^^^
-   * this part is transformed to ability name.
-   */
-  def toCallArrow: Option[(Option[NamedTypeToken[F]], CallArrowToken[F])] =
-    (value, properties.last) match {
-      case (VarToken(name), IntoArrow(funcName, args)) =>
-        val fields = properties.init.traverse {
-          case f @ IntoField(_) => f.value.some
-          case _ => none
-        }.map(
-          name.value +: _
-        ).filter(
-          _.forall(isClass)
-        )
-
-        fields.map { props =>
-          val callAbility = name.rename(props.mkString("."))
-          val importAbility = (props.init match {
-            case Nil => none
-            case init => init.mkString(".").some
-          }).map(name.rename).map(_.asTypeToken)
-
-          importAbility -> CallArrowToken(
-            callAbility.asTypeToken.some,
-            funcName,
-            args
+        fields.toList.inits.drop(1).map { init =>
+          val importLength = init.length + 1
+          val nameLength = importLength + 1
+          val newProps = NonEmptyList.fromList(
+            properties.toList.drop(importLength)
           )
-        }
-      case _ => none
+          val newName = name.rename(names.take(nameLength).mkString("."))
+          val importAbility = name.rename(names.take(importLength).mkString(".")).asTypeToken
+
+          val varToken = VarToken(newName)
+          val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
+
+          importAbility -> token
+        }.toList.reverse
+      case _ => Nil
     }
+
+  def toCallArrow: Option[CallArrowToken[F]] = (
+    value,
+    properties.last
+  ) match {
+    case (VarToken(name), IntoArrow(funcName, args)) =>
+      properties.init.traverse {
+        case IntoField(name) => name.extract.some
+        case _ => none
+      }.map { fields =>
+        val imported = name
+          .rename(
+            (name.value +: fields).mkString(".")
+          )
+          .asTypeToken
+
+        CallArrowToken(
+          imported.some,
+          funcName,
+          args
+        )
+      }
+    case _ => none
+  }
 
   def toNamedValue: Option[NamedValueToken[F]] =
     (value, properties.last) match {
