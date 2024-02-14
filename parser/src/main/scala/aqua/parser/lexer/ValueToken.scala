@@ -53,7 +53,7 @@ case class PropertyToken[F[_]: Comonad](
    * ^^^^^^^^^^^^^^^^^^^^^^^^
    * this part is transformed to dotted name.
    */
-  def toDottedName: Option[(Name[F], ValueToken[F])] = value match {
+  def toDottedName: Option[(NamedTypeToken[F], ValueToken[F])] = value match {
     case VarToken(name) =>
       // Pattern `Class (field)*` is ability access
       // and should not be transformed
@@ -90,12 +90,15 @@ case class PropertyToken[F[_]: Comonad](
           val newProps = NonEmptyList.fromList(
             properties.toList.drop(last + 1)
           )
+          
+          val abilityName = props.take(last).mkString(".")
+          val abilityToken = name.rename(abilityName).asTypeToken
+
           val newName = name.rename(props.take(last + 1).mkString("."))
           val varToken = VarToken(newName)
+          val result = newProps.fold(varToken)(props => PropertyToken(varToken, props))
 
-          newName -> newProps.fold(varToken)(
-            props => PropertyToken(varToken, props)
-            )
+          abilityToken -> result
         )
       }
     case _ => none
@@ -139,10 +142,12 @@ case class PropertyToken[F[_]: Comonad](
         properties.init.traverse {
           case IntoField(name) => name.extract.some
           case _ => none
-        }.map{ props =>
-          val typeName = name.rename(
-            (name.value +: props).mkString(".")
-          ).asTypeToken
+        }.map { props =>
+          val typeName = name
+            .rename(
+              (name.value +: props).mkString(".")
+            )
+            .asTypeToken
 
           NamedValueToken(typeName, args.extract)
         }

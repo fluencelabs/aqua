@@ -144,8 +144,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .fromOption(
             prop.toDottedName
           )
-          .filterF { case (name, _) =>
-            A.isDefinedAbility(name.asTypeToken)
+          .filterF { case (ability, _) =>
+            A.isDefinedAbility(ability)
           }.map { case (_, t) => t}
 
         val namedValue = OptionT
