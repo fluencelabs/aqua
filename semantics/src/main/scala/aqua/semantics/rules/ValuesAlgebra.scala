@@ -86,7 +86,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
         } yield IntoIndexRaw(idx, valueType)).value
       case op: IntoApply[S] => ???
-      }
+    }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     v match {
@@ -130,14 +130,34 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
          * so here we try to differentiate them and adjust property
          * token accordingly.
          */
-        prop.leadingName.fold(default)(name =>
-          A.isDefinedAbility(name)
-            .flatMap(isDefined =>
-              prop.adjust
-                .filter(_ => isDefined)
-                .fold(default)(valueToRaw)
-            )
-        )
+
+        val callArrow = OptionT
+          .fromOption(
+            prop.toCallArrow
+          )
+          .filterF(ca => 
+            ca.ability.fold(false.pure)(A.isDefinedAbility)
+          )
+          .widen[ValueToken[S]]
+
+        val dottedName = OptionT
+          .fromOption(
+            prop.toDottedName
+          )
+          .filterF { case (name, _) =>
+            A.isDefinedAbility(name.asTypeToken)
+          }.map { case (_, t) => t}
+
+        val namedValue = OptionT
+          .fromOption(
+            prop.toNamedValue
+          )
+          .filterF(nv => 
+            T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined)  
+          )
+          .widen[ValueToken[S]]
+
+        callArrow.orElse(dottedName).orElse(namedValue).foldF(default)(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
