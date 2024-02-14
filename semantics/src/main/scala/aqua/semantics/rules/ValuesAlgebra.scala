@@ -135,8 +135,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .fromOption(
             prop.toCallArrow
           )
-          .filterF(ca => 
-            ca.ability.fold(false.pure)(A.isDefinedAbility)
+          .filterF(ca =>
+            ca.ability.fold(false.pure)(ab =>
+              (
+                A.isDefinedAbility(ab),
+                T.resolveServiceType(ab, mustBeDefined = false).map(_.isDefined)
+              ).mapN(_ || _)
+            )
           )
           .widen[ValueToken[S]]
 
@@ -146,15 +151,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
           .filterF { case (ability, _) =>
             A.isDefinedAbility(ability)
-          }.map { case (_, t) => t}
+          }
+          .map { case (_, t) => t }
 
         val namedValue = OptionT
           .fromOption(
             prop.toNamedValue
           )
-          .filterF(nv => 
-            T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined)  
-          )
+          .filterF(nv => T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined))
           .widen[ValueToken[S]]
 
         callArrow.orElse(dottedName).orElse(namedValue).foldF(default)(valueToRaw)
