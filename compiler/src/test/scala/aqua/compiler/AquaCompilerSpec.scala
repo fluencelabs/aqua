@@ -85,6 +85,25 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     inside(funcs)(test)
   )
 
+  def through(peer: ValueModel) =
+    MakeRes.hop(peer)
+
+  val relay = VarRaw("-relay-", ScalarType.string)
+
+  def getDataSrv(name: String, varName: String, t: Type) = {
+    CallServiceRes(
+      LiteralModel.quote("getDataSrv"),
+      name,
+      CallRes(Nil, Some(CallModel.Export(varName, t))),
+      LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    ).leaf
+  }
+
+  private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def join(vm: VarModel, size: ValueModel) =
+    ResBuilder.join(vm, size, init)
+
   "aqua compiler" should "compile a simple snippet to the right context" in {
 
     val src = Map(
@@ -112,25 +131,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       const.get should be(LiteralModel.number(5))
     }
   }
-
-  def through(peer: ValueModel) =
-    MakeRes.hop(peer)
-
-  val relay = VarRaw("-relay-", ScalarType.string)
-
-  def getDataSrv(name: String, varName: String, t: Type) = {
-    CallServiceRes(
-      LiteralModel.quote("getDataSrv"),
-      name,
-      CallRes(Nil, Some(CallModel.Export(varName, t))),
-      LiteralModel.fromRaw(ValueRaw.InitPeerId)
-    ).leaf
-  }
-
-  private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
-
-  private def join(vm: VarModel, size: ValueModel) =
-    ResBuilder.join(vm, size, init)
 
   it should "create right topology" in {
     val src = Map(
@@ -499,5 +499,44 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
       main.body.equalsOrShowDiff(expected) should be(true)
     }
+  }
+
+  it should "import function with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func main() -> i32:
+             |  <- ${rename.getOrElse(name)}.foo()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares foo
+             |func foo() -> i32:
+             |  <- 42
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val expected = XorRes.wrap(
+          respCall(transformCfg, LiteralModel.number(42), initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test("Imp", None)
+    test("Test.Imp", None)
+    test("Imp", "Imported".some)
+    test("Test.Imp", "Imported".some)
   }
 }
