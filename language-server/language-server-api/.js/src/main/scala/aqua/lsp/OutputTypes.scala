@@ -4,7 +4,7 @@ import aqua.parser.lift.FileSpan
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
-import scala.scalajs.js.{UndefOr, undefined}
+import scala.scalajs.js.{undefined, UndefOr}
 
 @JSExportAll
 case class CompilationResult(
@@ -16,7 +16,7 @@ case class CompilationResult(
 )
 
 @JSExportAll
-case class ExprInfoJs(location: TokenLocation, `type`: String)
+case class ExprInfoJs(location: TokenLocation, `type`: TypeJs)
 
 @JSExportAll
 case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
