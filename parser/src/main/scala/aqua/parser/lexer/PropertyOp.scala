@@ -108,7 +108,7 @@ object PropertyOp {
     namedArgs.lift.map(IntoApply.apply)
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: parseApply :: Nil)
+    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: parseApply.backtrack :: Nil)
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep
