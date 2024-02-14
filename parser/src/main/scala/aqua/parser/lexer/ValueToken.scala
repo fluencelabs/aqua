@@ -44,13 +44,13 @@ case class PropertyToken[F[_]: Comonad](
   def toAbility: List[(NamedTypeToken[F], ValueToken[F])] =
     value match {
       case VarToken(name) if !name.value.contains(".") =>
-        val fields = properties.init.view.takeWhile {
+        val fields = properties.toList.takeWhile {
           case IntoField(_) => true
           case _ => false
         }.collect { case f @ IntoField(_) => f.value }.toList
         val names = name.value +: fields
 
-        fields.toList.inits.drop(1).map { init =>
+        fields.inits.drop(1).map { init =>
           val importLength = init.length + 1
           val nameLength = importLength + 1
           val newProps = NonEmptyList.fromList(
