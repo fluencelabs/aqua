@@ -1,0 +1,26 @@
+alias Top: ⊤
+alias Bottom: ⊥
+
+alias Number: u32
+alias String: string
+alias Array: []string
+alias Stream: *string
+alias Option: ?string
+
+
+data Struct:
+  a: Number
+  b: String
+
+service Srv("srv"):
+  noop()
+
+ability Ability:
+  a: Number
+  b: String
+
+fn nilArrow():
+  Srv.noop()
+
+fn fullArrow(a: string, b: number) -> string, number:
+  <- a, b
