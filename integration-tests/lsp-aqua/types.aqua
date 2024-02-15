@@ -1,3 +1,5 @@
+aqua Types
+
 alias Top: ⊤
 alias Bottom: ⊥
 
@@ -7,20 +9,21 @@ alias Array: []string
 alias Stream: *string
 alias Option: ?string
 
-
 data Struct:
   a: Number
   b: String
+  c: Array
+  d: Option
 
 service Srv("srv"):
-  noop()
+  noop(srvArg: string)
 
 ability Ability:
   a: Number
   b: String
 
-fn nilArrow():
-  Srv.noop()
+func nilArrow():
+  Srv.noop("")
 
-fn fullArrow(a: string, b: number) -> string, number:
+func fullArrow(a: string, b: u32) -> string, u32:
   <- a, b

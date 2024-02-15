@@ -43,7 +43,7 @@ class StructTypeJs(val name: String, val fields: js.Dictionary[TypeJs]) extends 
 }
 
 class ServiceTypeJs(val name: String, val fields: js.Dictionary[TypeJs]) extends TypeJs {
-  val tag: String = "struct"
+  val tag: String = "service"
 }
 
 trait ProductType extends TypeJs
