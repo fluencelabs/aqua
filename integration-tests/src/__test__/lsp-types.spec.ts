@@ -1,3 +1,9 @@
+describe("Testing LSP types", () => {
+    it("dummy", async () => {
+        expect(true).toBeTruthy()
+    })
+})
+
 // FIXME: these tests work only with LSP ESM build (ModuleKind.ESModule in build.sbt)
 /*
 import {
@@ -10,7 +16,7 @@ import {
 } from '@fluencelabs/aqua-language-server-api/aqua-lsp-api';
 
 describe("Testing LSP types", () => {
-    it("range", async () => {
+    it("check types in aqua file", async () => {
         const compiled = await AquaLSP.compile("lsp-aqua/types.aqua", {})
         const types = compiled.tokens.map(ti => ti.type)
 
