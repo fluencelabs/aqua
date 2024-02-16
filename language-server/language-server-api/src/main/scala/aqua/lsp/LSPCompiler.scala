@@ -7,16 +7,16 @@ import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.rules.locations.LocationsAlgebra
 
 import cats.data.Validated.validNec
-import cats.data.{State, Chain, Validated, ValidatedNec}
+import cats.data.{Chain, State, Validated, ValidatedNec}
 import cats.syntax.either.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.semigroup.*
-import cats.{Comonad, Monad, Monoid, Order}
+import cats.{Comonad, Monad, Monoid, Order, Show}
 
 object LSPCompiler {
 
-  private def getLspAquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad](
+  private def getLspAquaCompiler[F[_]: Monad, E, I: Order: Show, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, LspContext[S]] = {
     given Monoid[LspContext[S]] = LspContext
@@ -48,7 +48,7 @@ object LSPCompiler {
 
     val semantics = new LspSemantics[S]()
 
-    given LocationsAlgebra[S, State[LspContext[S], *]] = 
+    given LocationsAlgebra[S, State[LspContext[S], *]] =
       LocationsInterpreter[S, LspContext[S]]()
 
     new AquaCompiler[F, E, I, S, LspContext[S]](
@@ -57,7 +57,7 @@ object LSPCompiler {
     )
   }
 
-  def compileToLsp[F[_]: Monad, E, I: Order, S[_]: Comonad](
+  def compileToLsp[F[_]: Monad, E, I: Order: Show, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: AquaCompilerConf

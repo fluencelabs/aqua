@@ -22,7 +22,8 @@ case class LspContext[S[_]](
   variables: List[VariableInfo[S]] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
   errors: List[SemanticError[S]] = Nil,
-  warnings: List[SemanticWarning[S]] = Nil
+  warnings: List[SemanticWarning[S]] = Nil,
+  importPaths: Map[String, String] = Map.empty
 ) {
   lazy val allLocations: List[TokenLocation[S]] = variables.flatMap(_.allLocations)
 }
@@ -41,7 +42,8 @@ object LspContext {
         importTokens = x.importTokens ++ y.importTokens,
         variables = x.variables ++ y.variables,
         errors = x.errors ++ y.errors,
-        warnings = x.warnings ++ y.warnings
+        warnings = x.warnings ++ y.warnings,
+        importPaths = x.importPaths ++ y.importPaths
       )
 
   trait Implicits[S[_]] {
@@ -100,6 +102,9 @@ object LspContext {
           )
         )
       )
+
+    override def setImportPaths(ctx: LspContext[S], importPaths: Map[String, String]): LspContext[S] =
+      ctx.copy(importPaths = importPaths)
 
     override def setModule(
       ctx: LspContext[S],

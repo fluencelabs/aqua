@@ -1,5 +1,7 @@
 aqua A
 
+import "aqua-src/gen/OneMore.aqua"
+
 export main
 
 alias SomeAlias: string

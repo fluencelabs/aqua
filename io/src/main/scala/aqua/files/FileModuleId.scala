@@ -1,18 +1,21 @@
 package aqua.files
 
 import fs2.io.file.Path
-import cats.Order
+import cats.{Order, Show}
 
 case class FileModuleId private (file: Path) {
-  override def toString: String = s"${file}"
+  override def toString: String = s"$file"
 }
 
 object FileModuleId {
 
-  implicit object FileModuleIdOrder extends Order[FileModuleId] {
-
+  given Order[FileModuleId] with {
     override def compare(x: FileModuleId, y: FileModuleId): Int =
       x.file.toString.compareTo(y.file.toString)
+  }
+
+  given Show[FileModuleId] with {
+    override def show(t: FileModuleId): String = t.toString
   }
 
   def apply(file: Path): FileModuleId =

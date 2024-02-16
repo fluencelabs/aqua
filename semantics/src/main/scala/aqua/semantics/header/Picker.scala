@@ -22,6 +22,7 @@ trait Picker[A] {
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def declares(ctx: A): Set[String]
   def setAbility(ctx: A, name: String, ctxAb: A): A
+  def setImportPaths(ctx: A, importPaths: Map[String, String]): A
   def setModule(ctx: A, name: Option[String], declares: Set[String]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
   def setInit(ctx: A, ctxInit: Option[A]): A
@@ -51,6 +52,7 @@ object Picker {
     def funcAcceptAbility(name: String): Boolean = Picker[A].funcAcceptAbility(p, name)
     def declares: Set[String] = Picker[A].declares(p)
     def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
+    def setImportPaths(importPaths: Map[String, String]): A = Picker[A].setImportPaths(p, importPaths)
     def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
@@ -116,6 +118,10 @@ object Picker {
 
     override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
       ctx.copy(abilities = Map(name -> ctxAb))
+
+    // dummy
+    override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
+      ctx
 
     override def setModule(
       ctx: RawContext,
