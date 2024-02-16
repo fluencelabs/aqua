@@ -126,8 +126,6 @@ object ResultHelper extends Logging {
         logger.debug("Errors: " + errs.mkString("\n"))
 
     val importTokens = importsToTokenImport(lsp.importTokens, lsp.importPaths)
-    println("imports: " + lsp.importPaths)
-    println("importTokens: " + importTokens)
 
     CompilationResult(
       errors.toJSArray,

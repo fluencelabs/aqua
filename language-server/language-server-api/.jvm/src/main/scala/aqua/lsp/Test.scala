@@ -24,7 +24,7 @@ object Test extends IOApp.Simple {
       Imports(
         Map(
           Path("/") -> Imports.PathSettings(
-            Map("" -> List(Path("./aqua")), "aqua-src/gen" -> List(Path("/home/diemust/git/aqua/aqua-src/gen")))
+            Map("" -> List(Path("./aqua")))
           )
         )
       )
