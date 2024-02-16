@@ -74,7 +74,7 @@ class TopTypeJs extends TypeJs {
 
 object TypeJs {
 
-  def typeList(types: List[(String, Type)]): Dictionary[TypeJs] =
+  def typeList(types: Iterable[(String, Type)]): Dictionary[TypeJs] =
     js.Dictionary(types.map { case (n, t) =>
       (n, TypeJs.fromType(t))
     }: _*)
@@ -88,9 +88,9 @@ object TypeJs {
       case StreamType(el) => new StreamTypeJs(fromType(el))
       case StreamMapType(el) => new StreamMapTypeJs(fromType(el))
       case CanonStreamType(el) => new CanonStreamTypeJs(fromType(el))
-      case StructType(name, fields) => new StructTypeJs(name, typeList(fields.toSortedMap.toList))
-      case AbilityType(name, fields) => new AbilityTypeJs(name, typeList(fields.toSortedMap.toList))
-      case ServiceType(name, fields) => new ServiceTypeJs(name, typeList(fields.toSortedMap.toList))
+      case StructType(name, fields) => new StructTypeJs(name, typeList(fields.toSortedMap))
+      case AbilityType(name, fields) => new AbilityTypeJs(name, typeList(fields.toSortedMap))
+      case ServiceType(name, fields) => new ServiceTypeJs(name, typeList(fields.toSortedMap))
       case lct: LabeledConsType => new LabeledConsTypeJs(typeList(lct.toLabelledList()))
       case uct: UnlabeledConsType => new UnlabeledConsTypeJs(uct.toList.map(fromType).toJSArray)
       case ArrowType(domain, codomain) =>
