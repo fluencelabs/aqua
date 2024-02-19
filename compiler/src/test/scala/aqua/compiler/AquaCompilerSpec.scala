@@ -29,12 +29,6 @@ import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-given FileId[String] with {
-  override def show(t: String): String = t
-
-  override def compare(x: String, y: String): Int = x.compare(y)
-}
-
 class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   import ModelBuilder.*
 
