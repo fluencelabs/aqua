@@ -5,7 +5,7 @@ import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawContext
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.rules.locations.LocationsAlgebra
-
+import aqua.semantics.FileId
 import cats.data.Validated.validNec
 import cats.data.{Chain, State, Validated, ValidatedNec}
 import cats.syntax.either.*
@@ -16,7 +16,7 @@ import cats.{Comonad, Monad, Monoid, Order, Show}
 
 object LSPCompiler {
 
-  private def getLspAquaCompiler[F[_]: Monad, E, I: Order: Show, S[_]: Comonad](
+  private def getLspAquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, LspContext[S]] = {
     given Monoid[LspContext[S]] = LspContext
@@ -57,7 +57,7 @@ object LSPCompiler {
     )
   }
 
-  def compileToLsp[F[_]: Monad, E, I: Order: Show, S[_]: Comonad](
+  def compileToLsp[F[_]: Monad, E, I: FileId, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: AquaCompilerConf

@@ -30,7 +30,7 @@ case class Modules[I, E, T](
 
   def isResolved: Boolean = dependsOn.isEmpty
 
-  def map[TT](f: (T, AquaModule[I, E, T]) => TT): Modules[I, E, TT] =
+  def map[TT](f: AquaModule[I, E, T] => AquaModule[I, E, TT]): Modules[I, E, TT] =
     copy(loaded = loaded.view.mapValues(_.map(f)).toMap)
 
   def mapErr[EE](f: E => EE): Modules[I, EE, T] =

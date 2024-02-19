@@ -5,17 +5,16 @@ import aqua.linker.Linker
 import aqua.parser.{Ast, ParserError}
 import aqua.semantics.header.Picker.setImportPaths
 import aqua.semantics.header.{HeaderHandler, Picker}
-import aqua.semantics.{SemanticError, Semantics}
-
+import aqua.semantics.{FileId, SemanticError, Semantics}
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.syntax.either.*
 import cats.syntax.functor.*
 import cats.syntax.show.*
-import cats.{Comonad, Monad, Monoid, Order, Show, ~>}
+import cats.{~>, Comonad, Monad, Monoid, Order, Show}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Monad, E, I: Order: Show, S[_]: Comonad, C: Monoid: Picker](
+class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 ) extends Logging {
@@ -60,9 +59,9 @@ class AquaCompiler[F[_]: Monad, E, I: Order: Show, S[_]: Comonad, C: Monoid: Pic
         // Lift resolution to CompileRes
         modules <- resolution.toEitherT[CompileWarns]
         // Generate transpilation functions for each module
-        transpiled = modules.map { case (body, m) =>
+        transpiled = modules.map { m =>
           val importIds = m.imports.view.mapValues(_.show).toMap
-          transpile(body).map(_.map(_.setImportPaths(importIds)))
+          m.copy(body = transpile(m.body).map(_.map(_.setImportPaths(importIds))))
         }
         // Link modules
         linked <- Linker.link(transpiled, CycleError.apply)
