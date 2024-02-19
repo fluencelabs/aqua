@@ -77,7 +77,7 @@ object TypeJs {
   def typeList(types: Iterable[(String, Type)]): Dictionary[TypeJs] =
     js.Dictionary(types.map { case (n, t) =>
       (n, TypeJs.fromType(t))
-    }: _*)
+    }.toSeq: _*)
 
   def fromType(t: Type): TypeJs = {
     t match
