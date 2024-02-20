@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.14.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.0...aqua-v0.14.1) (2024-02-20)
+
+
+### Features
+
+* **language-server:** Add types for types in LSP API ([#1078](https://github.com/fluencelabs/aqua/issues/1078)) ([3cd31c5](https://github.com/fluencelabs/aqua/commit/3cd31c5827dfc8208a5cbed0722e3ddeabc7e31f))
+* **language-server:** Resolve paths for imports ([#1079](https://github.com/fluencelabs/aqua/issues/1079)) ([245f664](https://github.com/fluencelabs/aqua/commit/245f6640f8f45b92338bb3bb20fbf2d73540b053))
+* **language-server:** Support declares and exports in LSP [LNG-304, LNG-319] ([#1070](https://github.com/fluencelabs/aqua/issues/1070)) ([f7194f0](https://github.com/fluencelabs/aqua/commit/f7194f0a54f51b0cc8aa0b4a2b295ec027be8a63))
+
+
+### Bug Fixes
+
+* **compiler:** Use `strict` to check types availability [LNG-334] ([#1071](https://github.com/fluencelabs/aqua/issues/1071)) ([17fb77c](https://github.com/fluencelabs/aqua/commit/17fb77c40f14b6a1c9b773d58e719d3476fe5414))
+* **deps:** update dependency @fluencelabs/js-client to v0.8.0 ([#1063](https://github.com/fluencelabs/aqua/issues/1063)) ([a8ae49b](https://github.com/fluencelabs/aqua/commit/a8ae49b55b86876ac3f961eb6e0b95f062466f70))
+* **deps:** update dependency @fluencelabs/js-client to v0.8.1 ([#1065](https://github.com/fluencelabs/aqua/issues/1065)) ([d03211b](https://github.com/fluencelabs/aqua/commit/d03211b492725f37d5e76ffc55861f5161094aae))
+* **deps:** update dependency @fluencelabs/js-client to v0.8.3 ([#1072](https://github.com/fluencelabs/aqua/issues/1072)) ([f4cc781](https://github.com/fluencelabs/aqua/commit/f4cc7818f4c9ba5b23ceaf771504bf697e767350))
+
 ## [0.14.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.4...aqua-v0.14.0) (2024-01-30)
 
 
