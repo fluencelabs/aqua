@@ -1,5 +1,6 @@
 package aqua.lsp
 
+import aqua.compiler.FileIdString.given_FileId_String
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
 import aqua.parser.Parser
 import aqua.parser.lift.Span
@@ -10,7 +11,6 @@ import aqua.types.*
 
 import cats.Id
 import cats.data.*
-import cats.instances.string.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -423,7 +423,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
             ),
             ProductType(nestedType :: Nil)
           )
-        ), ("check2", ArrowType(NilType, ProductType(someStr :: Nil))),
+        ),
+        ("check2", ArrowType(NilType, ProductType(someStr :: Nil))),
         ("check3", ArrowType(NilType, ProductType(ScalarType.string :: Nil)))
       )
     )
