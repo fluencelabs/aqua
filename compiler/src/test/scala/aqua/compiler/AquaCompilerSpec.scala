@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.compiler.FileIdString.given_FileId_String
+import aqua.compiler.FileIdString.given
 import aqua.model.AquaContext
 import aqua.model.CallServiceModel
 import aqua.model.FlattenModel
