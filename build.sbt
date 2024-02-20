@@ -82,7 +82,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler, io)
+  .dependsOn(compiler, io, compiler % "test->test")
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(

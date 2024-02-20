@@ -28,7 +28,7 @@ class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
   // (Imports contexts => Compilation result)
   type TP = Map[String, C] => CompileRes[C]
 
-  private def transpile(body: Ast[S]): TP =
+  private def transpile(body: Ast[S], importPaths: Map[String, String]): TP =
     imports =>
       for {
         // Process header, get initial context
@@ -44,7 +44,7 @@ class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
         rc <- headerSem
           .finCtx(processed)
           .toCompileRes
-      } yield rc
+      } yield rc.setImportPaths(importPaths)
 
   def compileRaw(
     sources: AquaSources[F, E, I],
@@ -60,8 +60,8 @@ class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
         modules <- resolution.toEitherT[CompileWarns]
         // Generate transpilation functions for each module
         transpiled = modules.map { m =>
-          val importIds = m.imports.view.mapValues(_.show).toMap
-          m.copy(body = transpile(m.body).map(_.map(_.setImportPaths(importIds))))
+          val importPaths = m.imports.view.mapValues(_.show).toMap
+          m.copy(body = transpile(m.body, importPaths))
         }
         // Link modules
         linked <- Linker.link(transpiled, CycleError.apply)
