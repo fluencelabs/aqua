@@ -1,48 +1,141 @@
+export interface ScalarType {
+    name: string,
+    tag: "scalar"
+}
+
+export interface ArrayType {
+    element: Type,
+    tag: "array"
+}
+
+export interface OptionType {
+    element: Type,
+    tag: "option"
+}
+
+export interface StreamType {
+    element: Type,
+    tag: "stream"
+}
+
+export interface StreamMapType {
+    element: Type,
+    tag: "streammap"
+}
+
+export interface CanonStreamType {
+    element: Type,
+    tag: "canon"
+}
+
+export interface AbilityType {
+    name: string,
+    fields: Record<string, Type>,
+    tag: "ability"
+}
+
+export interface StructType {
+    name: string,
+    fields: Record<string, Type>,
+    tag: "struct"
+}
+
+export interface ServiceType {
+    name: string,
+    fields: Record<string, Type>,
+    tag: "service"
+}
+
+export interface LabeledConsType {
+    args: Record<string, Type>,
+    tag: "labeled"
+}
+
+export interface UnlabeledConsType {
+    types: Type[],
+    tag: "unlabeled"
+}
+
+export interface ArrowType {
+    domain: LabeledConsType
+    codomain: UnlabeledConsType,
+    tag: "arrow"
+}
+
+export interface NilType {
+    tag: "nil"
+}
+
+export interface BottomType {
+    tag: "bottom"
+}
+
+export interface TopType {
+    tag: "top"
+}
+
+export type Type =
+    ScalarType
+    | ArrayType
+    | OptionType
+    | StreamType
+    | StreamMapType
+    | CanonStreamType
+    | AbilityType
+    | StructType
+    | ServiceType
+    | LabeledConsType
+    | UnlabeledConsType
+    | ArrowType
+    | NilType
+    | TopType
+    | BottomType
+
 export interface TokenLocation {
-  name: string;
-  startLine: number;
-  startCol: number;
-  endLine: number;
-  endCol: number;
+    name: string;
+    startLine: number;
+    startCol: number;
+    endLine: number;
+    endCol: number;
 }
 
 export interface TokenInfo {
-  location: TokenLocation;
-  type: string;
+    location: TokenLocation;
+    type: Type;
 }
 
 export interface TokenLink {
-  current: TokenLocation;
-  definition: TokenLocation;
+    current: TokenLocation;
+    definition: TokenLocation;
 }
 
 export interface TokenImport {
-  current: TokenLocation;
-  path: string;
+    current: TokenLocation;
+    path: string;
 }
 
 export interface ErrorInfo {
-  infoType: "error";
-  start: number;
-  end: number;
-  message: string;
-  location: string | null;
+    infoType: "error";
+    start: number;
+    end: number;
+    message: string;
+    location: string | null;
 }
 
 export interface WarningInfo {
-  infoType: "warning";
-  start: number;
-  end: number;
-  message: string;
-  location: string | null;
+    infoType: "warning";
+    start: number;
+    end: number;
+    message: string;
+    location: string | null;
 }
 
 export interface CompilationResult {
-  errors: ErrorInfo[];
-  warnings: WarningInfo[];
-  locations: TokenLink[];
-  importLocations: TokenImport[];
-  tokens: TokenInfo[];
+    errors: ErrorInfo[];
+    warnings: WarningInfo[];
+    locations: TokenLink[];
+    importLocations: TokenImport[];
+    tokens: TokenInfo[];
 }
 
 /*
@@ -59,7 +152,7 @@ export interface CompilationResult {
 export type Imports = Record<string, Record<string, string[]>>;
 
 export class Compiler {
-  compile(path: string, imports: Imports): Promise<CompilationResult>;
+    compile(path: string, imports: Imports): Promise<CompilationResult>;
 }
 
 export var AquaLSP: Compiler;

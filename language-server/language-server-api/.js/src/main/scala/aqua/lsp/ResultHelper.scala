@@ -84,8 +84,8 @@ object ResultHelper extends Logging {
   private def tokensToJs(tokens: List[DefinitionInfo[FileSpan.F]]): js.Array[ExprInfoJs] =
     tokens.flatMap { ti =>
       TokenLocation.fromSpan(ti.token.unit._1).map { tl =>
-        val typeName = ti.`type`.show
-        ExprInfoJs(tl, typeName)
+        val typeDef = TypeJs.fromType(ti.`type`)
+        ExprInfoJs(tl, typeDef)
       }
     }.toJSArray
 
