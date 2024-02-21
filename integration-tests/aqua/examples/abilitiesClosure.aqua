@@ -1,6 +1,6 @@
 aqua M
 
-export bugLNG314
+export bugLNG314, bugLNG338
 
 ability WorkerJob:
   runOnSingleWorker(w: string) -> string
@@ -21,3 +21,29 @@ func bugLNG314() -> string:
    subnet_job <- disjoint_run{worker_job}()
    res <- runJob(subnet_job)
    <- res
+
+ability Compute:
+  job() -> string
+
+func lift() -> Compute:
+  job = () -> string:
+    <- "job done"
+  <- Compute(job)
+
+ability Function:
+  run() -> string
+
+func roundtrip{Function}() -> string:
+  res <- Function.run()
+  <- res
+
+func disj{Compute}() -> Function:
+  run = func () -> string:
+      <- Compute.job()
+  <- Function(run = run)
+
+func bugLNG338() -> string:
+  comp = lift()
+  fn = disj{comp}()
+  res <- roundtrip{fn}()
+  <- res
