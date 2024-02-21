@@ -1,31 +1,32 @@
 aqua A
 
-import "aqua-src/gen/OneMore.aqua"
+export haveFun
 
-export main
+ability Compute:
+  job()
 
-alias SomeAlias: string
+service Op("op"):
+  noop()
 
-data NestedStruct:
-  a: SomeAlias
+func lift() -> Compute:
+  job = ():
+    Op.noop()
+  <- Compute(job)
 
-data SomeStruct:
-  al: SomeAlias
-  nested: NestedStruct
+ability Function:
+  run()
 
-ability SomeAbility:
-  someStr: SomeStruct
-  nested: NestedStruct
-  al: SomeAlias
-  someFunc(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
+func roundtrip{Function}() -> ?string:
+  Function.run()
+  <- nil
 
-service Srv("a"):
-  check(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct
-  check2() -> SomeStruct
-  check3() -> SomeAlias
+func disjoint_run{Compute}() -> Function:
+  run = func ():
+      Compute.job()
+  <- Function(run = run)
 
-func withAb{SomeAbility}() -> SomeStruct:
-  <- SomeAbility.someStr
-
-func main(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> string:
+func haveFun() -> string:
+  comp = lift()
+  fn = disjoint_run{comp}()
+  roundtrip{fn}()
   <- ""

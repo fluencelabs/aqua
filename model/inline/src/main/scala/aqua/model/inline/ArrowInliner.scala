@@ -17,6 +17,7 @@ import cats.syntax.option.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
 import cats.{Eval, Monoid}
+import scala.annotation.tailrec
 import scribe.Logging
 
 /**
@@ -82,6 +83,62 @@ object ArrowInliner extends Logging {
     arrowsToSave: Map[String, FuncArrow]
   )
 
+  /**
+   * Find abilities recursively, because ability can hold arrow with another ability in it.
+   * @param abilitiesToGather gather all fields for these abilities
+   * @param varsFromAbs already gathered variables
+   * @param arrowsFromAbs already gathered arrows
+   * @param processedAbs already processed abilities
+   * @return all needed variables and arrows
+   */
+  @tailrec
+  private def arrowsAndVarsFromAbilities(
+    abilitiesToGather: Map[String, GeneralAbilityType],
+    exports: Map[String, ValueModel],
+    arrows: Map[String, FuncArrow],
+    varsFromAbs: Map[String, ValueModel] = Map.empty,
+    arrowsFromAbs: Map[String, FuncArrow] = Map.empty,
+    processedAbs: Set[String] = Set.empty
+  ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
+    val varsFromAbilities = abilitiesToGather.flatMap { case (name, at) =>
+      getAbilityVars(name, None, at, exports)
+    }
+    val arrowsFromAbilities = abilitiesToGather.flatMap { case (name, at) =>
+      getAbilityArrows(name, None, at, exports, arrows)
+    }
+
+    val allProcessed = abilitiesToGather.keySet ++ processedAbs
+
+    // find all names that is used in arrows
+    val namesUsage = arrowsFromAbilities.values.flatMap(_.body.usesVarNames.value).toSet
+
+    // check if there is abilities that we didn't gather
+    val abilitiesUsage = namesUsage.toList
+      .flatMap(exports.get)
+      .collect {
+        case ValueModel.Ability(vm, at) if !allProcessed.contains(vm.name) =>
+          vm.name -> at
+      }
+      .toMap
+
+    val allVars = varsFromAbilities ++ varsFromAbs
+    val allArrows = arrowsFromAbilities ++ arrowsFromAbs
+
+    if (abilitiesUsage.isEmpty) {
+      (allVars, allArrows)
+    } else {
+      arrowsAndVarsFromAbilities(
+        abilitiesUsage,
+        exports,
+        arrows,
+        allVars,
+        allArrows,
+        allProcessed
+      )
+    }
+
+  }
+
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
@@ -104,15 +161,15 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows
     // gather all arrows and variables from abilities
-    returnedAbilities = rets.collect { case ValueModel.Ability(vm, at) =>
+    abilitiesToGather = rets.collect { case ValueModel.Ability(vm, at) =>
       vm.name -> at
     }
-    varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
-      getAbilityVars(name, None, at, exports)
-    }.toMap
-    arrowsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
-      getAbilityArrows(name, None, at, exports, arrows)
-    }.toMap
+    arrsVars = arrowsAndVarsFromAbilities(
+      abilitiesToGather.toMap,
+      exports,
+      arrows
+    )
+    (varsFromAbilities, arrowsFromAbilities) = arrsVars
 
     // find and get resolved arrows if we return them from the function
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
@@ -172,9 +229,11 @@ object ArrowInliner extends Logging {
       abilityType,
       exports
     )
+    val abilityExport =
+      exports.get(abilityName).map(vm => abilityNewName.getOrElse(abilityName) -> vm).toMap
 
-    get(_.variables) ++ get(_.arrows).flatMap {
-      case arrow @ (_, vm @ ValueModel.Arrow(_, _)) =>
+    abilityExport ++ get(_.variables) ++ get(_.arrows).flatMap {
+      case arrow @ (_, ValueModel.Arrow(_, _)) =>
         arrow.some
       case (_, m) =>
         internalError(s"($m) cannot be an arrow")
@@ -497,7 +556,7 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
-    
+
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {
