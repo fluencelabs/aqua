@@ -3,30 +3,27 @@ aqua A
 export haveFun
 
 ability Compute:
-  job()
-
-service Op("op"):
-  noop()
+  job() -> string
 
 func lift() -> Compute:
-  job = ():
-    Op.noop()
+  job = () -> string:
+    <- "job done"
   <- Compute(job)
 
 ability Function:
-  run()
+  run() -> string
 
-func roundtrip{Function}() -> ?string:
-  Function.run()
-  <- nil
+func roundtrip{Function}() -> string:
+  res <- Function.run()
+  <- res
 
 func disjoint_run{Compute}() -> Function:
-  run = func ():
-      Compute.job()
+  run = func () -> string:
+      <- Compute.job()
   <- Function(run = run)
 
 func haveFun() -> string:
   comp = lift()
   fn = disjoint_run{comp}()
-  roundtrip{fn}()
-  <- ""
+  res <- roundtrip{fn}()
+  <- res

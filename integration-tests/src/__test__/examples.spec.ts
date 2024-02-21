@@ -40,7 +40,7 @@ import {
   multipleAbilityWithClosureCall,
   returnSrvAsAbilityCall,
 } from "../examples/abilityCall.js";
-import { bugLNG314Call } from "../examples/abilityClosureCall.js";
+import { bugLNG314Call, bugLNG338Call } from "../examples/abilityClosureCall.js";
 import {
   nilLengthCall,
   nilLiteralCall,
@@ -664,6 +664,11 @@ describe("Testing examples", () => {
     let result = await bugLNG314Call();
     expect(result).toEqual("strstrstr");
   });
+
+  it("abilitiesClosure.aqua bug LNG-338", async () => {
+      let result = await bugLNG338Call();
+      expect(result).toEqual("job done");
+    });
 
   it("functors.aqua LNG-119 bug", async () => {
     let result = await bugLng119Call();
