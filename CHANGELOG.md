@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.1...aqua-v0.14.2) (2024-02-21)
+
+
+### Bug Fixes
+
+* **compiler:** Recursively find abilities [LNG-338] ([#1086](https://github.com/fluencelabs/aqua/issues/1086)) ([b22762c](https://github.com/fluencelabs/aqua/commit/b22762ca6d6ed443a930780c928c7b72ae6a50f6))
+
 ## [0.14.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.0...aqua-v0.14.1) (2024-02-20)
 
 
