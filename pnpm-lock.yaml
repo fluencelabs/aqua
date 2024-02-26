@@ -40,8 +40,8 @@ importers:
         specifier: 0.14.2
         version: link:../api/api-npm
       '@fluencelabs/aqua-lib':
-        specifier: 0.10.1
-        version: 0.10.1
+        specifier: 0.10.2
+        version: 0.10.2
       '@types/jest':
         specifier: 29.5.11
         version: 29.5.11
@@ -474,8 +474,8 @@ packages:
       '@jridgewell/trace-mapping': 0.3.9
     dev: true
 
-  /@fluencelabs/aqua-lib@0.10.1:
-    resolution: {integrity: sha512-zwg7faVsmUmfiV5EScVs0p+BArzJzFRfgjcigKzoxB5DvQRb64+OSs7Pmt8flSfV4iprPf1RQT9vhsDvdOsK0g==}
+  /@fluencelabs/aqua-lib@0.10.2:
+    resolution: {integrity: sha512-f3jL1kqHcP+tLpvD+QlVV51ZIptbStXfPSiDO+3SPurmcNWix8JZbQNQ+3t/BjCkHL8aw5r8vuuadPzftuVX/g==}
     dev: true
 
   /@fluencelabs/avm@0.59.0:
