@@ -1,8 +1,8 @@
 import BundleJS.*
 
-val aquaVersion = "0.14.0"
+val aquaVersion = "0.14.2"
 
-val scalaV = "3.3.1"
+val scalaV = "3.4.0"
 val catsV = "2.10.0"
 val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
@@ -82,7 +82,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler, io)
+  .dependsOn(compiler, io, compiler % "test->test")
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(

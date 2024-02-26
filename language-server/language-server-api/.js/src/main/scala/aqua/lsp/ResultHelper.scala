@@ -84,8 +84,8 @@ object ResultHelper extends Logging {
   private def tokensToJs(tokens: List[DefinitionInfo[FileSpan.F]]): js.Array[ExprInfoJs] =
     tokens.flatMap { ti =>
       TokenLocation.fromSpan(ti.token.unit._1).map { tl =>
-        val typeName = ti.`type`.show
-        ExprInfoJs(tl, typeName)
+        val typeDef = TypeJs.fromType(ti.`type`)
+        ExprInfoJs(tl, typeDef)
       }
     }.toJSArray
 
@@ -107,11 +107,12 @@ object ResultHelper extends Logging {
       link.toList
     }.toJSArray
 
-  private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]]): js.Array[TokenImport] =
+  private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]], importPaths: Map[String, String]): js.Array[TokenImport] =
     imports.flatMap { lt =>
       val (span, str) = lt.valueToken
       val unquoted = str.substring(1, str.length - 1)
-      TokenLocation.fromSpan(span).map(l => TokenImport(l, unquoted))
+      val path = importPaths.getOrElse(unquoted, unquoted)
+      TokenLocation.fromSpan(span).map(l => TokenImport(l, path))
     }.toJSArray
 
   def lspToCompilationResult(lsp: LspContext[FileSpan.F]): CompilationResult = {
@@ -124,11 +125,13 @@ object ResultHelper extends Logging {
       case errs =>
         logger.debug("Errors: " + errs.mkString("\n"))
 
+    val importTokens = importsToTokenImport(lsp.importTokens, lsp.importPaths)
+
     CompilationResult(
       errors.toJSArray,
       warnings.toJSArray,
       locationsToJs(lsp.variables.flatMap(v => v.allLocations)),
-      importsToTokenImport(lsp.importTokens),
+      importTokens,
       tokensToJs(lsp.variables.map(_.definition))
     )
   }

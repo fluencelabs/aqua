@@ -1,5 +1,6 @@
 package aqua.compiler
 
+import aqua.compiler.FileIdString.given
 import aqua.model.AquaContext
 import aqua.model.CallServiceModel
 import aqua.model.FlattenModel
@@ -16,6 +17,7 @@ import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.*
 import aqua.res.ResBuilder
+import aqua.semantics.FileId
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 
 import cats.Id

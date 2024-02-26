@@ -1,0 +1,29 @@
+aqua Types
+
+alias Top: ⊤
+alias Bottom: ⊥
+
+alias Number: u32
+alias String: string
+alias Array: []string
+alias Stream: *string
+alias Option: ?string
+
+data Struct:
+  a: Number
+  b: String
+  c: Array
+  d: Option
+
+service Srv("srv"):
+  noop(srvArg: string)
+
+ability Ability:
+  a: Number
+  b: String
+
+func nilArrow():
+  Srv.noop("")
+
+func fullArrow(a: string, b: u32) -> string, u32:
+  <- a, b
