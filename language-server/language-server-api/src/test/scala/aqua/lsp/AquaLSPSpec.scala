@@ -455,4 +455,52 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       res.checkLocations("Srv", 0, n, main) shouldBe true
     }
   }
+
+  it should "return right tokens with no errors when using different file" in {
+    val main =
+      """aqua Import declares *
+        |
+        |use timeout, someString from "export2.aqua" as Export
+        |import someString from "export2.aqua"
+        |
+        |export timeout
+        |
+        |func timeout() -> string:
+        |  res <- Export.timeout()
+        |  b = someString()
+        |  a = Export.someString()
+        |  <- res
+        |
+        |""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val firstImport =
+      """aqua B declares timeout, someString
+        |
+        |func timeout() -> string:
+        |  <- "hack file"
+        |
+        |func someString() -> string:
+        |  <- "sssss"
+        |
+        |""".stripMargin
+
+    val imports = Map(
+      "export2.aqua" ->
+        firstImport
+    )
+
+    val res = compile(src, imports).toOption.get.values.head
+
+    res.errors shouldBe empty
+    res.checkLocations("timeout", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("timeout", 1, 1, firstImport, Some(main)) shouldBe false
+    res.checkLocations("timeout", 1, 2, firstImport, Some(main)) shouldBe false
+    res.checkLocations("timeout", 1, 3, firstImport, Some(main)) shouldBe true
+    res.checkLocations("someString", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("someString", 1, 2, firstImport, Some(main)) shouldBe true
+    res.checkLocations("someString", 1, 3, firstImport, Some(main)) shouldBe true
+  }
 }

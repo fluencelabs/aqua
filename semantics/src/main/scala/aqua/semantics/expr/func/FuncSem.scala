@@ -21,7 +21,7 @@ class FuncSem[S[_]](val expr: FuncExpr[S]) extends AnyVal {
       case arrow: ArrowRaw =>
         N.defineArrow(expr.name, arrow.`type`, isRoot = true) as FuncRaw(expr.name.value, arrow)
 
-      case m =>
+      case _ =>
         Raw.error("Func must continue with an arrow definition").pure[Alg]
     }
 
