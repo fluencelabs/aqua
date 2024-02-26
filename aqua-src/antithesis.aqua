@@ -1,29 +1,12 @@
-aqua A
+aqua Job declares *
 
-export haveFun
+import someString from "hack"
+use timeout, someString from "hack.aqua" as P
 
-ability Compute:
-  job() -> string
+export timeout
 
-func lift() -> Compute:
-  job = () -> string:
-    <- "job done"
-  <- Compute(job)
-
-ability Function:
-  run() -> string
-
-func roundtrip{Function}() -> string:
-  res <- Function.run()
-  <- res
-
-func disjoint_run{Compute}() -> Function:
-  run = func () -> string:
-      <- Compute.job()
-  <- Function(run = run)
-
-func haveFun() -> string:
-  comp = lift()
-  fn = disjoint_run{comp}()
-  res <- roundtrip{fn}()
+func timeout() -> string: 
+  res <- P.timeout()
+  b = someString()
+  a = P.someString()
   <- res
