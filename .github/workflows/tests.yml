@@ -65,7 +65,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Pull nox image
-        run: docker pull $NOX_IMAGE
+        run: docker pull docker.fluence.dev/nox:feat-vm-425-aquavm-mem-limits-from-config-2_4983_1@sha256:71bc65e096931ad1abc92b166b0033f01a718084d0f275d070ea495353da2d89
 
       - name: Run nox
         uses: isbang/compose-action@v1.5.1
