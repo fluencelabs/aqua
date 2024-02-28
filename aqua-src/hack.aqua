@@ -1,18 +1,7 @@
-service Peer("peer"):
-  hodes: -> []string
-  timeout: i32, string -> string
+aqua B declares timeout, someString
 
-func test_timeout() -> string:
-  on HOST_PEER_ID:
-    nodes <- Peer.hodes()
-    results: *string
+func timeout() -> string:
+  <- "hack file"
 
-    for node <- nodes par:
-      on node:
-        results <<- node
-
-  timeout: *string
-  join results[999]
-  par join results[123]
-
-  <- timeout!
+func someString() -> string:
+  <- "sssss"
