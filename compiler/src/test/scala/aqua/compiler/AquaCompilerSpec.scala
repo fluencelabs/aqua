@@ -680,4 +680,74 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
   }
+
+  it should "import ability (nested) with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val impName = rename.getOrElse(name)
+      val abName = impName + ".Ab"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func useAb{$abName}() -> i32:
+             |  <- $abName.ab1.ab0.call($abName.ab1.ab0.a)
+             |
+             |func main() -> i32:
+             |  id = (x: i32) -> i32:
+             |    <- x
+             |  ab0 = $impName.Ab0(a = 42, call = id)
+             |  ab1 = $impName.Ab1(ab0 = ab0)
+             |  ab = $abName(ab1 = ab1)
+             |  <- useAb{ab}()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |ability Ab0:
+             |  a: i32
+             |  call(x: i32) -> i32
+             |
+             |ability Ab1:
+             |  ab0: Ab0
+             |
+             |ability Ab:
+             |  ab1: Ab1
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
 }
