@@ -1,20 +1,20 @@
 package aqua.parser.lexer
 
+import aqua.parser.lexer.CallArrowToken.CallBraces
+import aqua.parser.lexer.NamedArg.namedArgs
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.LiteralType
-import aqua.parser.lexer.CallArrowToken.CallBraces
-import aqua.parser.lexer.NamedArg.namedArgs
 
-import cats.~>
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
+import cats.~>
 import scala.language.postfixOps
 
 sealed trait PropertyOp[F[_]] extends Token[F] {
@@ -62,6 +62,12 @@ case class IntoCopy[F[_]: Comonad](
   override def toString: String = s".copy(${args.map(_.toString).toList.mkString(", ")})"
 }
 
+/**
+ * WARNING: This is parsed when we have parens after a name, but `IntoArrow` failed to parse.
+ *          This is a case of imported named type, e.g. `Some.Imported.Module.DefinedAbility(...)`
+ *          It is transformed into `NamedTypeValue` in `ValuesAlgebra`
+ * TODO: Eliminate `IntoArrow`, unify it with this property
+ */
 case class IntoApply[F[_]: Comonad](
   argsF: F[NonEmptyList[NamedArg[F]]]
 ) extends PropertyOp[F] {
@@ -108,7 +114,15 @@ object PropertyOp {
     namedArgs.lift.map(IntoApply.apply)
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: parseApply.backtrack :: Nil)
+    P.oneOf(
+      // NOTE: order is important here
+      // intoApply has lower priority than intoArrow
+      parseCopy.backtrack ::
+        parseArrow.backtrack ::
+        parseField ::
+        parseIdx ::
+        parseApply.backtrack :: Nil
+    )
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

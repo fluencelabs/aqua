@@ -41,8 +41,22 @@ case class PropertyToken[F[_]: Comonad](
   private def isConst(name: String): Boolean =
     name.forall(c => !c.isLetter || c.isUpper)
 
+  /**
+   * Try to transform this token to imported ability access
+   * e.g. in `Some.Imported.Module.Ab.innerAb.call(...)`:
+   * - `Some.Imported.Module` is imported module name
+   * - `Ab.innerAb.call(...)` is ability access
+   * so it should be handled as `(Some.Imported.Module.Ab).innerAb.call(...)`
+   *                              ^^^^^^^^^^^^^^^^^^^^^^^
+   *                    ability name inside `VarToken` as one string
+   * but we don't know this in advance, so this method returns
+   * a list of all possible (imported module name, ability access value token) pairs
+   * so calling code can check what prefix is valid imported module name and
+   * handle the corresponding ability access value token.
+   */
   def toAbility: List[(NamedTypeToken[F], ValueToken[F])] =
     value match {
+      // NOTE: guard against recursion: if dot is alredy in the name, do not transform
       case VarToken(name) if !name.value.contains(".") =>
         val fields = properties.toList.takeWhile {
           case IntoField(_) => true
@@ -50,23 +64,38 @@ case class PropertyToken[F[_]: Comonad](
         }.collect { case f @ IntoField(_) => f.value }.toList
         val names = name.value +: fields
 
-        fields.inits.drop(1).map { init =>
-          val importLength = init.length + 1
-          val nameLength = importLength + 1
-          val newProps = NonEmptyList.fromList(
-            properties.toList.drop(importLength)
-          )
-          val newName = name.rename(names.take(nameLength).mkString("."))
-          val importAbility = name.rename(names.take(importLength).mkString(".")).asTypeToken
+        fields.inits
+          // do not use the last field
+          // those cases are handled in `toCallArrow` and `toNamedValue`
+          .drop(1)
+          .map { init =>
+            // Length of the import name
+            val importLength = init.length + 1
+            // Length of the imported name
+            val nameLength = importLength + 1
+            val newProps = NonEmptyList.fromList(
+              properties.toList.drop(importLength)
+            )
+            val newName = name.rename(names.take(nameLength).mkString("."))
+            val importAbility = name.rename(names.take(importLength).mkString(".")).asTypeToken
 
-          val varToken = VarToken(newName)
-          val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
+            val varToken = VarToken(newName)
+            val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
 
-          importAbility -> token
-        }.toList.reverse
+            importAbility -> token
+          }
+          .toList
+          // test shorter prefixes first
+          .reverse
       case _ => Nil
     }
 
+  /**
+   * Try to convert this token into `CallArrowToken`
+   * e.g. `Some.Imported.Module.call(...)`
+   *       ^^^^^^^^^^^^^^^^^^^^ ^^^^
+   *       ability name         function name
+   */
   def toCallArrow: Option[CallArrowToken[F]] = (
     value,
     properties.last
@@ -91,6 +120,12 @@ case class PropertyToken[F[_]: Comonad](
     case _ => none
   }
 
+  /**
+   * Try to convert this token into `NamedValueToken`,
+   * e.g. `Some.Imported.Module.DefinedAbility(...)`
+   *       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   *       type name
+   */
   def toNamedValue: Option[NamedValueToken[F]] =
     (value, properties.last) match {
       case (v @ VarToken(name), IntoApply(args)) =>

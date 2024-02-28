@@ -1,5 +1,6 @@
 package aqua.semantics.rules
 
+import aqua.errors.Errors.internalError
 import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
@@ -85,7 +86,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
           valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
         } yield IntoIndexRaw(idx, valueType)).value
-      case op: IntoApply[S] => ???
+      case op: IntoApply[S] =>
+        internalError("Unexpected. `IntoApply` expected to be transformed into `NamedValueToken`")
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
@@ -142,6 +144,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
         val ability = OptionT(
           prop.toAbility.findM { case (ab, _) =>
+            // Test if name is an import
             A.isDefinedAbility(ab)
           }
         ).map { case (_, token) => token }
