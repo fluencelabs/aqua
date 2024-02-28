@@ -503,6 +503,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  val moduleNames = List("Test", "Imp", "Sub", "Path").inits
+    .takeWhile(_.nonEmpty)
+    .map(_.mkString("."))
+    .toList
+
   it should "import function with `use`" in {
     def test(name: String, rename: Option[String]) = {
       val src = Map(
@@ -536,10 +541,87 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    test("Imp", None)
-    test("Test.Imp", None)
-    test("Imp", "Imported".some)
-    test("Test.Imp", "Imported".some)
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
+  it should "import service with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val srvName = rename.getOrElse(name) + ".Srv"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |
+             |func main() -> i32:
+             |  a <- $srvName.call()
+             |  $srvName "res-id"
+             |  b <- $srvName.call()
+             |  <- a + b
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |service Srv("def-id"):
+             |  call() -> i32
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        def call(id: String, exp: CallModel.Export) =
+          CallServiceRes(
+            LiteralModel.quote(id),
+            "call",
+            CallRes(Nil, Some(exp)),
+            initPeer
+          ).leaf
+
+        val a = CallModel.Export("ret", ScalarType.i32)
+        val b = CallModel.Export("ret-0", ScalarType.i32)
+        val add = CallModel.Export("add", ScalarType.i32)
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            call("def-id", a),
+            call("res-id", b),
+            CallServiceRes(
+              LiteralModel.quote("math"),
+              "add",
+              CallRes(List(a.asVar, b.asVar), Some(add)),
+              initPeer
+            ).leaf,
+            respCall(transformCfg, add.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
   }
 
   it should "import ability with `use`" in {
@@ -576,9 +658,9 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
         val expected = XorRes.wrap(
           SeqRes.wrap(
             // NOTE: Result of compilation is inefficient
-            ApRes(LiteralModel.number(42),ap).leaf,
-            ApRes(ap.asVar,props).leaf,
-            respCall(transformCfg, props.asVar, initPeer),
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
           ),
           errorCall(transformCfg, 0, initPeer)
         )
@@ -587,9 +669,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    test("Imp", None)
-    test("Test.Imp", None)
-    test("Imp", "Imported".some)
-    test("Test.Imp", "Imported".some)
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
   }
 }
