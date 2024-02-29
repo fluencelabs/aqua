@@ -507,9 +507,7 @@ object ArrowInliner extends Logging {
      * are prohibited because they are used inside **this function**.
      */
     defineNames <- StateT.liftF(
-      fn.body.definesVarNames.map(
-        _ -- argNames -- capturedNames
-      )
+      fn.body.definesVarNames
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
     canonStreamsWithNames <- canonStreamVariables(args)

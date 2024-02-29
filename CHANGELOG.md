@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.2...aqua-v0.14.3) (2024-02-29)
+
+
+### Bug Fixes
+
+* **compiler:** Change `noEmptyResponse` default to `true` ([#1093](https://github.com/fluencelabs/aqua/issues/1093)) ([23aba18](https://github.com/fluencelabs/aqua/commit/23aba18c7d7fb86acd2470474f776f00a78ee9c6))
+* **language-server:** Name clashing in LSP [LNG-342] ([#1089](https://github.com/fluencelabs/aqua/issues/1089)) ([3e9d385](https://github.com/fluencelabs/aqua/commit/3e9d3856685f74a6be5d0aa288cd7e4f95010901))
+
 ## [0.14.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.1...aqua-v0.14.2) (2024-02-21)
 
 
