@@ -76,14 +76,18 @@ class TypesInterpreter[S[_], X](using
         }.as(none)
     }
 
-  override def resolveServiceType(name: NamedTypeToken[S]): State[X, Option[ServiceType]] =
-    resolveType(name).flatMap {
+  override def resolveServiceType(
+    name: NamedTypeToken[S],
+    mustBeDefined: Boolean = true
+  ): State[X, Option[ServiceType]] =
+    resolveType(name, mustBeDefined).flatMap {
       case Some(serviceType: ServiceType) =>
         serviceType.some.pure
-      case Some(t) =>
+      case Some(t) if mustBeDefined =>
         report.error(name, s"Type `$t` is not a service").as(none)
-      case None =>
+      case None if mustBeDefined =>
         report.error(name, s"Type `${name.value}` is not defined").as(none)
+      case _ => none.pure
     }
 
   override def defineAbilityType(

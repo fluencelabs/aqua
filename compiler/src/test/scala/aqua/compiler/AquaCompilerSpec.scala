@@ -87,6 +87,25 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     inside(funcs)(test)
   )
 
+  def through(peer: ValueModel) =
+    MakeRes.hop(peer)
+
+  val relay = VarRaw("-relay-", ScalarType.string)
+
+  def getDataSrv(name: String, varName: String, t: Type) = {
+    CallServiceRes(
+      LiteralModel.quote("getDataSrv"),
+      name,
+      CallRes(Nil, Some(CallModel.Export(varName, t))),
+      LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    ).leaf
+  }
+
+  private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def join(vm: VarModel, size: ValueModel) =
+    ResBuilder.join(vm, size, init)
+
   "aqua compiler" should "compile a simple snippet to the right context" in {
 
     val src = Map(
@@ -114,25 +133,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       const.get should be(LiteralModel.number(5))
     }
   }
-
-  def through(peer: ValueModel) =
-    MakeRes.hop(peer)
-
-  val relay = VarRaw("-relay-", ScalarType.string)
-
-  def getDataSrv(name: String, varName: String, t: Type) = {
-    CallServiceRes(
-      LiteralModel.quote("getDataSrv"),
-      name,
-      CallRes(Nil, Some(CallModel.Export(varName, t))),
-      LiteralModel.fromRaw(ValueRaw.InitPeerId)
-    ).leaf
-  }
-
-  private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
-
-  private def join(vm: VarModel, size: ValueModel) =
-    ResBuilder.join(vm, size, init)
 
   it should "create right topology" in {
     val src = Map(
@@ -501,5 +501,386 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
       main.body.equalsOrShowDiff(expected) should be(true)
     }
+  }
+
+  val moduleNames = List("Test", "Imp", "Sub", "Path").inits
+    .takeWhile(_.nonEmpty)
+    .map(_.mkString("."))
+    .toList
+
+  it should "import function with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func main() -> i32:
+             |  <- ${rename.getOrElse(name)}.foo()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares foo
+             |func foo() -> i32:
+             |  <- 42
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val expected = XorRes.wrap(
+          respCall(transformCfg, LiteralModel.number(42), initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
+  it should "import service with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val srvName = rename.getOrElse(name) + ".Srv"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |
+             |func main() -> i32:
+             |  a <- $srvName.call()
+             |  $srvName "res-id"
+             |  b <- $srvName.call()
+             |  <- a + b
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |service Srv("def-id"):
+             |  call() -> i32
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        def call(id: String, exp: CallModel.Export) =
+          CallServiceRes(
+            LiteralModel.quote(id),
+            "call",
+            CallRes(Nil, Some(exp)),
+            initPeer
+          ).leaf
+
+        val a = CallModel.Export("ret", ScalarType.i32)
+        val b = CallModel.Export("ret-0", ScalarType.i32)
+        val add = CallModel.Export("add", ScalarType.i32)
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            call("def-id", a),
+            call("res-id", b),
+            CallServiceRes(
+              LiteralModel.quote("math"),
+              "add",
+              CallRes(List(a.asVar, b.asVar), Some(add)),
+              initPeer
+            ).leaf,
+            respCall(transformCfg, add.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
+  it should "import ability with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val abName = rename.getOrElse(name) + ".Ab"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func useAb{$abName}() -> i32:
+             |  <- $abName.a
+             |
+             |func main() -> i32:
+             |  ab = $abName(a = 42)
+             |  <- useAb{ab}()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |ability Ab:
+             |  a: i32
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
+  it should "import ability (nested) with `use`" in {
+    def test(name: String, rename: Option[String]) = {
+      val impName = rename.getOrElse(name)
+      val abName = impName + ".Ab"
+      val src = Map(
+        "main.aqua" ->
+          s"""aqua Main
+             |export main
+             |use "import.aqua"${rename.fold("")(" as " + _)}
+             |func useAb{$abName}() -> i32:
+             |  <- $abName.ab1.ab0.call($abName.ab1.ab0.a)
+             |
+             |func main() -> i32:
+             |  id = (x: i32) -> i32:
+             |    <- x
+             |  ab0 = $impName.Ab0(a = 42, call = id)
+             |  ab1 = $impName.Ab1(ab0 = ab0)
+             |  ab = $abName(ab1 = ab1)
+             |  <- useAb{ab}()
+             |""".stripMargin
+      )
+      val imports = Map(
+        "import.aqua" ->
+          s"""aqua $name declares *
+             |ability Ab0:
+             |  a: i32
+             |  call(x: i32) -> i32
+             |
+             |ability Ab1:
+             |  ab0: Ab0
+             |
+             |ability Ab:
+             |  ab1: Ab1
+             |""".stripMargin
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    moduleNames.foreach { name =>
+      val rename = "Imported"
+
+      withClue(s"Testing $name") {
+        test(name, None)
+      }
+      withClue(s"Testing $name as $rename") {
+        test(name, rename.some)
+      }
+    }
+  }
+
+  it should "import abilities in chain of imports" in {
+    case class Imp(header: String, rename: Option[String] = None) {
+      val as = rename.fold("")(" as " + _)
+      val name = rename.getOrElse(header)
+
+      override def toString: String = s"$header$as"
+    }
+
+    def test(hierarchy: List[Imp]) = {
+      hierarchy.nonEmpty should be(true)
+
+      def genImp(header: String, imported: Imp, path: String): String = {
+        s"""aqua ${header} declares *
+           |use "${path}"${imported.as}
+           |
+           |ability Inner:
+           |  ab: ${imported.name}.Outer
+           |
+           |ability Outer:
+           |  ab: Inner
+           |
+           |func create{${imported.name}.Outer}() -> Inner:
+           |  ab = Inner(ab = ${imported.name}.Outer)
+           |  <- ab
+           |""".stripMargin
+      }
+
+      val base = Imp("Base")
+      val basePath = "base.aqua"
+      val baseCode = s"""aqua Base declares *
+                        |
+                        |ability Outer:
+                        |  a: i32
+                        |  call(x: i32) -> i32
+                        |""".stripMargin
+
+      val withPaths = hierarchy.zipWithIndex.map { case (imp, idx) =>
+        imp -> s"import$idx.aqua"
+      }
+      val nexts = withPaths.tail :+ (base -> basePath)
+      val imports = withPaths
+        .zip(nexts)
+        .map { case ((curImp, curPath), (nextImp, nextPath)) =>
+          curPath -> genImp(curImp.header, nextImp, nextPath)
+        }
+        .appended(basePath -> baseCode)
+        .toMap
+
+      val importStmts = withPaths.map { case (imp, path) =>
+        s"use \"${path}\"${imp.as}"
+      }.prepended(s"use \"${basePath}\"")
+      val createStmts = hierarchy.reverse.zipWithIndex.flatMap { case (imp, idx) =>
+        s"abIn${idx + 1} = ${imp.name}.create{abOut$idx}()" ::
+          s"abOut${idx + 1} = ${imp.name}.Outer(ab = abIn${idx + 1})" ::
+          Nil
+      }.prepended("abOut0 = Base.Outer(a = 42, call = id)")
+
+      val lastAb = s"abOut${hierarchy.size}" + ".ab".repeat(hierarchy.size * 2)
+      val main = s"""aqua Main
+                    |export main
+                    |${importStmts.mkString("\n")}
+                    |
+                    |func main() -> i32:
+                    |  id = (x: i32) -> i32:
+                    |    <- x
+                    |  ${createStmts.mkString("\n  ")}
+                    |  <- $lastAb.call($lastAb.a)
+                    |""".stripMargin
+
+      val src = Map(
+        "main.aqua" -> main
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    // Simple
+    (1 to 10).map(i => (1 to i).map(n => Imp(s"Imp$n")).toList).foreach { h =>
+      withClue(s"Testing ${h.mkString(" -> ")}") {
+        test(h)
+      }
+    }
+
+    // With renaming
+    (1 to 10)
+      .map(i =>
+        (1 to i)
+          .map(n =>
+            // Rename every second one
+            Imp(s"Imp$n", s"Renamed$n".some.filter(_ => n % 2 == 0))
+          )
+          .toList
+      )
+      .foreach { h =>
+        withClue(s"Testing ${h.mkString(" -> ")}") {
+          test(h)
+        }
+      }
+
+    // With subpath
+    (1 to 10)
+      .map(i =>
+        (1 to i)
+          .map(n => s"Imp$n")
+          .inits
+          .takeWhile(_.nonEmpty)
+          .map(p => Imp(p.mkString(".")))
+          .toList
+      )
+      .foreach { h =>
+        withClue(s"Testing ${h.mkString(" -> ")}") {
+          test(h)
+        }
+      }
   }
 }

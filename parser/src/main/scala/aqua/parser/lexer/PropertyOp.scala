@@ -1,20 +1,20 @@
 package aqua.parser.lexer
 
+import aqua.parser.lexer.CallArrowToken.CallBraces
+import aqua.parser.lexer.NamedArg.namedArgs
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.LiteralType
-import aqua.parser.lexer.CallArrowToken.CallBraces
-import aqua.parser.lexer.NamedArg.namedArgs
 
-import cats.~>
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
+import cats.~>
 import scala.language.postfixOps
 
 sealed trait PropertyOp[F[_]] extends Token[F] {
@@ -36,7 +36,7 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] = copy(fk(name))
 
-  def value: String = name.extract
+  lazy val value: String = name.extract
 
   override def toString: String = name.extract
 }
@@ -46,6 +46,8 @@ case class IntoIndex[F[_]: Comonad](point: F[Unit], idx: Option[ValueToken[F]])
   override def as[T](v: T): F[T] = point.as(v)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(point), idx.map(_.mapK(fk)))
+
+  override def toString: String = s"[$idx]"
 }
 
 case class IntoCopy[F[_]: Comonad](
@@ -56,6 +58,27 @@ case class IntoCopy[F[_]: Comonad](
 
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoCopy[K] =
     copy(fk(point), args.map(_.mapK(fk)))
+
+  override def toString: String = s".copy(${args.map(_.toString).toList.mkString(", ")})"
+}
+
+/**
+ * WARNING: This is parsed when we have parens after a name, but `IntoArrow` failed to parse.
+ *          This is a case of imported named type, e.g. `Some.Imported.Module.DefinedAbility(...)`
+ *          It is transformed into `NamedTypeValue` in `ValuesAlgebra`
+ * TODO: Eliminate `IntoArrow`, unify it with this property
+ */
+case class IntoApply[F[_]: Comonad](
+  argsF: F[NonEmptyList[NamedArg[F]]]
+) extends PropertyOp[F] {
+  lazy val args: NonEmptyList[NamedArg[F]] = argsF.extract
+
+  override def as[T](v: T): F[T] = argsF.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoApply[K] =
+    copy(fk(argsF.map(_.map(_.mapK(fk)))))
+
+  override def toString: String = s"(${args.map(_.toString).toList.mkString(", ")})"
 }
 
 object PropertyOp {
@@ -87,8 +110,19 @@ object PropertyOp {
       }
     }
 
+  private val parseApply: P[PropertyOp[Span.S]] =
+    namedArgs.lift.map(IntoApply.apply)
+
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: Nil)
+    P.oneOf(
+      // NOTE: order is important here
+      // intoApply has lower priority than intoArrow
+      parseCopy.backtrack ::
+        parseArrow.backtrack ::
+        parseField ::
+        parseIdx ::
+        parseApply.backtrack :: Nil
+    )
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

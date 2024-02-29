@@ -42,112 +42,105 @@ case class PropertyToken[F[_]: Comonad](
     name.forall(c => !c.isLetter || c.isUpper)
 
   /**
-   * This method tries to convert property token to
-   * property token with dotted var name inside value token.
-   *
-   * Next properties pattern is untouched:
-   * Class (field)*
-   *
-   * Next properties pattern is transformed:
-   * (Class)* (CONST | field) ..props..
-   * ^^^^^^^^^^^^^^^^^^^^^^^^
-   * this part is transformed to dotted name.
+   * Try to transform this token to imported ability access
+   * e.g. in `Some.Imported.Module.Ab.innerAb.call(...)`:
+   * - `Some.Imported.Module` is imported module name
+   * - `Ab.innerAb.call(...)` is ability access
+   * so it should be handled as `(Some.Imported.Module.Ab).innerAb.call(...)`
+   *                              ^^^^^^^^^^^^^^^^^^^^^^^
+   *                    ability name inside `VarToken` as one string
+   * but we don't know this in advance, so this method returns
+   * a list of all possible (imported module name, ability access value token) pairs
+   * so calling code can check what prefix is valid imported module name and
+   * handle the corresponding ability access value token.
    */
-  private def toDottedName: Option[ValueToken[F]] = value match {
-    case VarToken(name) =>
-      // Pattern `Class (field)*` is ability access
-      // and should not be transformed
-      val isAbility = isClass(name.value) && properties.forall {
-        case f @ IntoField(_) => isField(f.value)
-        case _ => true
-      }
+  def toAbility: List[(NamedTypeToken[F], ValueToken[F])] =
+    value match {
+      // NOTE: guard against recursion: if dot is alredy in the name, do not transform
+      case VarToken(name) if !name.value.contains(".") =>
+        val fields = properties.toList.takeWhile {
+          case IntoField(_) => true
+          case _ => false
+        }.collect { case f @ IntoField(_) => f.value }.toList
+        val names = name.value +: fields
 
-      if (isAbility) none
-      else {
-        // Gather prefix of properties that are IntoField
-        val props = name.value +: properties.toList.view.map {
-          case IntoField(name) => name.extract.some
-          case _ => none
-        }.takeWhile(_.isDefined).flatten.toList
+        fields.inits
+          // do not use the last field
+          // those cases are handled in `toCallArrow` and `toNamedValue`
+          .drop(1)
+          .map { init =>
+            // Length of the import name
+            val importLength = init.length + 1
+            // Length of the imported name
+            val nameLength = importLength + 1
+            val newProps = NonEmptyList.fromList(
+              properties.toList.drop(importLength)
+            )
+            val newName = name.rename(names.take(nameLength).mkString("."))
+            val importAbility = name.rename(names.take(importLength).mkString(".")).asTypeToken
 
-        val propsWithIndex = props.zipWithIndex
+            val varToken = VarToken(newName)
+            val token = newProps.fold(varToken)(ps => PropertyToken(varToken, ps))
 
-        // Find first property that is not Class
-        val classesTill = propsWithIndex.find { case (name, _) =>
-          !isClass(name)
-        }.collect { case (_, idx) =>
-          idx
-        }.getOrElse(props.length)
-
-        // Find last property after classes
-        // that is CONST or field
-        val lastSuitable = propsWithIndex
-          .take(classesTill)
-          .findLast { case (name, _) =>
-            isConst(name) || isField(name)
+            importAbility -> token
           }
-          .collect { case (_, idx) => idx }
+          .toList
+          // test shorter prefixes first
+          .reverse
+      case _ => Nil
+    }
 
-        lastSuitable.map(last =>
-          val newProps = NonEmptyList.fromList(
-            properties.toList.drop(last + 1)
+  /**
+   * Try to convert this token into `CallArrowToken`
+   * e.g. `Some.Imported.Module.call(...)`
+   *       ^^^^^^^^^^^^^^^^^^^^ ^^^^
+   *       ability name         function name
+   */
+  def toCallArrow: Option[CallArrowToken[F]] = (
+    value,
+    properties.last
+  ) match {
+    case (VarToken(name), IntoArrow(funcName, args)) =>
+      properties.init.traverse {
+        case IntoField(name) => name.extract.some
+        case _ => none
+      }.map { fields =>
+        val imported = name
+          .rename(
+            (name.value +: fields).mkString(".")
           )
-          val newName = props.take(last + 1).mkString(".")
-          val varToken = VarToken(name.rename(newName))
+          .asTypeToken
 
-          newProps.fold(varToken)(props => PropertyToken(varToken, props))
+        CallArrowToken(
+          imported.some,
+          funcName,
+          args
         )
       }
     case _ => none
   }
 
   /**
-   * This method tries to convert property token to
-   * call arrow token.
-   *
-   * Next properties pattern is transformed:
-   * (Class)+ arrow()
-   * ^^^^^^^
-   * this part is transformed to ability name.
+   * Try to convert this token into `NamedValueToken`,
+   * e.g. `Some.Imported.Module.DefinedAbility(...)`
+   *       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   *       type name
    */
-  private def toCallArrow: Option[CallArrowToken[F]] = value match {
-    case VarToken(name) =>
-      val ability = properties.init.traverse {
-        case f @ IntoField(_) => f.value.some
-        case _ => none
-      }.map(
-        name.value +: _
-      ).filter(
-        _.forall(isClass)
-      ).map(props => name.rename(props.mkString(".")))
+  def toNamedValue: Option[NamedValueToken[F]] =
+    (value, properties.last) match {
+      case (v @ VarToken(name), IntoApply(args)) =>
+        properties.init.traverse {
+          case IntoField(name) => name.extract.some
+          case _ => none
+        }.map { props =>
+          val typeName = name
+            .rename(
+              (name.value +: props).mkString(".")
+            )
+            .asTypeToken
 
-      (properties.last, ability) match {
-        case (IntoArrow(funcName, args), Some(ability)) =>
-          CallArrowToken(
-            ability.asTypeToken.some,
-            funcName,
-            args
-          ).some
-        case _ => none
-      }
-    case _ => none
-  }
-
-  /**
-   * This is a hacky method to adjust parsing result
-   * to format that was used previously.
-   * This method tries to convert property token to
-   * call arrow token or property token with
-   * dotted var name inside value token.
-   *
-   * @return Some(token) if token was adjusted, None otherwise
-   */
-  def adjust: Option[ValueToken[F]] =
-    toCallArrow.orElse(toDottedName)
-
-  lazy val leadingName: Option[NamedTypeToken[F]] =
-    value match {
-      case VarToken(name) => name.asTypeToken.some
+          NamedValueToken(typeName, args.extract)
+        }
       case _ => none
     }
 }

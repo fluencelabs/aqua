@@ -1,5 +1,6 @@
 package aqua.semantics.rules
 
+import aqua.errors.Errors.internalError
 import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
@@ -85,6 +86,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
           valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
         } yield IntoIndexRaw(idx, valueType)).value
+      case op: IntoApply[S] =>
+        internalError("Unexpected. `IntoApply` expected to be transformed into `NamedValueToken`")
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
@@ -129,14 +132,29 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
          * so here we try to differentiate them and adjust property
          * token accordingly.
          */
-        prop.leadingName.fold(default)(name =>
-          A.isDefinedAbility(name)
-            .flatMap(isDefined =>
-              prop.adjust
-                .filter(_ => isDefined)
-                .fold(default)(valueToRaw)
+
+        val callArrow = OptionT
+          .fromOption(prop.toCallArrow)
+          .filterF(ca =>
+            ca.ability.fold(false.pure)(
+              A.isDefinedAbility
             )
-        )
+          )
+          .widen[ValueToken[S]]
+
+        val ability = OptionT(
+          prop.toAbility.findM { case (ab, _) =>
+            // Test if name is an import
+            A.isDefinedAbility(ab)
+          }
+        ).map { case (_, token) => token }
+
+        val namedValue = OptionT
+          .fromOption(prop.toNamedValue)
+          .filterF(nv => T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined))
+          .widen[ValueToken[S]]
+
+        callArrow.orElse(ability).orElse(namedValue).foldF(default)(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {

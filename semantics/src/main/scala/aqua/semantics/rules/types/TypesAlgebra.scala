@@ -19,7 +19,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
-  def resolveServiceType(name: NamedTypeToken[S]): Alg[Option[ServiceType]]
+  def resolveServiceType(name: NamedTypeToken[S], mustBeDefined: Boolean = true): Alg[Option[ServiceType]]
 
   def defineAbilityType(
     name: NamedTypeToken[S],
