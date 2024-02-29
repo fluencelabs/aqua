@@ -1,12 +1,47 @@
-aqua Job declares *
+aqua Main
 
-import someString from "hack"
-use timeout, someString from "hack.aqua" as P
+export yourCloudlessFunction
 
-export timeout
+ability Promise:
+  yield: -> []string
 
-func timeout() -> string: 
-  res <- P.timeout()
-  b = someString()
-  a = P.someString()
+func done_nil() -> []string:
+  <- nil
+
+func done() -> Promise:
+  <- Promise(yield = done_nil)
+
+ability Compute:
+  yield() -> ?string
+
+alias WorkerYield: -> ?string
+alias Yield: WorkerYield -> Promise
+
+func wait_for() -> Yield:
+  wait = func (cb: -> ?string) -> Promise:
+    yield = func () -> ?string:
+      e <- cb()
+      <- ?[]
+    <- Promise(yield = yield)
+  <- wait
+
+ability Function:
+  run(dealId: string) -> string
+
+func simple{Compute}(yield: Yield) -> Function:
+  deal_run = func (deal_id: string) -> string:
+    c_yield = func () -> ?string:
+      <- Compute.yield()
+    yieeld <- yield(c_yield)
+    new_errs <- yieeld.yield()
+    <- ""
+  <- Function(run = deal_run)
+
+func yourCloudlessFunction() -> []string:
+  res: *string
+  yieeld = func () -> ?string:
+    <- ?[]
+  c = Compute(yield = yieeld)
+  fn = simple{c}(wait_for())
+  r <- fn.run("")
   <- res
