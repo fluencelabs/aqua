@@ -72,7 +72,7 @@ object AquaConfig {
           noXor = cjs.noXor.getOrElse(false),
           noRelay = cjs.noRelay.getOrElse(false),
           tracing = cjs.tracing.getOrElse(false),
-          noEmptyResponse = cjs.noEmptyResponse.getOrElse(false)
+          noEmptyResponse = cjs.noEmptyResponse.getOrElse(true)
         )
       }
   }
