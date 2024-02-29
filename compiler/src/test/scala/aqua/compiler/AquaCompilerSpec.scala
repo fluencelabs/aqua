@@ -750,4 +750,137 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  it should "import abilities in chain of imports" in {
+    case class Imp(header: String, rename: Option[String] = None) {
+      val as = rename.fold("")(" as " + _)
+      val name = rename.getOrElse(header)
+
+      override def toString: String = s"$header$as"
+    }
+
+    def test(hierarchy: List[Imp]) = {
+      hierarchy.nonEmpty should be(true)
+
+      def genImp(header: String, imported: Imp, path: String): String = {
+        s"""aqua ${header} declares *
+           |use "${path}"${imported.as}
+           |
+           |ability Inner:
+           |  ab: ${imported.name}.Outer
+           |
+           |ability Outer:
+           |  ab: Inner
+           |
+           |func create{${imported.name}.Outer}() -> Inner:
+           |  ab = Inner(ab = ${imported.name}.Outer)
+           |  <- ab
+           |""".stripMargin
+      }
+
+      val base = Imp("Base")
+      val basePath = "base.aqua"
+      val baseCode = s"""aqua Base declares *
+                        |
+                        |ability Outer:
+                        |  a: i32
+                        |  call(x: i32) -> i32
+                        |""".stripMargin
+
+      val withPaths = hierarchy.zipWithIndex.map { case (imp, idx) =>
+        imp -> s"import$idx.aqua"
+      }
+      val nexts = withPaths.tail :+ (base -> basePath)
+      val imports = withPaths
+        .zip(nexts)
+        .map { case ((curImp, curPath), (nextImp, nextPath)) =>
+          curPath -> genImp(curImp.header, nextImp, nextPath)
+        }
+        .appended(basePath -> baseCode)
+        .toMap
+
+      val importStmts = withPaths.map { case (imp, path) =>
+        s"use \"${path}\"${imp.as}"
+      }.prepended(s"use \"${basePath}\"")
+      val createStmts = hierarchy.reverse.zipWithIndex.flatMap { case (imp, idx) =>
+        s"abIn${idx + 1} = ${imp.name}.create{abOut$idx}()" ::
+          s"abOut${idx + 1} = ${imp.name}.Outer(ab = abIn${idx + 1})" ::
+          Nil
+      }.prepended("abOut0 = Base.Outer(a = 42, call = id)")
+
+      val lastAb = s"abOut${hierarchy.size}" + ".ab".repeat(hierarchy.size * 2)
+      val main = s"""aqua Main
+                    |export main
+                    |${importStmts.mkString("\n")}
+                    |
+                    |func main() -> i32:
+                    |  id = (x: i32) -> i32:
+                    |    <- x
+                    |  ${createStmts.mkString("\n  ")}
+                    |  <- $lastAb.call($lastAb.a)
+                    |""".stripMargin
+
+      val src = Map(
+        "main.aqua" -> main
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          SeqRes.wrap(
+            // NOTE: Result of compilation is inefficient
+            ApRes(LiteralModel.number(42), ap).leaf,
+            ApRes(ap.asVar, props).leaf,
+            respCall(transformCfg, props.asVar, initPeer)
+          ),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    // Simple
+    (1 to 10).map(i => (1 to i).map(n => Imp(s"Imp$n")).toList).foreach { h =>
+      withClue(s"Testing ${h.mkString(" -> ")}") {
+        test(h)
+      }
+    }
+
+    // With renaming
+    (1 to 10)
+      .map(i =>
+        (1 to i)
+          .map(n =>
+            // Rename every second one
+            Imp(s"Imp$n", s"Renamed$n".some.filter(_ => n % 2 == 0))
+          )
+          .toList
+      )
+      .foreach { h =>
+        withClue(s"Testing ${h.mkString(" -> ")}") {
+          test(h)
+        }
+      }
+
+    // With subpath
+    (1 to 10)
+      .map(i =>
+        (1 to i)
+          .map(n => s"Imp$n")
+          .inits
+          .takeWhile(_.nonEmpty)
+          .map(p => Imp(p.mkString(".")))
+          .toList
+      )
+      .foreach { h =>
+        withClue(s"Testing ${h.mkString(" -> ")}") {
+          test(h)
+        }
+      }
+  }
 }
