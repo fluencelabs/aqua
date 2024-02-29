@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.3...aqua-v0.14.4) (2024-02-29)
+
+
+### Bug Fixes
+
+* **compiler:** Bug in renaming [LNG-346] ([#1094](https://github.com/fluencelabs/aqua/issues/1094)) ([d7fef3d](https://github.com/fluencelabs/aqua/commit/d7fef3db5fda6c2dfeacac84c3cff2188538a35a))
+* **compiler:** Import abilities with `use` [LNG-324] ([#1077](https://github.com/fluencelabs/aqua/issues/1077)) ([a6c8e75](https://github.com/fluencelabs/aqua/commit/a6c8e75c270efd358908f285310f1f1d177a65fb))
+
 ## [0.14.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.2...aqua-v0.14.3) (2024-02-29)
 
 
