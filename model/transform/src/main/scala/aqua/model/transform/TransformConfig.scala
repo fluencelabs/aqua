@@ -29,7 +29,8 @@ case class TransformConfig(
   respFuncName: String = "response",
   noEmptyResponse: Boolean = false,
   relayVarName: Option[String] = Some("-relay-"),
-  tracing: Option[TransformConfig.TracingConfig] = None
+  tracing: Option[TransformConfig.TracingConfig] = None,
+  noXor: Boolean = false
 ) {
   val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
   val errorHandlingSrvId: ValueRaw = LiteralRaw.quote(errorHandlingService)

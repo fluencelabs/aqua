@@ -19,7 +19,8 @@ case class AquaAPIConfig(
   def getTransformConfig: TransformConfig = {
     val config = TransformConfig(
       tracing = Option.when(tracing)(TransformConfig.TracingConfig.default),
-      noEmptyResponse = noEmptyResponse
+      noEmptyResponse = noEmptyResponse,
+      noXor = noXor
     )
 
     if (noRelay) config.copy(relayVarName = None)
@@ -27,9 +28,7 @@ case class AquaAPIConfig(
   }
 
   def getCompilerConfig: AquaCompilerConf = {
-    val config = AquaCompilerConf(
-      noXor = noXor
-    )
+    val config = AquaCompilerConf()
 
     if (noRelay) config.copy(relayVarName = None)
     else config

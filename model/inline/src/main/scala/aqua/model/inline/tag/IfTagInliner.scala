@@ -1,24 +1,26 @@
 package aqua.model.inline.tag
 
-import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
-import aqua.model.ValueModel
 import aqua.model.*
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.ValueModel
+import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.canonicalizeIfStream
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-import cats.data.{Chain, State}
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
+import aqua.model.inline.state.*
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
+
 import cats.Eval
+import cats.data.Reader
+import cats.data.{Chain, State}
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 
 final case class IfTagInliner(
   valueRaw: ValueRaw
 ) {
   import IfTagInliner.*
 
-  def inlined[S: Mangler: Exports: Arrows]: State[S, IfTagInlined] =
+  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, IfTagInlined] =
     (valueRaw match {
       // Optimize in case last operation is equality check
       case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>

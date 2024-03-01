@@ -3,21 +3,21 @@ package aqua.model.inline.raw
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.raw.ops.Call
 import aqua.raw.value.CallServiceRaw
+
 import cats.data.{Chain, State}
 import scribe.Logging
 
 object CallServiceRawInliner extends RawInliner[CallServiceRaw] with Logging {
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports: Arrows: Config](
     value: CallServiceRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
     logger.trace(s"${exportTo.mkString(" ")} $value")
     logger.trace(Console.BLUE + s"call service id ${value.serviceId}" + Console.RESET)
-
 
     val call = Call(value.arguments, exportTo)
 
@@ -40,7 +40,7 @@ object CallServiceRawInliner extends RawInliner[CallServiceRaw] with Logging {
     } yield values.values.toList -> inline
   }
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     raw: CallServiceRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =
