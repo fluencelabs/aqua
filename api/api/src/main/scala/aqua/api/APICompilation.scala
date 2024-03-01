@@ -56,7 +56,7 @@ object APICompilation {
       Constants.parse(aquaConfig.constants)
     ).tupled.toResult.flatTraverse { case (level, constants) =>
       val transformConfig = aquaConfig.getTransformConfig
-      val config = AquaCompilerConf(constants)
+      val config = aquaConfig.getCompilerConfig.copy(constants = constants)
 
       LogFormatter.initLogger(Some(level))
 
@@ -142,7 +142,7 @@ object APICompilation {
     LogFormatter.initLogger(Some(level))
 
     val transformConfig = aquaConfig.getTransformConfig
-    val config = AquaCompilerConf(constants)
+    val config = aquaConfig.getCompilerConfig.copy(constants = constants)
 
     CompilerAPI
       .compile[IO, AquaFileError, FileModuleId, FileSpan.F](

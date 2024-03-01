@@ -1,4 +1,6 @@
 package aqua.api
+
+import aqua.compiler.AquaCompilerConf
 import aqua.model.transform.TransformConfig
 
 enum TargetType:
@@ -18,6 +20,15 @@ case class AquaAPIConfig(
     val config = TransformConfig(
       tracing = Option.when(tracing)(TransformConfig.TracingConfig.default),
       noEmptyResponse = noEmptyResponse
+    )
+
+    if (noRelay) config.copy(relayVarName = None)
+    else config
+  }
+
+  def getCompilerConfig: AquaCompilerConf = {
+    val config = AquaCompilerConf(
+      noXor = noXor
     )
 
     if (noRelay) config.copy(relayVarName = None)

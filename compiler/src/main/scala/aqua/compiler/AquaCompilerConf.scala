@@ -7,9 +7,10 @@ import aqua.raw.ConstantRaw
  *
  * @param constantsList List of known constants
  * @param noXor Disable error bubbling mechanism
+ * @param relayVarName Name of the relay variable
  */
 case class AquaCompilerConf(
-  constants: List[ConstantRaw],
+  constants: List[ConstantRaw] = Nil,
   noXor: Boolean = false,
   relayVarName: Option[String] = Some("-relay-")
 )
