@@ -29,17 +29,12 @@ case class TransformConfig(
   respFuncName: String = "response",
   noEmptyResponse: Boolean = false,
   relayVarName: Option[String] = Some("-relay-"),
-  tracing: Option[TransformConfig.TracingConfig] = None,
-  constants: List[ConstantRaw] = Nil
+  tracing: Option[TransformConfig.TracingConfig] = None
 ) {
-
   val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
   val errorHandlingSrvId: ValueRaw = LiteralRaw.quote(errorHandlingService)
   val callbackSrvId: ValueRaw = LiteralRaw.quote(callbackService)
   val dataSrvId: ValueRaw = LiteralRaw.quote(getDataService)
-
-  val constantsList: List[ConstantRaw] =
-    ConstantRaw.defaultConstants(relayVarName) ::: constants
 }
 
 object TransformConfig {

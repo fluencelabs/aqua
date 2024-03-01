@@ -48,7 +48,7 @@ object CompilerAPI extends Logging {
       .implicits(
         RawContext.blank.copy(
           parts = Chain
-            .fromSeq(config.constantsList)
+            .fromSeq(config.constants)
             .map(const => RawContext.blank -> const)
         )
       )
