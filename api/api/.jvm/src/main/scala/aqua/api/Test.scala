@@ -18,9 +18,10 @@ object Test extends IOApp.Simple {
       .compilePath(
         "./aqua-src/antithesis.aqua",
         Imports.fromMap(Map("/" -> Map("" -> List("./aqua")))),
-        AquaAPIConfig(targetType = TypeScriptType),
+        AquaAPIConfig(targetType = TypeScriptType, noXor = true),
         TypeScriptBackend(false, "IFluenceClient$$")
-      ).timed
+      )
+      .timed
       .flatMap { case (duration, res) =>
         println("Compilation time: " + duration.toMillis)
         val (warnings, result) = res.value.run
