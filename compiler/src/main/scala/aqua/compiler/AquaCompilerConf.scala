@@ -10,5 +10,6 @@ import aqua.raw.ConstantRaw
  */
 case class AquaCompilerConf(
   constants: List[ConstantRaw],
-  noXor: Boolean = false
+  noXor: Boolean = false,
+  relayVarName: Option[String] = Some("-relay-")
 )

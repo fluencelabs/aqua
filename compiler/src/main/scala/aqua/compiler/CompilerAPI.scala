@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.compiler.AquaError.*
 import aqua.model.AquaContext
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.RawContext
+import aqua.raw.{ConstantRaw, RawContext}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
 import aqua.semantics.{FileId, RawSemantics}
@@ -48,7 +48,7 @@ object CompilerAPI extends Logging {
       .implicits(
         RawContext.blank.copy(
           parts = Chain
-            .fromSeq(config.constants)
+            .fromSeq(config.constants ++ ConstantRaw.defaultConstants(config.relayVarName))
             .map(const => RawContext.blank -> const)
         )
       )
