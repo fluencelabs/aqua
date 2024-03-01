@@ -20,6 +20,7 @@ import cats.kernel.Monoid
  * @param relayVarName - name of the relay variable
  * @param tracing - tracing configuration
  * @param constants - list of constants
+ * @param noXor - if true, do not generate generate `xor`s for error propagation
  */
 case class TransformConfig(
   getDataService: String = "getDataSrv",

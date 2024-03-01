@@ -2,9 +2,15 @@ package aqua.model.inline.state
 
 import cats.data.{Reader, State}
 
+/**
+ * Representation that `S` contains configuration for inlining
+ */
 trait Config[S] {
   self =>
 
+  /**
+   * Flag that disables error propagation mechanics in inlined code
+   */
   def noErrorPropagation: Reader[S, Boolean]
 
   final def transform[R](f: R => S): Config[R] = new Config[R] {
