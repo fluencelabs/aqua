@@ -2,9 +2,9 @@ package aqua.model.transform.funcop
 
 import aqua.model.OpModel
 
+import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import cats.Eval
 
 /**
  * Base type for [[OpModel.Tree]] -> [[OpModel.Tree]] transformation
@@ -23,7 +23,7 @@ trait OpTransform {
         .lift(op, children)
         .getOrElse(
           Eval.now(
-            op.wrap(children.toList: _*)
+            op.wrap(children.toList*)
           )
         )
     )

@@ -8,7 +8,7 @@ case class AquaAPIConfig(
   targetType: TargetType = TargetType.AirType,
   logLevel: String = "info",
   constants: List[String] = Nil,
-  noXor: Boolean = false, // TODO: Remove
+  noXor: Boolean = false,
   noRelay: Boolean = false,
   tracing: Boolean = false,
   noEmptyResponse: Boolean = true
