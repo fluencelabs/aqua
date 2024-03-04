@@ -1,4 +1,4 @@
-module DeclareModule declares decl_foo, decl_bar, SuperFoo, DECLARE_CONST, DECLARE_CONST2
+aqua DeclareModule declares decl_foo, decl_bar, SuperFoo, DECLARE_CONST, DECLARE_CONST2
 export SuperFoo
 
 const DECLARE_CONST = "declare_const"

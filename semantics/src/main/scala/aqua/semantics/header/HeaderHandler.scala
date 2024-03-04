@@ -72,7 +72,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         .toValidNec(
           error(
             tkn,
-            s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
+            s"Used module has no `aqua` header. Please add `aqua` header or use ... as ModuleName, or switch to import"
           )
         )
 
