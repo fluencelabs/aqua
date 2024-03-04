@@ -32,4 +32,3 @@ jobs:
     uses: ./.github/workflows/tests.yml
     with:
       ref: ${{ github.ref }}
-      nox-image: "docker.fluence.dev/nox:renovate-avm_4905_1"

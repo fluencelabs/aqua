@@ -22,8 +22,8 @@ on:
 
 env:
   FORCE_COLOR: true
+  NOX_IMAGE: "${{ inputs.nox-image }}"
   FLUENCE_ENV: "${{ inputs.fluence-env }}"
-  FCLI_V_NOX: "${{ inputs.nox-image }}"
 
 jobs:
   aqua:
@@ -64,17 +64,14 @@ jobs:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
 
-      - name: Setup fcli
-        uses: fluencelabs/setup-fluence@v1
+      - name: Pull nox image
+        run: docker pull $NOX_IMAGE
+
+      - name: Run nox
+        uses: isbang/compose-action@v1.5.1
         with:
-          artifact: fcli
-          version: unstable
-
-      - name: Init local env with fcli
-        run: fluence local init --no-input
-
-      - name: Run nox network
-        run: fluence local up
+          compose-file: ".github/e2e/docker-compose.yml"
+          down-flags: "--volumes"
 
       - name: Cache Scala
         uses: coursier/cache-action@v6
