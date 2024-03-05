@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.errors.Errors.internalError
 import aqua.model
 import aqua.model.*
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
@@ -27,7 +27,7 @@ import scribe.Logging
  */
 object ArrowInliner extends Logging {
 
-  def callArrow[S: Exports: Arrows: Mangler](
+  def callArrow[S: Exports: Arrows: Mangler: Config](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, OpModel.Tree] =
@@ -43,7 +43,7 @@ object ArrowInliner extends Logging {
       )
 
   // push results to streams if they are exported to streams
-  private def pushStreamResults[S: Mangler: Exports: Arrows](
+  private def pushStreamResults[S: Mangler: Exports: Arrows: Config](
     outsideStreamNames: Set[String],
     exportTo: List[CallModel.Export],
     results: List[ValueRaw]
@@ -140,7 +140,7 @@ object ArrowInliner extends Logging {
   }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  private def inline[S: Mangler: Arrows: Exports](
+  private def inline[S: Mangler: Arrows: Exports: Config](
     fn: FuncArrow,
     call: CallModel,
     outsideDeclaredStreams: Set[String]
@@ -542,7 +542,7 @@ object ArrowInliner extends Logging {
     _ <- Exports[S].resolved(exportsResolved)
   } yield (fn.copy(body = treeWithCanons, ret = ret), SeqModel.wrap(canons))
 
-  private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
+  private[inline] def callArrowRet[S: Exports: Arrows: Mangler: Config](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] = for {

@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.callToModel
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.model.inline.{ArrowInliner, Inline, RawValueInliner}
 import aqua.raw.ops.Call
 import aqua.raw.value.CallArrowRaw
@@ -14,7 +14,7 @@ import scribe.Logging
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports: Arrows: Config](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = {
@@ -31,7 +31,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     resolveArrow(funcName, call)
   }
 
-  private def resolveFuncArrow[S: Mangler: Exports: Arrows](
+  private def resolveFuncArrow[S: Mangler: Exports: Arrows: Config](
     fn: FuncArrow,
     call: Call
   ): State[S, (List[ValueModel], Inline)] = {
@@ -52,7 +52,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     }
   }
 
-  private def resolveArrow[S: Mangler: Exports: Arrows](
+  private def resolveArrow[S: Mangler: Exports: Arrows: Config](
     funcName: String,
     call: Call
   ): State[S, (List[ValueModel], Inline)] = for {
@@ -76,7 +76,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
       })
   } yield result
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     raw: CallArrowRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =

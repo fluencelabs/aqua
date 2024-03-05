@@ -1,28 +1,28 @@
 package aqua.model.inline.raw
 
 import aqua.model.*
-import aqua.model.inline.raw.RawInliner
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
-import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ArrowType, ScalarType}
+import aqua.model.inline.raw.RawInliner
+import aqua.model.inline.state.*
 import aqua.raw.value.ApplyUnaryOpRaw
 import aqua.raw.value.ApplyUnaryOpRaw.Op.*
+import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
+import aqua.types.{ArrowType, ScalarType}
 
 import cats.data.Chain
-import cats.syntax.traverse.*
-import cats.syntax.monoid.*
-import cats.syntax.functor.*
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
-import cats.syntax.foldable.*
+import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.monoid.*
+import cats.syntax.traverse.*
 
 object ApplyUnaryOpRawInliner extends RawInliner[ApplyUnaryOpRaw] {
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     raw: ApplyUnaryOpRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = for {
@@ -40,7 +40,7 @@ object ApplyUnaryOpRawInliner extends RawInliner[ApplyUnaryOpRaw] {
     }
   } yield result
 
-  private def fullInline[S: Mangler: Exports: Arrows](
+  private def fullInline[S: Mangler: Exports: Arrows: Config](
     vm: ValueModel,
     vinline: Inline,
     op: ApplyUnaryOpRaw.Op

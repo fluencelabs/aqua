@@ -1,48 +1,15 @@
 aqua Main
 
-export bugLNG346
+export main
 
-ability Promise:
-  yield() -> string
+service Srv("srv"):
+    call(x: i32) -> i32
 
-func done_nil() -> string:
-  <- ""
+func main(a: i32, b: i32) -> i32:
+    res: *i32
+    if a > b:
+        on "peer" via "relay":
+            res <- Srv.call(a)
 
-func done() -> Promise:
-  <- Promise(yield = done_nil)
+    <- res!
 
-ability Compute:
-  yield() -> string
-
-alias WorkerYield: -> string
-alias Yield: WorkerYield -> Promise
-
-func wait_for() -> Yield:
-  wait = func (cb: -> string) -> Promise:
-    yield = func () -> string:
-      e <- cb()
-      <- e
-    <- Promise(yield = yield)
-  <- wait
-
-ability Function:
-  run(dealId: string) -> string
-
-func simple{Compute}(yield: Yield) -> Function:
-  deal_run = func () -> string:
-    c_yield = func () -> string:
-      <- Compute.yield()
-    yieeld <- yield(c_yield)
-    res <- yieeld.yield()
-    <- res
-  <- Function(run = deal_run)
-
-func bugLNG346() -> string:
-  res: *string
-  yieeld = func () -> string:
-    res <<- "hello"
-    <- ""
-  c = Compute(yield = yieeld)
-  fn = simple{c}(wait_for())
-  r <- fn.run("")
-  <- res!

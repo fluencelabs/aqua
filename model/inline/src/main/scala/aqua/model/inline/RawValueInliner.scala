@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.raw.*
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -23,7 +23,7 @@ object RawValueInliner extends Logging {
 
   import aqua.model.inline.Inline.*
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports: Arrows: Config](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] = for {
@@ -69,7 +69,7 @@ object RawValueInliner extends Logging {
     }
   } yield result
 
-  private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
+  private[inline] def inlineToTree[S: Mangler: Exports: Arrows: Config](
     inline: Inline
   ): State[S, List[OpModel.Tree]] =
     (inline.mergeMode match {
@@ -77,7 +77,7 @@ object RawValueInliner extends Logging {
       case ParMode => inline.predo.toList
     }).pure
 
-  private[inline] def toModel[S: Mangler: Exports: Arrows](
+  private[inline] def toModel[S: Mangler: Exports: Arrows: Config](
     unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -92,7 +92,7 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
-  def valueToModel[S: Mangler: Exports: Arrows](
+  def valueToModel[S: Mangler: Exports: Arrows: Config](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
@@ -100,7 +100,7 @@ object RawValueInliner extends Logging {
     model <- toModel(unfold(value, propertiesAllowed))
   } yield model
 
-  def valueListToModel[S: Mangler: Exports: Arrows](
+  def valueListToModel[S: Mangler: Exports: Arrows: Config](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
@@ -109,7 +109,7 @@ object RawValueInliner extends Logging {
    * Unfold all arguments and make CallModel
    * @param flatStreamArguments canonicalize and flatten all stream arguments if true
    */
-  def callToModel[S: Mangler: Exports: Arrows](
+  def callToModel[S: Mangler: Exports: Arrows: Config](
     call: Call,
     flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] = {
@@ -122,7 +122,7 @@ object RawValueInliner extends Logging {
           State.pure(args)
       }
       exportTo <- call.exportTo.traverse {
-        case c@Call.Export(_, _, isExistingStream) if isExistingStream =>
+        case c @ Call.Export(_, _, isExistingStream) if isExistingStream =>
           // process streams, because they can be stored in Exports outside function/closure with different name
           valueToModel(c.toRaw)
         case ce =>
