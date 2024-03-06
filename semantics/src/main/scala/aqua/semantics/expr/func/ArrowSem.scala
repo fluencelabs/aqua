@@ -55,26 +55,12 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     M: ManglerAlgebra[Alg]
   ): Alg[Raw] = for {
-    streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
     // TODO: wrap with local on...via...
     retsAndCodomain = retValues zip funcArrow.codomain.toList
-    (streamThatReturnAsStreamVars, streamThatReturnAsStreamNames) = retsAndCodomain.collect {
-      case (vr @ VarRaw(name, StreamType(_)), StreamType(_)) => (vr, name)
-      case (vr @ StreamRaw(_, name, _), StreamType(_)) => (vr, name)
-    }.unzip
-    // streams that return as streams and derived to another variable
-    derivedStreamRetValues <- N
-      .getDerivedFrom(streamThatReturnAsStreamVars.map(_.varNames))
-      .map(_.flatten.toSet)
 
     res <- bodyGen match {
       case FuncOp(bodyModel) =>
-        val streamArgNames = funcArrow.domain.labelledStreams.map { case (name, _) => name }
-
-        // Remove arguments, and values returned as streams
-        val localStreams = streamsInScope -- streamArgNames --
-          streamThatReturnAsStreamNames.toSet -- derivedStreamRetValues
 
         // process stream that returns as not streams and all Apply*Raw
         retsAndCodomain.traverse {
@@ -124,13 +110,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           val bodyModified = SeqTag.wrap(
             bodyModel +: bodyRets
           )
-
-          // wrap streams with restrictions
-          val bodyWithRestrictions =
-            localStreams.foldLeft(bodyModified) { case (bm, (streamName, streamType)) =>
-              RestrictionTag(streamName, streamType).wrap(bm)
-            }
-          ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
+          ArrowRaw(funcArrow, retVals, bodyModified)
         }
 
       case _ => Raw.error("Invalid arrow body").pure[Alg]

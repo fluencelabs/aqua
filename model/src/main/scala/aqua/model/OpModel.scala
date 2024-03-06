@@ -172,8 +172,7 @@ object ForModel {
     ForModel(item, iterable, Mode.Null)
 }
 
-// TODO how is it used? remove, if it's not
-case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
+case class DeclareStreamModel(value: VarModel) extends NoExecModel {
   override def toString: String = s"declare $value"
 
   override def usesVarNames: Set[String] = value.usesVarNames

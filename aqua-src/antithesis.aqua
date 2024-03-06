@@ -1,15 +1,49 @@
-aqua Main
+aqua Test
 
-export main
+export test2
 
-service Srv("srv"):
-    call(x: i32) -> i32
+ability Join:
+  join1() -> string
 
-func main(a: i32, b: i32) -> i32:
-    res: *i32
-    if a > b:
-        on "peer" via "relay":
-            res <- Srv.call(a)
+ability Fork:
+  fork() -> Join
 
-    <- res!
+func test() -> string:
 
+  fork = () -> Join:
+    in: *string
+    join1 = () -> string:
+
+      in <<- "something in nested"
+
+      <- ""
+    in <<- "something in"
+    <- Join(join1)
+  f = Fork(fork)
+
+  j = f.fork()
+  <- j.join1()
+
+func fork() -> Join:
+    in: *string
+    out: *string
+    join1 = () -> string:
+      inJoin: *string
+      for i <- in rec:
+        inJoin <<- i
+      for o <- out rec:
+        inJoin <<- o
+      join in!
+      par join out!
+      <- inJoin!
+    in <<- "something in INSIDE"
+    out <<- "something out INSIDE"
+    <- Join(join1)
+
+func test2() -> string:
+  out: *string
+  f = Fork(fork = fork)
+  j <- f.fork()
+  str <- j.join1()
+  out <<- "something out OUTSIDE"
+  <- str

@@ -166,26 +166,6 @@ object TagInliner extends Logging {
     }
   }
 
-  private def flatCanonStream[S: Mangler](
-    canonV: VarModel,
-    op: Option[OpModel.Tree]
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    if (canonV.properties.nonEmpty) {
-      val apName = canonV.name + "_flatten"
-      Mangler[S].findAndForbidName(apName).map { apN =>
-        val apV = VarModel(apN, canonV.`type`)
-        val apOp = FlattenModel(canonV, apN).leaf
-        (
-          apV,
-          combineOpsWithSeq(op, apOp.some)
-        )
-      }
-    } else {
-      State.pure((canonV, op))
-    }
-
-  }
-
   /**
    * Processes a single [[RawTag]] that may lead to many changes, including calling [[ArrowInliner]]
    *
@@ -385,7 +365,8 @@ object TagInliner extends Logging {
       case DeclareStreamTag(value) =>
         value match
           case VarRaw(name, t) =>
-            Exports[S].resolved(name, VarModel(name, t)).as(TagInlined.Empty())
+            val vm = VarModel(name, t)
+            Exports[S].resolved(name, vm).as(TagInlined.Single(DeclareStreamModel(vm)))
           case _ => none
 
       case ServiceIdTag(id, serviceType, name) =>

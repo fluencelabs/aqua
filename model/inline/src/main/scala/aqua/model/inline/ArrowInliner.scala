@@ -9,9 +9,11 @@ import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 
 import cats.data.{Chain, IndexedStateT, State, StateT}
+import cats.free.Cofree
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
+import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
@@ -173,15 +175,39 @@ object ArrowInliner extends Logging {
 
     // find and get resolved arrows if we return them from the function
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
-    arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+    arrowsFromClosures <- Arrows[S].pickArrows(returnedArrows)
+    arrowsToSave = arrowsFromAbilities ++ arrowsFromClosures
+
+    allReturnNames = arrowsToSave.values
+      .flatMap(_.body.definedOutside.value)
+      .toSet ++ arrowsToSave.keySet ++ varsFromAbilities.keySet
 
     body = SeqModel.wrap(callableFuncBody :: ops)
+    restrictions = collect(body) { case RestrictionModel(n, t) =>
+      n
+    }.flatMap { restrictedAlready =>
+      collect(body) {
+        case DeclareStreamModel(VarModel(n, t, _))
+            if !restrictedAlready.contains(n) && !allReturnNames.contains(n) =>
+          RestrictionModel(n, t)
+      }
+    }.value
+    withRestrictions = restrictions.foldLeft(body) { case (b, res) =>
+      res.wrap(b)
+    }
   } yield InlineResult(
-    body,
+    withRestrictions,
     rets,
     varsFromAbilities,
-    arrowsFromAbilities ++ arrowsToSave
+    arrowsToSave
   )
+
+  private def collect[A](
+    tree: Cofree[Chain, OpModel]
+  )(pf: PartialFunction[OpModel, A]): Eval[Chain[A]] =
+    Cofree.cata(tree)((tag, acc: Chain[Chain[A]]) =>
+      Eval.later(Chain.fromOption(pf.lift(tag)) ++ acc.flatten)
+    )
 
   /**
    * Get ability fields (vars or arrows) from exports
@@ -324,14 +350,10 @@ object ArrowInliner extends Logging {
    * Correctly rename captured values and arrows of a function
    *
    * @param fn Function
-   * @param exports Exports state before calling/inlining
-   * @param arrows Arrows state before calling/inlining
    * @return Renamed values and arrows
    */
   def renameCaptured[S: Mangler](
-    fn: FuncArrow,
-    exports: Map[String, ValueModel],
-    arrows: Map[String, FuncArrow]
+    fn: FuncArrow
   ): State[S, (Renamed[ValueModel], Renamed[FuncArrow])] = {
     // Gather abilities related values
     val abilitiesValues = fn.capturedValues.collect {
@@ -481,9 +503,6 @@ object ArrowInliner extends Logging {
   ): State[S, (FuncArrow, OpModel.Tree)] = for {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
-    argNames = args.argNames
-    capturedNames = fn.capturedValues.keySet ++ fn.capturedArrows.keySet
-
     /**
      * Substitute all arguments inside function body.
      * Data arguments could be passed as variables or values (expressions),
@@ -497,7 +516,7 @@ object ArrowInliner extends Logging {
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
-    captured <- renameCaptured(fn, exports, arrows)
+    captured <- renameCaptured(fn)
     (capturedValues, capturedArrows) = captured
 
     /**
@@ -537,6 +556,15 @@ object ArrowInliner extends Logging {
     treeWithCanons = collectionsToCanons(tree, streamToCanonArgs)
 
     ret = fn.ret.map(_.renameVars(renaming))
+
+    // TODO: find all streams inside arrow
+    // get outside streams
+    // get inside streams
+    // check what streams are going outside as vars or in abilities or in closures
+    // check what streams are defined in body and not going outside
+    //   create stream restriction here for these streams
+
+    // TODO: should find arrows in rets and get all capturedValues
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
