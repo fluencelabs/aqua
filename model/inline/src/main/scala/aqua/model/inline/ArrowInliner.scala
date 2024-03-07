@@ -183,15 +183,29 @@ object ArrowInliner extends Logging {
       .toSet ++ arrowsToSave.keySet ++ varsFromAbilities.keySet
 
     body = SeqModel.wrap(callableFuncBody :: ops)
-    restrictions = collect(body) { case RestrictionModel(n, t) =>
-      n
-    }.flatMap { restrictedAlready =>
-      collect(body) {
-        case DeclareStreamModel(VarModel(n, t, _))
-            if !restrictedAlready.contains(n) && !allReturnNames.contains(n) =>
-          RestrictionModel(n, t)
-      }
+
+    restrictionsAndDeclarations = collect(body) {
+      case rm@RestrictionModel(n, t) =>
+        rm
+      case dm@DeclareStreamModel(VarModel(n, t, _)) =>
+        dm
     }.value
+    counted = restrictionsAndDeclarations.foldLeft(Map.empty[String, (Int, Type)]) {
+      case (acc, RestrictionModel(n, t)) =>
+        val (count, ty) = acc.getOrElse(n, (0, t))
+        acc + (n -> (count - 1, ty))
+      case (acc, DeclareStreamModel(VarModel(n, t, _))) =>
+        val (count, ty) = acc.getOrElse(n, (0, t))
+        acc + (n -> (count + 1, ty))
+      case (acc, _) =>
+        acc
+    }
+    restrictions = counted.toList.filter {
+      case (name, (count, _)) => !allReturnNames.contains(name) && count > 0
+    }.map {
+      case (name, (_, ty)) => RestrictionModel(name, ty)
+    }
+
     withRestrictions = restrictions.foldLeft(body) { case (b, res) =>
       res.wrap(b)
     }
