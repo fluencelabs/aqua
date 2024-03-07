@@ -1,25 +1,28 @@
 package aqua.model.inline.tag
 
-import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
-import aqua.model.ValueModel
+import aqua.helpers.syntax.reader.*
 import aqua.model.*
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.ValueModel
+import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.canonicalizeIfStream
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-import cats.data.{Chain, State}
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
+import aqua.model.inline.state.*
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
+
 import cats.Eval
+import cats.data.Reader
+import cats.data.{Chain, State}
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 
 final case class IfTagInliner(
   valueRaw: ValueRaw
 ) {
   import IfTagInliner.*
 
-  def inlined[S: Mangler: Exports: Arrows]: State[S, IfTagInlined] =
-    (valueRaw match {
+  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, IfTagInlined] = for {
+    cond <- (valueRaw match {
       // Optimize in case last operation is equality check
       case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>
         (
@@ -41,12 +44,36 @@ final case class IfTagInliner(
 
           (prefix, valueModel, compareModel, shouldMatch)
         }
-    }).map { case (prefix, leftValue, rightValue, shouldMatch) =>
-      IfTagInlined(
-        prefix,
-        toModel(leftValue, rightValue, shouldMatch)
-      )
-    }
+    })
+    (prefix, leftValue, rightValue, shouldMatch) = cond
+    noProp <- Config[S].noErrorPropagation.toState
+    model = if (noProp) toModelNoProp else toModel
+  } yield IfTagInlined(
+    prefix,
+    model(leftValue, rightValue, shouldMatch)
+  )
+
+  private def toModelNoProp(
+    leftValue: ValueModel,
+    rightValue: ValueModel,
+    shouldMatch: Boolean
+  )(children: Chain[OpModel.Tree]): OpModel.Tree =
+    children
+      .filterNot(_.head == EmptyModel)
+      .uncons
+      .map { case (ifBody, elseBody) =>
+        XorModel.wrap(
+          MatchMismatchModel(
+            leftValue,
+            rightValue,
+            shouldMatch
+          ).wrap(ifBody),
+          SeqModel.wrap(
+            elseBody
+          )
+        )
+      }
+      .getOrElse(EmptyModel.leaf)
 
   private def toModel(
     leftValue: ValueModel,

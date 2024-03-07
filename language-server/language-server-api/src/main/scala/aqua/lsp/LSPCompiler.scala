@@ -2,10 +2,11 @@ package aqua.lsp
 
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, AquaError, AquaSources}
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.RawContext
+import aqua.raw.{ConstantRaw, RawContext}
+import aqua.semantics.FileId
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.FileId
+
 import cats.data.Validated.validNec
 import cats.data.{Chain, State, Validated, ValidatedNec}
 import cats.syntax.either.*
@@ -24,7 +25,7 @@ object LSPCompiler {
         LspContext.blank.copy(raw =
           RawContext.blank.copy(
             parts = Chain
-              .fromSeq(config.constantsList)
+              .fromSeq(config.constants ++ ConstantRaw.defaultConstants(config.relayVarName))
               .map(const => RawContext.blank -> const)
           )
         )

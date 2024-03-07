@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.*
 import aqua.model.inline.ArrowInliner
-import aqua.model.inline.state.InliningState
+import aqua.model.inline.state.{Config, InliningState}
 import aqua.model.transform.TransformConfig.TracingConfig
 import aqua.model.transform.funcop.*
 import aqua.model.transform.pre.*
@@ -48,6 +48,7 @@ object Transform extends Logging {
   private def funcToModelTree(
     func: FuncArrow,
     preTransformer: FuncPreTransformer,
+    conf: TransformConfig,
     funcArgName: String = "_func"
   ): Eval[OpModel.Tree] = {
 
@@ -66,7 +67,10 @@ object Transform extends Logging {
     val call = CallModel(funcArg :: Nil, Nil)
 
     // <funcArgName> resolves to func
-    val initState = InliningState(resolvedArrows = Map(funcArgName -> func))
+    val initState = InliningState(
+      resolvedArrows = Map(funcArgName -> func),
+      config = Config.Values(noErrorPropagation = conf.noXor)
+    )
 
     // Inlining `funcAround(<funcArgName>)`
     ArrowInliner
@@ -118,7 +122,7 @@ object Transform extends Logging {
 
     for {
       // Pre transform and inline the function
-      model <- funcToModelTree(func, preTransformer)
+      model <- funcToModelTree(func, preTransformer, conf)
       // Post transform the function.
       // We should wrap `model` with `onInitPeer` here
       // so that TagInliner would not wrap it with `xor`.

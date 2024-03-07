@@ -883,4 +883,94 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
         }
       }
   }
+
+  it should "not generate error propagation in `if` with `noXor = true`" in {
+    val src = Map(
+      "index.aqua" ->
+        """aqua Test
+          |
+          |export main
+          |
+          |service Srv("srv"):
+          |  call()
+          |
+          |func main(a: i32):
+          |  if a > 0:
+          |    Srv.call()
+          |""".stripMargin
+    )
+
+    val transformCfg = TransformConfig(noEmptyResponse = true, relayVarName = None, noXor = true)
+
+    insideRes(src, transformCfg = transformCfg)("main") { case main :: Nil =>
+      val aArg = VarModel("-a-arg-", ScalarType.i32)
+      val gt = CallModel.Export("gt", ScalarType.bool)
+      val expected = XorRes.wrap(
+        SeqRes.wrap(
+          getDataSrv("a", aArg.name, aArg.baseType),
+          CallServiceRes(
+            LiteralModel.quote("cmp"),
+            "gt",
+            CallRes(aArg :: LiteralModel.number(0) :: Nil, Some(gt)),
+            initPeer
+          ).leaf,
+          XorRes.wrap(
+            MatchMismatchRes(gt.asVar, LiteralModel.bool(true), true).wrap(
+              CallServiceRes(
+                LiteralModel.quote("srv"),
+                "call",
+                CallRes(Nil, None),
+                initPeer
+              ).leaf
+            )
+          )
+        ),
+        errorCall(transformCfg, 0, initPeer)
+      )
+
+      main.body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "not generate error propagation in `on` with `noXor = true`" in {
+    val src = Map(
+      "index.aqua" ->
+        """aqua Test
+          |
+          |export main
+          |
+          |service Srv("srv"):
+          |  call()
+          |
+          |func main():
+          |  on "peer" via "relay":
+          |    Srv.call()
+          |  Srv.call()
+          |""".stripMargin
+    )
+
+    val transformCfg = TransformConfig(noEmptyResponse = true, relayVarName = None, noXor = true)
+
+    insideRes(src, transformCfg = transformCfg)("main") { case main :: Nil =>
+      def call(peer: ValueModel) =
+        CallServiceRes(
+          LiteralModel.quote("srv"),
+          "call",
+          CallRes(Nil, None),
+          peer
+        ).leaf
+
+      val expected = XorRes.wrap(
+        SeqRes.wrap(
+          through(LiteralModel.quote("relay")),
+          call(LiteralModel.quote("peer")),
+          through(LiteralModel.quote("relay")),
+          call(initPeer)
+        ),
+        errorCall(transformCfg, 0, initPeer)
+      )
+
+      main.body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
 }

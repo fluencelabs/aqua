@@ -1,11 +1,12 @@
 package aqua.model.inline.state
 
 import aqua.mangler.ManglerState
-import aqua.model.{FuncArrow, ValueModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.{FuncArrow, ValueModel}
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.ArrowType
+
 import cats.data.{Chain, State}
 import cats.instances.list.*
 import cats.syntax.traverse.*
@@ -27,7 +28,8 @@ case class InliningState(
   noNames: ManglerState = ManglerState(),
   resolvedExports: Map[String, ValueModel] = Map.empty,
   resolvedArrows: Map[String, FuncArrow] = Map.empty,
-  instructionCounter: Int = 0
+  instructionCounter: Int = 0,
+  config: Config.Values = Config.Values.default
 )
 
 object InliningState {
@@ -44,4 +46,6 @@ object InliningState {
   given Exports[InliningState] =
     Exports.Simple.transformS(_.resolvedExports, (acc, ex) => acc.copy(resolvedExports = ex))
 
+  given Config[InliningState] =
+    Config[Config.Values].transform(_.config)
 }

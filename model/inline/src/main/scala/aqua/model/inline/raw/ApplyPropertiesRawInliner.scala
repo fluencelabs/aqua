@@ -6,7 +6,7 @@ import aqua.model.ValueModel.Ability
 import aqua.model.inline.Inline
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.raw.value.*
 import aqua.types.*
 
@@ -24,7 +24,7 @@ import scribe.Logging
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Logging {
 
   // in perspective literals can have properties and functors (like `nil` with length)
-  def flatLiteralWithProperties[S: Mangler: Exports: Arrows](
+  def flatLiteralWithProperties[S: Mangler: Exports: Arrows: Config](
     literal: LiteralModel,
     inl: Inline,
     properties: Chain[PropertyModel]
@@ -45,7 +45,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldAbilityProperty[S: Mangler: Exports: Arrows](
+  private def unfoldAbilityProperty[S: Mangler: Exports: Arrows: Config](
     varModel: VarModel,
     abilityType: NamedType,
     p: PropertyRaw
@@ -112,7 +112,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
       )
   }
 
-  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
+  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows: Config](
     varModel: VarModel,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] =
@@ -172,7 +172,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   private case class PropertyRawWithModel(raw: PropertyRaw, model: Option[PropertyModel])
 
   // Unfold properties that we can process in parallel
-  private def optimizeProperties[S: Mangler: Exports: Arrows](
+  private def optimizeProperties[S: Mangler: Exports: Arrows: Config](
     properties: Chain[PropertyRaw]
   ): State[S, (Chain[PropertyRawWithModel], Inline)] = {
     properties.map {
@@ -211,7 +211,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }.sequence.map(_.toList.unzip.bimap(Chain.fromSeq, _.combineAll))
   }
 
-  private def unfoldProperties[S: Mangler: Exports: Arrows](
+  private def unfoldProperties[S: Mangler: Exports: Arrows: Config](
     prevInline: Inline,
     vm: VarModel,
     properties: Chain[PropertyRaw],
@@ -263,7 +263,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   /**
    * Unfold `stream[idx]`
    */
-  private def unfoldStreamGate[S: Mangler: Exports: Arrows](
+  private def unfoldStreamGate[S: Mangler: Exports: Arrows: Config](
     streamName: String,
     streamType: StreamType,
     idx: ValueRaw
@@ -325,7 +325,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     mergeMode = SeqMode
   )
 
-  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
+  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows: Config](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
@@ -389,7 +389,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         flatten = VarModel(nn, varModel.`type`)
       } yield flatten -> Inline.tree(FlattenModel(varModel, flatten.name).leaf)
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     apr: ApplyPropertyRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
