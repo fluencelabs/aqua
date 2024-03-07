@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.8.3
-        version: 0.8.3
+        specifier: 0.9.0
+        version: 0.9.0
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -478,8 +478,8 @@ packages:
     resolution: {integrity: sha512-f3jL1kqHcP+tLpvD+QlVV51ZIptbStXfPSiDO+3SPurmcNWix8JZbQNQ+3t/BjCkHL8aw5r8vuuadPzftuVX/g==}
     dev: true
 
-  /@fluencelabs/avm@0.59.0:
-    resolution: {integrity: sha512-dm6CMCAq5HLEInbYICd17PlhDiKR5kxVFL4v4O0BfQhKskSA4riC+E/6pcQqj8XK7I3bKkFZCoY4bq1q6LDarw==}
+  /@fluencelabs/avm@0.62.0:
+    resolution: {integrity: sha512-6jV8Ix967VG7A8fhc0jP+nMT6heR9wQ8RpPyFzeorHZmILBszGwb/j02PW6WNA0E3bsAGZYyG5N0NanG9pH5tQ==}
     dependencies:
       msgpack-lite: 0.1.26
       multicodec: 3.2.1
@@ -489,37 +489,31 @@ packages:
     resolution: {integrity: sha512-1Bp2gBy3oMEILMynFpOIFK/q2Pj792xpnb3AJs5QcTQAaHz9V2nrEI8OOPwBAFTmjmLBirXBqQQX63O+ePH7yg==}
     dev: false
 
-  /@fluencelabs/interfaces@0.11.0:
-    resolution: {integrity: sha512-gUW5CYGgmA7r/9WB79VXQh6Udvg7/ywPk5fu5OI5VsL37CGD+NnJW1l+tRcl0qhgl9CwI/sfjNoxo3JgHD1Llw==}
-    engines: {node: '>=10', pnpm: '>=3'}
-    dev: false
-
   /@fluencelabs/interfaces@0.12.0:
     resolution: {integrity: sha512-IyljxronxSV0lrl1diW1LUTDD0XVZILHyznAlQ+5eWOXu0nSrkH7ps7ivbWdz7DdfAIOEvIcjX5yGb0SQUhOsA==}
     engines: {node: '>=10', pnpm: '>=3'}
-    dev: true
 
-  /@fluencelabs/js-client-isomorphic@0.5.0:
-    resolution: {integrity: sha512-MhguhGQShDF6ErCFxP0RhQ366xjJ50RPp7a+D9KR5nUtbLIFCht/EDsPm0io+IE5lBYYDemhP8Rus0RBreCtyQ==}
+  /@fluencelabs/js-client-isomorphic@0.6.0:
+    resolution: {integrity: sha512-WNW/iAtezxcOYlGfXZ7I5G/1wcsXwyGN0MUxccMqGiiFN7AIas2vdkrPRBM6hLuy3hw1Wa8ETyxR/OPDamfWoQ==}
     dependencies:
-      '@fluencelabs/avm': 0.59.0
-      '@fluencelabs/marine-js': 0.8.0
-      '@fluencelabs/marine-worker': 0.5.1
+      '@fluencelabs/avm': 0.62.0
+      '@fluencelabs/marine-js': 0.13.0
+      '@fluencelabs/marine-worker': 0.6.0
       '@fluencelabs/threads': 2.0.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /@fluencelabs/js-client@0.8.3:
-    resolution: {integrity: sha512-Voi7dbYw+nnbC4FJsotGEethR8cR9PvYbd13t1Zq9SeVb1w+Gb+gHKMenZzhvjt1Hv+NfBp1YLkzhM8FHjLRTQ==}
+  /@fluencelabs/js-client@0.9.0:
+    resolution: {integrity: sha512-pKRtGDW+uZwUEs1pqe/+2ma3+odiYfickhR028kd6tOEuy3gj4Zj0B6VToC1ncU3E1XZoZrAALEkZvcAma8v1g==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 14.0.0
       '@chainsafe/libp2p-yamux': 6.0.1
-      '@fluencelabs/avm': 0.59.0
-      '@fluencelabs/interfaces': 0.11.0
-      '@fluencelabs/js-client-isomorphic': 0.5.0
-      '@fluencelabs/marine-worker': 0.5.1
+      '@fluencelabs/avm': 0.62.0
+      '@fluencelabs/interfaces': 0.12.0
+      '@fluencelabs/js-client-isomorphic': 0.6.0
+      '@fluencelabs/marine-worker': 0.6.0
       '@fluencelabs/threads': 2.0.0
       '@libp2p/crypto': 4.0.1
       '@libp2p/identify': 1.0.11
@@ -549,18 +543,18 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@fluencelabs/marine-js@0.8.0:
-    resolution: {integrity: sha512-exxp0T0Dk69dxnbpAiVc/qp66s8Jq/P71TRB9aeQZLZy3EQtVAMCBJvwQY8LzVVlYEyVjmqQkFG/N0rAeYU1vg==}
+  /@fluencelabs/marine-js@0.13.0:
+    resolution: {integrity: sha512-/qGc6FkLAwgf4U1P8eSb3ECY6cNm77FjfGokva+Pme4VB9EAKDdWxpY/F+AcdUyJ7XUgl/I4eMebTDGpMto5bQ==}
     dependencies:
       '@wasmer/wasi': 0.12.0
       '@wasmer/wasmfs': 0.12.0
       default-import: 1.1.5
     dev: false
 
-  /@fluencelabs/marine-worker@0.5.1:
-    resolution: {integrity: sha512-23CqQJMCVbtVLAxSV9ancGyQAMxNxKFy95boAAGfx5uJkvoetHRpb1+TYXMPCTVTSZBAmVrZbdGSQNXKoLDQig==}
+  /@fluencelabs/marine-worker@0.6.0:
+    resolution: {integrity: sha512-XVp7M6D0SVHgNxqSLd8MXq2pyMEJKwQoM7qcltfuYB9EGdeSNqerjSyDAUEWv0lchicClcYVn47xXUBqhE0HgA==}
     dependencies:
-      '@fluencelabs/marine-js': 0.8.0
+      '@fluencelabs/marine-js': 0.13.0
       '@fluencelabs/threads': 2.0.0
       observable-fns: 0.6.1
     transitivePeerDependencies:
