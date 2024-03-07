@@ -70,13 +70,10 @@ jobs:
           artifact: fcli
           version: unstable
 
-      - name: Init local env with fcli
-        run: fluence local init --no-input
-
       - name: Run nox network
         run: fluence local up
 
-      - name: Cache Scala
+      - name: Cache Sc
         uses: coursier/cache-action@v6
 
       - name: Setup Scala
