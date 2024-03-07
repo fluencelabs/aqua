@@ -1,15 +1,15 @@
 package aqua.model.inline
 
+import aqua.model.*
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.raw.RawInliner
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.*
+import aqua.model.inline.state.*
 import aqua.raw.value.MakeStructRaw
 import aqua.types.{StreamMapType, StructType}
 
 import cats.data.{Chain, NonEmptyMap, State}
-import cats.syntax.foldable.*
 import cats.syntax.bifunctor.*
+import cats.syntax.foldable.*
 import cats.syntax.functor.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
@@ -58,7 +58,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields)
   }
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     raw: MakeStructRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

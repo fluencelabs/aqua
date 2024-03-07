@@ -20,6 +20,7 @@ import cats.kernel.Monoid
  * @param relayVarName - name of the relay variable
  * @param tracing - tracing configuration
  * @param constants - list of constants
+ * @param noXor - if true, do not generate generate `xor`s for error propagation
  */
 case class TransformConfig(
   getDataService: String = "getDataSrv",
@@ -30,16 +31,12 @@ case class TransformConfig(
   noEmptyResponse: Boolean = false,
   relayVarName: Option[String] = Some("-relay-"),
   tracing: Option[TransformConfig.TracingConfig] = None,
-  constants: List[ConstantRaw] = Nil
+  noXor: Boolean = false
 ) {
-
   val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
   val errorHandlingSrvId: ValueRaw = LiteralRaw.quote(errorHandlingService)
   val callbackSrvId: ValueRaw = LiteralRaw.quote(callbackService)
   val dataSrvId: ValueRaw = LiteralRaw.quote(getDataService)
-
-  val constantsList: List[ConstantRaw] =
-    ConstantRaw.defaultConstants(relayVarName) ::: constants
 }
 
 object TransformConfig {

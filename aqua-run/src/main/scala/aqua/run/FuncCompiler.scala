@@ -22,14 +22,14 @@ import scribe.Logging
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
   imports: Imports,
-  transformConfig: TransformConfig
+  transformConfig: TransformConfig,
+  config: AquaCompilerConf
 ) extends Logging {
 
   type Result = [A] =>> CompileResult[FileModuleId, AquaFileError, FileSpan.F][A]
 
   private def compileToContext(
-    path: Path,
-    config: AquaCompilerConf = AquaCompilerConf(transformConfig.constantsList)
+    path: Path
   ): F[Result[Chain[AquaContext]]] = {
     val sources = new AquaFileSources[F](path, imports)
     CompilerAPI.compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](

@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.*
 import aqua.raw.value.StreamRaw
 
 import cats.data.{Chain, State}
@@ -11,7 +11,7 @@ import cats.syntax.traverse.*
 
 object StreamRawInliner extends RawInliner[StreamRaw] {
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Config](
     raw: StreamRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

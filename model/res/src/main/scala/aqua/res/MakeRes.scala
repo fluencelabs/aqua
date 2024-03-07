@@ -1,12 +1,13 @@
 package aqua.res
 
+import aqua.model.*
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.types.*
 import aqua.types.{ArrayType, CanonStreamType, StreamType}
+
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
-import aqua.raw.value.{LiteralRaw, ValueRaw}
-import aqua.model.*
-import aqua.types.*
 
 /**
  * Helpers for translating [[OpModel]] to [[ResolvedOp]]
@@ -22,8 +23,8 @@ object MakeRes {
   def hop(onPeer: ValueModel): ResolvedOp.Tree = {
     // Those names can't be produced from compilation
     // so they are safe to use
-    val streamName = "-ephemeral-stream-"
-    val canonName = "-ephemeral-canon-"
+    val streamName = "-hop-"
+    val canonName = "-hopc-"
     val elementType = BottomType
     val streamType = StreamType(elementType)
     val canonType = CanonStreamType(elementType)

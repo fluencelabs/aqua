@@ -3,8 +3,8 @@ package aqua.model.inline
 import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.inline.tag.IfTagInliner
+import aqua.model.inline.state.*
+import aqua.model.inline.tag.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{CanonStreamType, CollectionType, StreamType}
@@ -193,35 +193,16 @@ object TagInliner extends Logging {
    * @tparam S Current state
    * @return Model (if any), and prefix (if any)
    */
-  def tagToModel[S: Mangler: Arrows: Exports](
+  def tagToModel[S: Mangler: Arrows: Exports: Config](
     tag: RawTag
   ): State[S, TagInlined[S]] =
     tag match {
       case OnTag(peerId, via, strategy) =>
-        for {
-          peerIdDe <- valueToModel(peerId)
-          viaDe <- valueListToModel(via.toList)
-          viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
-            flat(vm, tree)
-          }
-          (pid, pif) = peerIdDe
-          (viaD, viaF) = viaDeFlattened.unzip
-            .bimap(Chain.fromSeq, _.flatten)
-          strat = strategy.map { case OnTag.ReturnStrategy.Relay =>
-            OnModel.ReturnStrategy.Relay
-          }
-          toModel = (children: Chain[OpModel.Tree]) =>
-            XorModel.wrap(
-              OnModel(pid, viaD, strat).wrap(
-                children
-              ),
-              // This will return to previous topology
-              // and propagate error up
-              FailModel(ValueModel.error).leaf
-            )
-        } yield TagInlined.Mapping(
-          toModel = toModel,
-          prefix = parDesugarPrefix(viaF.prependedAll(pif))
+        OnTagInliner(peerId, via, strategy).inlined.map(inlined =>
+          TagInlined.Mapping(
+            toModel = inlined.toModel,
+            prefix = inlined.prefix
+          )
         )
 
       case IfTag(valueRaw) =>
@@ -471,7 +452,7 @@ object TagInliner extends Logging {
       inlined <- headInlined.build(children)
     } yield inlined
 
-  def handleTree[S: Exports: Mangler: Arrows](
+  def handleTree[S: Exports: Mangler: Arrows: Config](
     tree: RawTag.Tree
   ): State[S, OpModel.Tree] =
     traverseS(tree, tagToModel(_))

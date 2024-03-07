@@ -51,7 +51,7 @@ object ConstantRaw {
   def hostPeerId(relayVarName: Option[String]): ConstantRaw =
     ConstantRaw(
       "HOST_PEER_ID",
-      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string)),
+      relayVarName.fold(ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string)),
       false
     )
 
