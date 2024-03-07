@@ -1,6 +1,6 @@
 aqua Test
 
-export streamIf, test, test2
+export streamIf
 
 ability Join:
   join1() -> string
@@ -48,8 +48,7 @@ func test2() -> string:
   out <<- "something out OUTSIDE"
   <- str
 
-func streamIf() -> string:
-
+func streamIf() -> i8:
     on HOST_PEER_ID:
         if true:
             stream: *i8
@@ -65,7 +64,7 @@ func streamIf() -> string:
             stream: *i8
             stream <<- 4
 
-    stream: *string
-    stream <<- "AALALALALA"
+        stream: *i8
+        stream <<- 5
 
     <- stream!

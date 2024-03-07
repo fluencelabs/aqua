@@ -184,7 +184,7 @@ object ArrowInliner extends Logging {
 
     body = SeqModel.wrap(callableFuncBody :: ops)
 
-    restrictionsAndDeclarations = collect(body) {
+    /*restrictionsAndDeclarations = collect(body) {
       case rm@RestrictionModel(n, t) =>
         rm
       case dm@DeclareStreamModel(VarModel(n, t, _)) =>
@@ -208,9 +208,9 @@ object ArrowInliner extends Logging {
 
     withRestrictions = restrictions.foldLeft(body) { case (b, res) =>
       res.wrap(b)
-    }
+    }*/
   } yield InlineResult(
-    withRestrictions,
+    body,
     rets,
     varsFromAbilities,
     arrowsToSave
@@ -542,6 +542,7 @@ object ArrowInliner extends Logging {
     defineNames <- StateT.liftF(
       fn.body.definesVarNames
     )
+    _ = println("DEFINES NAMES: " + defineNames)
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
     canonStreamsWithNames <- canonStreamVariables(args)
     (renamedCanonStreams, canons) = canonStreamsWithNames
