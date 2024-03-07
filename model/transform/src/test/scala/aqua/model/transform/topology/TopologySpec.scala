@@ -481,7 +481,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
-    val stream = ValueModel.fromRaw(streamRaw)
+    val stream = VarModel(streamRaw.name, streamRaw.baseType)
     val streamEl = ValueModel.fromRaw(streamRawEl)
 
     val (joinModel, joinRes) = joinModelRes(streamEl)
@@ -552,7 +552,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
-    val stream = ValueModel.fromRaw(streamRaw)
+    val stream = VarModel(streamRaw.name, streamRaw.baseType)
     val streamEl = ValueModel.fromRaw(streamRawEl)
 
     val (joinModel, joinRes) = joinModelRes(streamEl)
