@@ -1,6 +1,6 @@
 aqua Test
 
-export streamIf
+export streamIf, test, test2
 
 ability Join:
   join1() -> string
@@ -40,13 +40,13 @@ func fork() -> Join:
     out <<- "something out INSIDE"
     <- Join(join1)
 
-func test2() -> string:
+func test2() -> string, string:
   out: *string
   f = Fork(fork = fork)
   j <- f.fork()
   str <- j.join1()
   out <<- "something out OUTSIDE"
-  <- str
+  <- str, out!
 
 func streamIf() -> i8:
     on HOST_PEER_ID:
