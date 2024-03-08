@@ -178,50 +178,13 @@ object ArrowInliner extends Logging {
     arrowsFromClosures <- Arrows[S].pickArrows(returnedArrows)
     arrowsToSave = arrowsFromAbilities ++ arrowsFromClosures
 
-    allReturnNames = arrowsToSave.values
-      .flatMap(_.body.definedOutside.value)
-      .toSet ++ arrowsToSave.keySet ++ varsFromAbilities.keySet
-
     body = SeqModel.wrap(callableFuncBody :: ops)
-
-    /*restrictionsAndDeclarations = collect(body) {
-      case rm@RestrictionModel(n, t) =>
-        rm
-      case dm@DeclareStreamModel(VarModel(n, t, _)) =>
-        dm
-    }.value
-    counted = restrictionsAndDeclarations.foldLeft(Map.empty[String, (Int, Type)]) {
-      case (acc, RestrictionModel(n, t)) =>
-        val (count, ty) = acc.getOrElse(n, (0, t))
-        acc + (n -> (count - 1, ty))
-      case (acc, DeclareStreamModel(VarModel(n, t, _))) =>
-        val (count, ty) = acc.getOrElse(n, (0, t))
-        acc + (n -> (count + 1, ty))
-      case (acc, _) =>
-        acc
-    }
-    restrictions = counted.toList.filter {
-      case (name, (count, _)) => !allReturnNames.contains(name) && count > 0
-    }.map {
-      case (name, (_, ty)) => RestrictionModel(name, ty)
-    }
-
-    withRestrictions = restrictions.foldLeft(body) { case (b, res) =>
-      res.wrap(b)
-    }*/
   } yield InlineResult(
     body,
     rets,
     varsFromAbilities,
     arrowsToSave
   )
-
-  private def collect[A](
-    tree: Cofree[Chain, OpModel]
-  )(pf: PartialFunction[OpModel, A]): Eval[Chain[A]] =
-    Cofree.cata(tree)((tag, acc: Chain[Chain[A]]) =>
-      Eval.later(Chain.fromOption(pf.lift(tag)) ++ acc.flatten)
-    )
 
   /**
    * Get ability fields (vars or arrows) from exports

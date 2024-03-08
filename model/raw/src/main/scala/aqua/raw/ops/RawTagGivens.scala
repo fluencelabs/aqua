@@ -45,13 +45,6 @@ trait RawTagGivens {
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }
 
-    def definedOutside: Eval[Set[String]] =
-      for {
-        inside <- definesVarNames
-        all <- usesVarNames
-      } yield all -- inside
-
-
     def exportedAndUsesNames: Eval[(Set[String], Set[String])] =
       Cofree
         .cata(tree)((tag, childs: Chain[(Set[String], Set[String])]) =>

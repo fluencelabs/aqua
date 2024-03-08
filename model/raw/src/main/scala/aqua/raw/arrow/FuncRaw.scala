@@ -11,11 +11,9 @@ case class FuncRaw(
 
   override def rawPartType: Type = arrow.`type`
 
-  // all vars that we use inside body
-  lazy val freeBodyVars: Set[String] = arrow.body.usesVarNames.value
-
-    // vars that we capture from external space (outer functions, etc)
-  lazy val varsWithoutArgs: Set[String] = {
+  // vars that we capture from external space (outer functions, etc)
+  lazy val capturedVars: Set[String] = {
+    val freeBodyVars: Set[String] = arrow.body.usesVarNames.value
     val argsNames = arrow.`type`.domain
       .toLabelledList()
       .map { case (name, _) => name }

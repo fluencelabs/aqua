@@ -302,7 +302,7 @@ case class ClosureTag(
 
   override def exportsVarNames: Set[String] = Set(func.name)
 
-  override def usesVarNames: Set[String] = func.varsWithoutArgs
+  override def usesVarNames: Set[String] = func.capturedVars
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func =
