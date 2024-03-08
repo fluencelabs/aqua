@@ -770,12 +770,13 @@ describe("Testing examples", () => {
 
   it("closureStreamScopes.aqua simple", async () => {
       let result = await simpleStreamScopeCall();
-      expect(result).toEqual(["one", "two", "three"]);
+      // it is not hanging
+      expect(result).toEqual(["result"]);
   });
 
   it("closureStreamScopes.aqua complex", async () => {
       let result = await complexStreamScopeCall();
-      expect(result).toEqual(["one", "two", "three"]);
+      expect(result).toEqual([["something in INSIDE", "something out INSIDE"], ["something out OUTSIDE"]);
   });
 
   // TODO: Unskip this after LNG-226 is fixed
