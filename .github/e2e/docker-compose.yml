@@ -12,6 +12,7 @@ services:
       - 7771:7771
       - 9991:9991
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7771
       - -w=9991
@@ -34,6 +35,7 @@ services:
       - 7772:7772
       - 9992:9992
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7772
       - -w=9992
@@ -55,6 +57,7 @@ services:
       - 7773:7773
       - 9993:9993
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7773
       - -w=9993
@@ -76,6 +79,7 @@ services:
       - 7774:7774
       - 9994:9994
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7774
       - -w=9994
@@ -97,6 +101,7 @@ services:
       - 7775:7775
       - 9995:9995
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7775
       - -w=9995
@@ -118,6 +123,7 @@ services:
       - 7776:7776
       - 9996:9996
     command:
+      - --enable-system-services=none
       - --aqua-pool-size=2
       - -t=7776
       - -w=9996
