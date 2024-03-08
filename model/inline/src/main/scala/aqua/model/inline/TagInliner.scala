@@ -365,8 +365,7 @@ object TagInliner extends Logging {
       case DeclareStreamTag(value) =>
         value match
           case VarRaw(name, t) =>
-            val vm = VarModel(name, t)
-            Exports[S].resolved(name, vm).as(TagInlined.Single(DeclareStreamModel(vm)))
+            Exports[S].resolved(name, VarModel(name, t)).as(TagInlined.Empty())
           case _ => none
 
       case ServiceIdTag(id, serviceType, name) =>

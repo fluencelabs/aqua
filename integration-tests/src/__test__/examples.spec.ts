@@ -23,7 +23,7 @@ import { registerPrintln } from "../compiled/examples/println.js";
 import { helloWorldCall } from "../examples/helloWorldCall.js";
 import { foldBug499Call, foldCall } from "../examples/foldCall.js";
 import { bugNG69Call, ifCall, ifWrapCall } from "../examples/ifCall.js";
-import { simpleCall, complexCall } from "../examples/closureStreamScopesCall.js";
+import { simpleStreamScopeCall, complexStreamScopeCall } from "../examples/closureStreamScopesCall.js";
 import { ifPropagateErrorsCall } from "../examples/ifPropagateErrors.js";
 import { parCall, testTimeoutCall } from "../examples/parCall.js";
 import { complexCall } from "../examples/complex.js";
@@ -769,12 +769,12 @@ describe("Testing examples", () => {
   });
 
   it("closureStreamScopes.aqua simple", async () => {
-      let result = await simpleCall();
+      let result = await simpleStreamScopeCall();
       expect(result).toEqual(["one", "two", "three"]);
   });
 
   it("closureStreamScopes.aqua complex", async () => {
-      let result = await complexCall();
+      let result = await complexStreamScopeCall();
       expect(result).toEqual(["one", "two", "three"]);
   });
 
