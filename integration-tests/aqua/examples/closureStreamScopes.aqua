@@ -1,6 +1,6 @@
-aqua Test
+aqua ClosureStreamScopes
 
-export simple, complex
+export simpleTest, complexTest
 
 ability Join:
   join1() -> []string
@@ -8,7 +8,7 @@ ability Join:
 ability Fork:
   fork() -> Join
 
-func simple() -> []string:
+func simpleTest() -> []string:
 
   fork = () -> Join:
     in: *string
@@ -40,7 +40,7 @@ func fork() -> Join:
     out <<- "something out INSIDE"
     <- Join(join1)
 
-func complex() -> []string, []string:
+func complexTest() -> []string, []string:
   out: *string
   f = Fork(fork = fork)
   j <- f.fork()

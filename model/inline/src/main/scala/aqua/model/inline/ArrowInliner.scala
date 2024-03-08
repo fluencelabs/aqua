@@ -542,7 +542,6 @@ object ArrowInliner extends Logging {
     defineNames <- StateT.liftF(
       fn.body.definesVarNames
     )
-    _ = println("DEFINES NAMES: " + defineNames)
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
     canonStreamsWithNames <- canonStreamVariables(args)
     (renamedCanonStreams, canons) = canonStreamsWithNames

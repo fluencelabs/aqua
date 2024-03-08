@@ -23,6 +23,7 @@ import { registerPrintln } from "../compiled/examples/println.js";
 import { helloWorldCall } from "../examples/helloWorldCall.js";
 import { foldBug499Call, foldCall } from "../examples/foldCall.js";
 import { bugNG69Call, ifCall, ifWrapCall } from "../examples/ifCall.js";
+import { simpleCall, complexCall } from "../examples/closureStreamScopesCall.js";
 import { ifPropagateErrorsCall } from "../examples/ifPropagateErrors.js";
 import { parCall, testTimeoutCall } from "../examples/parCall.js";
 import { complexCall } from "../examples/complex.js";
@@ -765,6 +766,16 @@ describe("Testing examples", () => {
   it("streamCapture.aqua simple", async () => {
     let streamCaptureResult = await streamCaptureSimpleCall();
     expect(streamCaptureResult).toEqual(["one", "two", "three"]);
+  });
+
+  it("closureStreamScopes.aqua simple", async () => {
+      let result = await simpleCall();
+      expect(result).toEqual(["one", "two", "three"]);
+  });
+
+  it("closureStreamScopes.aqua complex", async () => {
+      let result = await complexCall();
+      expect(result).toEqual(["one", "two", "three"]);
   });
 
   // TODO: Unskip this after LNG-226 is fixed
