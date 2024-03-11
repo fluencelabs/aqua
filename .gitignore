@@ -16,3 +16,5 @@ integration-tests/src/compiled/*
 
 **/dist
 **/node_modules
+
+**/.antlr
