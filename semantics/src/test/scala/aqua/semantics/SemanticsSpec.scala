@@ -142,14 +142,12 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     val streamType = StreamType(ScalarType.string)
     val stream = VarRaw(name, streamType)
 
-    RestrictionTag(stream.name, streamType).wrap(
-      SeqTag.wrap(
-        DeclareStreamTag(stream).leaf,
-        PushToStreamTag(
-          LiteralRaw.quote(value),
-          Call.Export(name, streamType)
-        ).leaf
-      )
+    SeqTag.wrap(
+      DeclareStreamTag(stream).leaf,
+      PushToStreamTag(
+        LiteralRaw.quote(value),
+        Call.Export(name, streamType)
+      ).leaf
     )
   }
 

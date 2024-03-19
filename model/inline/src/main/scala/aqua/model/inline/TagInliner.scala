@@ -349,19 +349,6 @@ object TagInliner extends Logging {
           }
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
-      case RestrictionTag(name, typ) =>
-        // Rename restriction after children are inlined with new exports
-        TagInlined
-          .After(
-            for {
-              exps <- Exports[S].exports
-              model = exps.get(name).collect { case VarModel(n, _, _) =>
-                RestrictionModel(n, typ)
-              }
-            } yield model.getOrElse(RestrictionModel(name, typ))
-          )
-          .pure
-
       case DeclareStreamTag(value) =>
         value match
           case VarRaw(name, t) =>

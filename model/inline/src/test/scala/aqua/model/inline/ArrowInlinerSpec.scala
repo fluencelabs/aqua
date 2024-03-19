@@ -134,11 +134,9 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .callArrow[InliningState](
         FuncArrow(
           "stream-callback",
-          RestrictionTag(streamVar.name, streamType).wrap(
-            SeqTag.wrap(
-              DeclareStreamTag(streamVar).leaf,
-              CallArrowRawTag.func("cb", Call(streamVar :: Nil, Nil)).leaf
-            )
+          SeqTag.wrap(
+            DeclareStreamTag(streamVar).leaf,
+            CallArrowRawTag.func("cb", Call(streamVar :: Nil, Nil)).leaf
           ),
           ArrowType(
             ProductType.labelled(
@@ -319,30 +317,28 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val newFunc = FuncArrow(
       "newFunc",
-      RestrictionTag(streamVar.name, streamType).wrap(
-        SeqTag.wrap(
-          CallArrowRawTag
-            .func(
-              returnNil.funcName,
-              Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
-            )
-            .leaf,
-          PushToStreamTag(
-            LiteralRaw.quote("asd"),
-            Call.Export(streamVar.name, streamVar.`type`)
-          ).leaf,
-          CanonicalizeTag(
-            streamVar,
-            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
-          ).leaf,
-          FlattenTag(
-            canonStreamVar,
-            flatStreamVar.name
-          ).leaf,
-          ReturnTag(
-            NonEmptyList.one(flatStreamVar)
-          ).leaf
-        )
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnNil.funcName,
+            Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+          )
+          .leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("asd"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        CanonicalizeTag(
+          streamVar,
+          Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+        ).leaf,
+        FlattenTag(
+          canonStreamVar,
+          flatStreamVar.name
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(flatStreamVar)
+        ).leaf
       ),
       ArrowType(
         ProductType(Nil),
@@ -440,30 +436,28 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val testReturnStream = FuncArrow(
       "testReturnStream",
-      RestrictionTag(streamVar.name, streamType).wrap(
-        SeqTag.wrap(
-          CallArrowRawTag
-            .func(
-              rereturnStream.funcName,
-              Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
-            )
-            .leaf,
-          PushToStreamTag(
-            LiteralRaw.quote("three"),
-            Call.Export(streamVar.name, streamVar.`type`)
-          ).leaf,
-          CanonicalizeTag(
-            streamVar,
-            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
-          ).leaf,
-          FlattenTag(
-            canonStreamVar,
-            flatStreamVar.name
-          ).leaf,
-          ReturnTag(
-            NonEmptyList.one(flatStreamVar)
-          ).leaf
-        )
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            rereturnStream.funcName,
+            Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+          )
+          .leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("three"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        CanonicalizeTag(
+          streamVar,
+          Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+        ).leaf,
+        FlattenTag(
+          canonStreamVar,
+          flatStreamVar.name
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(flatStreamVar)
+        ).leaf
       ),
       ArrowType(
         ProductType(Nil),
@@ -883,11 +877,9 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .callArrow[InliningState](
         FuncArrow(
           "stream-callback",
-          RestrictionTag(streamVar.name, streamType).wrap(
-            SeqTag.wrap(
-              DeclareStreamTag(streamVar).leaf,
-              CallArrowRawTag.func("cb", Call(streamVarLambda :: Nil, Nil)).leaf
-            )
+          SeqTag.wrap(
+            DeclareStreamTag(streamVar).leaf,
+            CallArrowRawTag.func("cb", Call(streamVarLambda :: Nil, Nil)).leaf
           ),
           ArrowType(
             ProductType.labelled(
@@ -1399,7 +1391,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
           .one(
             outterRes
           )
-      ).leaf: _*
+      ).leaf*
     )
 
     val outer = FuncArrow(

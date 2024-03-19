@@ -56,26 +56,26 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
   ): F[Raw] =
     V.valueToRaw(expr.peerId).map((_, iterableVM, ops)).flatMap {
       case (Some(peerId), Some(vm), FuncOp(op)) =>
-        for {
-          restricted <- FuncOpSem.restrictStreamsInScope(op)
-          onTag = OnTag(
-            peerId = peerId,
-            via = Chain.fromSeq(viaVM),
-            strategy = OnTag.ReturnStrategy.Relay.some
-          )
-          /**
-           * `parseq` => par (`never` as `last` in `fold`)
-           * So that peer initiating `parseq` would not continue execution past it
-           */
-          tag = ForTag
-            .par(expr.item.value, vm)
-            .wrap(
-              ParTag.wrap(
-                onTag.wrap(restricted),
-                NextTag(expr.item.value).leaf
-              )
+        val onTag = OnTag(
+          peerId = peerId,
+          via = Chain.fromSeq(viaVM),
+          strategy = OnTag.ReturnStrategy.Relay.some
+        )
+
+        /**
+         * `parseq` => par (`never` as `last` in `fold`)
+         * So that peer initiating `parseq` would not continue execution past it
+         */
+        ForTag
+          .par(expr.item.value, vm)
+          .wrap(
+            ParTag.wrap(
+              onTag.wrap(op),
+              NextTag(expr.item.value).leaf
             )
-        } yield tag.toFuncOp
+          )
+          .toFuncOp
+          .pure
       case (None, _, _) => Raw.error("ParSeqSem: could not resolve `peerId`").pure
       case (_, None, _) => Raw.error("ParSeqSem: could not resolve `iterable`").pure
       case (_, _, _) => Raw.error("ParSeqSem: wrong body of `parseq` block").pure

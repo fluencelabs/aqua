@@ -4,6 +4,7 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw, VarRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.*
+
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
@@ -156,14 +157,6 @@ case class NextTag(item: String) extends RawTag {
   override def usesVarNames: Set[String] = Set(item)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
-}
-
-case class RestrictionTag(name: String, `type`: Type) extends SeqGroupTag {
-
-  override def restrictsVarNames: Set[String] = Set(name)
-
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(name = map.getOrElse(name, name))
 }
 
 case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends SeqGroupTag {
