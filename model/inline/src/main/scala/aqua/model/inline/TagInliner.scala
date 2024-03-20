@@ -186,40 +186,12 @@ object TagInliner extends Logging {
         )
 
       case IfTag(valueRaw) =>
-        IfTagInliner(valueRaw).inlined.map(inlined =>
-          TagInlined.Mapping(
-            toModel = inlined.toModel,
-            prefix = inlined.prefix
-          )
-        )
+        IfTagInliner(valueRaw).inlined
 
       case TryTag => pure(XorModel)
 
       case ForTag(item, iterable, mode) =>
-        for {
-          vp <- valueToModel(iterable)
-          flattened <- mode match {
-            case ForTag.Mode.RecMode => State.pure(vp)
-            case _ => flat(vp._1, vp._2)
-          }
-          (v, p) = flattened
-          n <- Mangler[S].findAndForbidName(item)
-          elementType = iterable.`type` match {
-            case b: CollectionType => b.element
-            case _ =>
-              internalError(
-                s"non-box type variable '$iterable' in 'for' expression."
-              )
-          }
-          _ <- Exports[S].resolved(item, VarModel(n, elementType))
-          modeModel = mode match {
-            case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
-            case ForTag.Mode.ParMode | ForTag.Mode.RecMode => ForModel.Mode.Never
-          }
-        } yield TagInlined.Single(
-          model = ForModel(n, v, modeModel),
-          prefix = p
-        )
+        ForTagInliner(item, iterable, mode).inlined
 
       case PushToStreamTag(operand, exportTo) =>
         (

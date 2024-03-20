@@ -5,7 +5,7 @@ import aqua.model.*
 import aqua.model.ValueModel
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.inline.RawValueInliner.valueToModel
-import aqua.model.inline.TagInliner.canonicalizeIfStream
+import aqua.model.inline.TagInliner.{TagInlined, canonicalizeIfStream}
 import aqua.model.inline.state.*
 import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
@@ -21,7 +21,7 @@ final case class IfTagInliner(
 ) {
   import IfTagInliner.*
 
-  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, IfTagInlined] = for {
+  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = for {
     cond <- (valueRaw match {
       // Optimize in case last operation is equality check
       case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>
@@ -48,9 +48,9 @@ final case class IfTagInliner(
     (prefix, leftValue, rightValue, shouldMatch) = cond
     noProp <- Config[S].noErrorPropagation.toState
     model = if (noProp) toModelNoProp else toModel
-  } yield IfTagInlined(
-    prefix,
-    model(leftValue, rightValue, shouldMatch)
+  } yield TagInlined.Mapping(
+    prefix = prefix,
+    toModel = model(leftValue, rightValue, shouldMatch)
   )
 
   private def toModelNoProp(
