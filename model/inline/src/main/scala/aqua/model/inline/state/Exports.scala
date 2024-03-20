@@ -50,11 +50,6 @@ trait Exports[S] extends Scoped[S] {
   def getLastVarName(name: String): State[S, Option[String]]
 
   /**
-   * Rename names in variables
-   */
-  def renameVariables(renames: Map[String, String]): State[S, Unit]
-
-  /**
    * Resolve the whole map of exports
    * @param exports
    *   name -> value
@@ -104,9 +99,6 @@ trait Exports[S] extends Scoped[S] {
 
     override def getLastVarName(name: String): State[R, Option[String]] =
       self.getLastVarName(name).transformS(f, g)
-
-    override def renameVariables(renames: Map[String, String]): State[R, Unit] =
-      self.renameVariables(renames).transformS(f, g)
 
     override def getKeys: State[R, Set[String]] =
       self.getKeys.transformS(f, g)
@@ -223,17 +215,6 @@ object Exports {
           case (k, v) if k.startsWith(prefix) =>
             List(k.replaceFirst(prefix, newPrefix) -> v, k -> v)
           case (k, v) => List(k -> v)
-        }
-      }
-
-    override def renameVariables(
-      renames: Map[String, String]
-    ): State[Map[String, ValueModel], Unit] =
-      State.modify {
-        _.map {
-          case (k, vm @ VarModel(name, _, _)) if renames.contains(name) =>
-            k -> vm.copy(name = renames.getOrElse(name, name))
-          case (k, v) => k -> v
         }
       }
 
