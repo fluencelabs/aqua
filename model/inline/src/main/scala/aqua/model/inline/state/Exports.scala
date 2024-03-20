@@ -71,7 +71,7 @@ trait Exports[S] extends Scoped[S] {
   /**
    * Get all the values available in the scope
    */
-  val exports: State[S, Map[String, ValueModel]]
+  def exports: State[S, Map[String, ValueModel]]
 
   final def gather(names: Seq[String]): State[S, Map[String, ValueModel]] =
     exports.map(Exports.gatherFrom(names, _))
@@ -106,14 +106,10 @@ trait Exports[S] extends Scoped[S] {
     override def getAbilityField(name: String, field: String): State[R, Option[ValueModel]] =
       self.getAbilityField(name, field).transformS(f, g)
 
-    override val exports: State[R, Map[String, ValueModel]] =
+    override def exports: State[R, Map[String, ValueModel]] =
       self.exports.transformS(f, g)
 
-    override val purge: State[R, R] =
-      self.purgeR(f, g)
-
-    override protected def fill(s: R): State[R, Unit] =
-      self.fillR(s, f, g)
+    override def clear: State[R, Unit] = self.clear.transformS(f, g)
   }
 }
 
@@ -229,13 +225,7 @@ object Exports {
     override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
       State.get
 
-    override val purge: State[Map[String, ValueModel], Map[String, ValueModel]] =
-      for {
-        s <- State.get
-        _ <- State.set(Map.empty)
-      } yield s
-
-    override protected def fill(s: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
-      State.set(s)
+    override def clear: State[Map[String, ValueModel], Unit] =
+      State.set(Map.empty)
   }
 }

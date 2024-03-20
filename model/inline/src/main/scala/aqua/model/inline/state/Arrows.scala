@@ -20,6 +20,7 @@ import cats.syntax.traverse.*
  */
 trait Arrows[S] extends Scoped[S] {
   self =>
+
   def save(name: String, arrow: FuncArrow): State[S, Unit]
 
   /**
@@ -53,7 +54,7 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * All arrows available for use in scope
    */
-  val arrows: State[S, Map[String, FuncArrow]]
+  def arrows: State[S, Map[String, FuncArrow]]
 
   /**
    * Pick a subset of arrows by names
@@ -88,13 +89,10 @@ trait Arrows[S] extends Scoped[S] {
     override def save(name: String, arrow: FuncArrow): State[R, Unit] =
       self.save(name, arrow).transformS(f, g)
 
-    override val arrows: State[R, Map[String, FuncArrow]] = self.arrows.transformS(f, g)
+    override def arrows: State[R, Map[String, FuncArrow]] = self.arrows.transformS(f, g)
 
-    override val purge: State[R, R] =
-      self.purgeR(f, g)
-
-    override protected def fill(s: R): State[R, Unit] =
-      self.fillR(s, f, g)
+    override def clear: State[R, Unit] =
+      self.clear.transformS(f, g)
 
   }
 }
@@ -127,16 +125,10 @@ object Arrows {
     override def save(name: String, arrow: FuncArrow): State[Map[String, FuncArrow], Unit] =
       State.modify(_ + (name -> arrow))
 
-    override val arrows: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
+    override def arrows: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
       State.get
 
-    override val purge: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
-      for {
-        s <- State.get
-        _ <- State.set(Map.empty)
-      } yield s
-
-    override protected def fill(s: Map[String, FuncArrow]): State[Map[String, FuncArrow], Unit] =
-      State.set(s)
+    override def clear: State[Map[String, FuncArrow], Unit] =
+      State.set(Map.empty)
   }
 }

@@ -7,11 +7,13 @@ import cats.data.State
  * @tparam S State
  */
 trait Scoped[S] {
-  // Remove everything from the state
-  val purge: State[S, S]
+  // Empty the state
+  def clear: State[S, Unit]
 
-  // Put [[s]] to the state
-  protected def fill(s: S): State[S, Unit]
+  def purge: State[S, S] = for {
+    s <- State.get[S]
+    _ <- clear
+  } yield s
 
   /**
    * Clear the state, run [[scoped]], then recover the initial state
@@ -23,17 +25,13 @@ trait Scoped[S] {
     for {
       r <- purge
       t <- scoped
-      _ <- fill(r)
+      _ <- State.set(r)
     } yield t
 
-  // For transformS
-  protected def purgeR[R](f: R => S, g: (R, S) => R): State[R, R] =
+  def subScope[T](scoped: State[S, T]): State[S, T] =
     for {
-      r <- State.get[R]
-      s <- purge.transformS(f, g)
-    } yield g(r, s)
-
-  // For transformS
-  protected def fillR[R](s: R, f: R => S, g: (R, S) => R): State[R, Unit] =
-    fill(f(s)).transformS(f, g)
+      r <- State.get
+      t <- scoped
+      _ <- State.set(r)
+    } yield t
 }

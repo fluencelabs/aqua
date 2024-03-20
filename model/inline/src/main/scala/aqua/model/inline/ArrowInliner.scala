@@ -534,15 +534,6 @@ object ArrowInliner extends Logging {
 
     ret = fn.ret.map(_.renameVars(renaming))
 
-    // TODO: find all streams inside arrow
-    // get outside streams
-    // get inside streams
-    // check what streams are going outside as vars or in abilities or in closures
-    // check what streams are defined in body and not going outside
-    //   create stream restriction here for these streams
-
-    // TODO: should find arrows in rets and get all capturedValues
-
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
   } yield (fn.copy(body = treeWithCanons, ret = ret), SeqModel.wrap(canons))
