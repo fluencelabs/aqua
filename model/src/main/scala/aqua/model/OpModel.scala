@@ -172,12 +172,6 @@ object ForModel {
     ForModel(item, iterable, Mode.Null)
 }
 
-case class DeclareStreamModel(value: VarModel) extends NoExecModel {
-  override def toString: String = s"declare $value"
-
-  override def usesVarNames: Set[String] = value.usesVarNames
-}
-
 // key must be only string or number
 case class InsertKeyValueModel(
   key: ValueModel,
