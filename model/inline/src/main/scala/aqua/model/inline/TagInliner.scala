@@ -85,27 +85,29 @@ object TagInliner extends Logging {
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
-      def toSeqModel(tree: OpModel.Tree | Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
-        val treeChain = tree match {
-          case c: Chain[OpModel.Tree] => c
+    def build(children: State[T, Chain[OpModel.Tree]]): State[T, OpModel.Tree] = {
+      def prefixSeq(sub: OpModel.Tree | Chain[OpModel.Tree]) = {
+        val tree = sub match {
           case t: OpModel.Tree => Chain.one(t)
+          case c: Chain[OpModel.Tree] => c
         }
 
-        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ treeChain))
+        SeqModel.wrap(Chain.fromOption(prefix) ++ tree)
       }
 
       this match {
         case Empty(_) =>
-          toSeqModel(children)
+          children.map(prefixSeq)
         case Single(model, _) =>
-          toSeqModel(model.wrap(children))
+          children.map(model.wrap).map(prefixSeq)
         case Mapping(toModel, _) =>
-          toSeqModel(toModel(children))
+          children.map(toModel).map(prefixSeq)
         case After(model, _) =>
-          model.flatMap(m => toSeqModel(m.wrap(children)))
+          for {
+            c <- children
+            m <- model
+          } yield prefixSeq(m.wrap(c))
       }
-
     }
   }
 
@@ -387,7 +389,7 @@ object TagInliner extends Logging {
     for {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
-      children <- tail.traverse(traverseS[S](_, f))
+      children = tail.traverse(traverseS[S](_, f))
       inlined <- headInlined.build(children)
     } yield inlined
 
