@@ -148,6 +148,7 @@ object ArrowInliner extends Logging {
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body)
+
     callableFuncBody =
       fn.capturedTopology
         .fold(SeqModel)(ApplyTopologyModel.apply)
@@ -475,7 +476,6 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
   ): State[S, (FuncArrow, OpModel.Tree)] = for {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
@@ -519,13 +519,8 @@ object ArrowInliner extends Logging {
         renamedCanonStreams ++
         streamRenames
 
-    /**
-     * TODO: Optimize resolve.
-     * It seems that resolving whole `exports`
-     * and `arrows` is not necessary.
-     */
     arrowsResolved = arrows ++ capturedArrows.renamed
-    exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
+    exportsResolved = data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
 
@@ -547,18 +542,15 @@ object ArrowInliner extends Logging {
       .traverse(getAbilityArrows.tupled)
       .map(_.flatMap(_.toList).toMap)
 
-    exports <- Exports[S].exports
     streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
 
-    inlineResult <- Exports[S].scope(
-      Arrows[S].scope(
-        for {
-          // Process renamings, prepare environment
-          fnCanon <- ArrowInliner.prelude(arrow, call, exports, arrows)
-          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
-        } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
-      )
+    inlineResult <- Arrows[S].scope(
+      for {
+        // Process renamings, prepare environment
+        fnCanon <- ArrowInliner.prelude(arrow, call, arrows)
+        inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
+      } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
     )
 
     exportTo = call.exportTo.map(_.name)

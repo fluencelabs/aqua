@@ -9,9 +9,11 @@ import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.TagInlined
 import aqua.model.inline.TagInliner.flat
 import aqua.model.inline.state.*
+import aqua.model.inline.tag.ForTagInliner.toModel
 import aqua.raw.ops.ForTag
 import aqua.raw.value.ValueRaw
 import aqua.types.CollectionType
+import aqua.types.StreamType
 
 import cats.Eval
 import cats.data.Reader
@@ -45,8 +47,32 @@ final case class ForTagInliner(
       case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
       case ForTag.Mode.ParMode | ForTag.Mode.RecMode => ForModel.Mode.Never
     }
-  } yield TagInlined.Single(
-    model = ForModel(n, v, modeModel),
+    model = ForModel(n, v, modeModel)
+  } yield TagInlined.Around(
+    model = toModel(model),
     prefix = p
   )
+}
+
+object ForTagInliner {
+
+  def toModel[S: Mangler: Exports: Arrows: Config](model: ForModel)(
+    children: State[S, Chain[OpModel.Tree]]
+  ): State[S, OpModel.Tree] = Exports[S].subScope(for {
+    streamsBefore <- Exports[S].streams
+    trees <- children
+    streamsAfter <- Exports[S].streams
+    streams = streamsAfter.removedAll(streamsBefore.keySet)
+  } yield build(model, trees, streams))
+
+  private def build(
+    model: OpModel,
+    children: Chain[OpModel.Tree],
+    streams: Map[String, StreamType]
+  ): OpModel.Tree = model.wrap(
+    streams.toList.foldLeft(children) { case (acc, (name, st)) =>
+      Chain.one(RestrictionModel(name, st).wrap(acc))
+    }
+  )
+
 }

@@ -2,9 +2,12 @@ package aqua.model.inline.state
 
 import aqua.model.ValueModel.Ability
 import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.types.StreamType
 import aqua.types.{AbilityType, GeneralAbilityType, NamedType}
 
 import cats.data.{NonEmptyList, State}
+import cats.syntax.apply.*
+import cats.syntax.traverse.*
 
 /**
  * Exports – trace values available in the scope
@@ -73,6 +76,14 @@ trait Exports[S] extends Scoped[S] {
    */
   def exports: State[S, Map[String, ValueModel]]
 
+  def streams: State[S, Map[String, StreamType]] = for {
+    exps <- exports
+    streams = exps.collect { case (n, ValueModel.Stream(_, st)) => n -> st }
+    lasts <- streams.toList.flatTraverse { case (n, st) =>
+      getLastVarName(n).map(last => last.map(_ -> st).toList)
+    }
+  } yield lasts.toMap
+
   final def gather(names: Seq[String]): State[S, Map[String, ValueModel]] =
     exports.map(Exports.gatherFrom(names, _))
 
@@ -109,7 +120,11 @@ trait Exports[S] extends Scoped[S] {
     override def exports: State[R, Map[String, ValueModel]] =
       self.exports.transformS(f, g)
 
-    override def clear: State[R, Unit] = self.clear.transformS(f, g)
+    override protected def purge: State[R, R] =
+      self.purgeR(f, g)
+
+    override protected def set(r: R): State[R, Unit] =
+      self.setR(f, g)(r)
   }
 }
 
@@ -225,7 +240,10 @@ object Exports {
     override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
       State.get
 
-    override def clear: State[Map[String, ValueModel], Unit] =
-      State.set(Map.empty)
+    override val purge: State[Map[String, ValueModel], Map[String, ValueModel]] =
+      State.get <* State.set(Map.empty)
+
+    override def set(s: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
+      State.set(s)
   }
 }
