@@ -1,6 +1,6 @@
 aqua Test
 
-export simple, complex
+export simple, complex, forTag
 
 ability Join:
   join1() -> []string
@@ -47,3 +47,13 @@ func complex() -> []string, []string:
   strs <- j.join1()
   out <<- "something out OUTSIDE"
   <- strs, out
+
+
+
+func forTag(arr: []string) -> string:
+  if "a" == "b":
+     s: *string
+     s <<- "123"
+  s: *string
+  s <<- "ffff"
+  <- s!

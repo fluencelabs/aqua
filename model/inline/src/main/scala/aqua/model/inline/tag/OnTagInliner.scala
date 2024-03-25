@@ -4,11 +4,10 @@ import aqua.helpers.syntax.reader.*
 import aqua.model.*
 import aqua.model.inline.Inline.parDesugarPrefix
 import aqua.model.inline.RawValueInliner.{valueListToModel, valueToModel}
-import aqua.model.inline.TagInliner.flat
+import aqua.model.inline.TagInliner.{flat, TagInlined}
 import aqua.model.inline.state.*
 import aqua.raw.ops.OnTag
 import aqua.raw.value.ValueRaw
-
 import cats.data.{Chain, State}
 import cats.syntax.bifunctor.*
 import cats.syntax.traverse.*
@@ -20,7 +19,7 @@ final case class OnTagInliner(
 ) {
   import OnTagInliner.*
 
-  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, OnTagInlined] =
+  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] =
     for {
       peerIdDe <- valueToModel(peerId)
       viaDe <- valueListToModel(via.toList)
@@ -32,9 +31,11 @@ final case class OnTagInliner(
       }
       noProp <- Config[S].noErrorPropagation.toState
       model = if (noProp) toModelNoProp else toModel
-    } yield OnTagInlined(
+      modelByChildren = model(pid, viaD, strat)
+      stateModel = IfTagInliner.wrapWithRestrictions[S](modelByChildren)
+    } yield TagInlined.Around(
       prefix = parDesugarPrefix(viaF.prependedAll(pif)),
-      toModel = model(pid, viaD, strat)
+      model = stateModel
     )
 
   private def toModelNoProp(
@@ -57,12 +58,4 @@ final case class OnTagInliner(
       // and propagate error up
       FailModel(ValueModel.error).leaf
     )
-}
-
-object OnTagInliner {
-
-  final case class OnTagInlined(
-    prefix: Option[OpModel.Tree],
-    toModel: Chain[OpModel.Tree] => OpModel.Tree
-  )
 }

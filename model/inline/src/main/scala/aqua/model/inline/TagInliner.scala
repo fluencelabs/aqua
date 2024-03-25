@@ -193,12 +193,7 @@ object TagInliner extends Logging {
   ): State[S, TagInlined[S]] =
     tag match {
       case OnTag(peerId, via, strategy) =>
-        OnTagInliner(peerId, via, strategy).inlined.map(inlined =>
-          TagInlined.Mapping(
-            toModel = inlined.toModel,
-            prefix = inlined.prefix
-          )
-        )
+        OnTagInliner(peerId, via, strategy).inlined
 
       case IfTag(valueRaw) =>
         IfTagInliner(valueRaw).inlined

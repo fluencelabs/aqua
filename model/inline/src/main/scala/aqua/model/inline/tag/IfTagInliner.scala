@@ -9,9 +9,9 @@ import aqua.model.inline.TagInliner.{TagInlined, canonicalizeIfStream}
 import aqua.model.inline.state.*
 import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
+import aqua.types.StreamType
 
 import cats.Eval
-import cats.data.Reader
 import cats.data.{Chain, State}
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -22,7 +22,7 @@ final case class IfTagInliner(
   import IfTagInliner.*
 
   def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = for {
-    cond <- (valueRaw match {
+    cond <- valueRaw match {
       // Optimize in case last operation is equality check
       case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>
         (
@@ -44,13 +44,15 @@ final case class IfTagInliner(
 
           (prefix, valueModel, compareModel, shouldMatch)
         }
-    })
+    }
     (prefix, leftValue, rightValue, shouldMatch) = cond
     noProp <- Config[S].noErrorPropagation.toState
     model = if (noProp) toModelNoProp else toModel
-  } yield TagInlined.Mapping(
+    modelByChildren = model(leftValue, rightValue, shouldMatch)
+    stateModel = wrapWithRestrictions[S](modelByChildren)
+  } yield TagInlined.Around(
     prefix = prefix,
-    toModel = model(leftValue, rightValue, shouldMatch)
+    model = stateModel
   )
 
   private def toModelNoProp(
@@ -185,11 +187,6 @@ final case class IfTagInliner(
 
 object IfTagInliner {
 
-  final case class IfTagInlined(
-    prefix: Option[OpModel.Tree],
-    toModel: Chain[OpModel.Tree] => OpModel.Tree
-  )
-
   private def restrictErrors(
     name: String*
   )(tree: OpModel.Tree): OpModel.Tree =
@@ -220,5 +217,25 @@ object IfTagInliner {
   private val ifErrorName = "-if-error-"
   private val elseErrorName = "-else-error-"
   private val ifElseErrorName = "-if-else-error-"
+
+  def wrapWithRestrictions[S: Mangler: Exports: Arrows: Config](
+    childrenToModel: Chain[OpModel.Tree] => OpModel.Tree
+  )(
+    children: State[S, Chain[OpModel.Tree]]
+  ): State[S, OpModel.Tree] = Exports[S].subScope(for {
+    streamsBefore <- Exports[S].streams
+    trees <- children
+    model = childrenToModel(trees)
+    streamsAfter <- Exports[S].streams
+    streams = streamsAfter.removedAll(streamsBefore.keySet)
+  } yield build(model, streams))
+
+  private def build(
+    model: OpModel.Tree,
+    streams: Map[String, StreamType]
+  ): OpModel.Tree =
+    streams.toList.foldLeft(model) { case (acc, (name, st)) =>
+      RestrictionModel(name, st).wrap(acc)
+    }
 
 }
