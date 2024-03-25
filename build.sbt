@@ -14,7 +14,7 @@ val fs2V = "3.10.1"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
-val scribeV = "3.13.0"
+val scribeV = "3.13.2"
 
 name := "aqua-hll"
 
