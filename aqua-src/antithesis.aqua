@@ -1,59 +1,23 @@
-aqua Test
+aqua StreamCapture
 
-export simple, complex, forTag
+export testStreamCaptureReturn
 
-ability Join:
-  join1() -> []string
+func captureStream() -> (string -> []string):
+    stream: *string
 
-ability Fork:
-  fork() -> Join
+    stream <<- "one"
 
-func simple() -> []string:
+    capture = (s: string) -> []string:
+        stream <<- s
+        <- stream
 
-  fork = () -> Join:
-    in: *string
-    join1 = () -> []string:
+    <- capture
 
-      in <<- "something in nested"
+func rereturnCapture() -> (string -> []string):
+    capture <- captureStream()
+    <- capture
 
-      <- ["result"]
-    in <<- "something in"
-    <- Join(join1)
-  f = Fork(fork)
-
-  j = f.fork()
-  <- j.join1()
-
-func fork() -> Join:
-    in: *string
-    out: *string
-    join1 = () -> []string:
-      inJoin: *string
-      for i <- in rec:
-        inJoin <<- i
-      for o <- out rec:
-        inJoin <<- o
-      join in!
-      par join out!
-      <- inJoin
-    in <<- "something in INSIDE"
-    out <<- "something out INSIDE"
-    <- Join(join1)
-
-func complex() -> []string, []string:
-  out: *string
-  f = Fork(fork = fork)
-  j <- f.fork()
-  strs <- j.join1()
-  out <<- "something out OUTSIDE"
-  <- strs, out
-
-
-
-func forTag(arr: []string) -> string:
-  if "a" == "b":
-     s: *string
-     s <<- "123"
-  s: *string
-  s <<- "ffff"
-  <- s!
+func testStreamCaptureReturn(arr: []string) -> []string:
+    on HOST_PEER_ID:
+        capture <- rereturnCapture()
+    <- capture("five")
