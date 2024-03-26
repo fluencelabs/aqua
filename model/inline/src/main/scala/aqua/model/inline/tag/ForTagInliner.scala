@@ -63,7 +63,7 @@ object ForTagInliner {
     trees <- children
     streamsAfter <- Exports[S].streams
     streams = streamsAfter.removedAll(streamsBefore.keySet)
-    _ <- Exports[S].deleteStreams(streams)
+    _ <- Exports[S].deleteStreams(streams.keySet)
   } yield build(model, trees, streams))
 
   private def build(
