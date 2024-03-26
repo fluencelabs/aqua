@@ -77,7 +77,7 @@ trait Exports[S] extends Scoped[S] {
   def exports: State[S, Map[String, ValueModel]]
 
   def addStream(name: String, streamType: StreamType): State[S, Unit]
-  def deleteStream(name: String): State[S, Unit]
+  def deleteStreams(names: Set[String]): State[S, Unit]
 
   def streams: State[S, Map[String, StreamType]]
 
@@ -102,8 +102,8 @@ trait Exports[S] extends Scoped[S] {
     override def addStream(name: String, streamType: StreamType): State[R, Unit] =
       self.addStream(name, streamType).transformS(f, g)
 
-    override def deleteStream(name: String): State[R, Unit] =
-      self.deleteStream(name).transformS(f, g)
+    override def deleteStreams(names: Set[String]): State[R, Unit] =
+      self.deleteStreams(names).transformS(f, g)
 
     override def resolveAbilityField(
       abilityExportName: String,
@@ -226,8 +226,8 @@ object Exports {
     override def addStream(name: String, streamType: StreamType): State[ExportsState, Unit] =
       State.modify(st => st.copy(streams = st.streams + (name -> streamType)))
 
-    override def deleteStream(name: String): State[ExportsState, Unit] =
-      State.modify(st => st.copy(streams = st.streams - name))
+    override def deleteStreams(names: Set[String]): State[ExportsState, Unit] =
+      State.modify(st => st.copy(streams = st.streams -- names))
 
     override def resolveAbilityField(
       abilityExportName: String,

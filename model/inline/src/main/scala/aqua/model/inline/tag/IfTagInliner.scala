@@ -228,6 +228,7 @@ object IfTagInliner {
     model = childrenToModel(trees)
     streamsAfter <- Exports[S].streams
     streams = streamsAfter.removedAll(streamsBefore.keySet)
+    _ <- Exports[S].deleteStreams(streams.keySet)
   } yield build(model, streams))
 
   private def build(
