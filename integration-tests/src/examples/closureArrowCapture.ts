@@ -1,10 +1,10 @@
 import {
   test,
-  registerTestService,
+  registerTestServiceClosureArrowCapture,
 } from "../compiled/examples/closureArrowCapture.js";
 
 export async function closureArrowCaptureCall(s: string) {
-  registerTestService("test-service", {
+  registerTestServiceClosureArrowCapture("test-service", {
     call: (s: string) => {
       return "call: " + s;
     },
