@@ -521,7 +521,7 @@ object ArrowInliner extends Logging {
         streamRenames
 
     arrowsResolved = arrows ++ capturedArrows.renamed
-    exportsResolved = data.renamed ++ capturedValues.renamed
+    exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
 
