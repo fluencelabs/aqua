@@ -1,8 +1,8 @@
 aqua MultiRec
 
-export TestService, multiRecStream
+export TestServiceMultiRec, multiRecStream
 
-service TestService("test-srv"):
+service TestServiceMultiRec("test-srv"):
   handle(i: i32) -> []i32
 
 func multiRecStream(init: i32, target: i32) -> []i32:
@@ -11,7 +11,7 @@ func multiRecStream(init: i32, target: i32) -> []i32:
   
   loop <<- init
   for l <- loop rec:
-    news <- TestService.handle(l)
+    news <- TestServiceMultiRec.handle(l)
     for n <- news:
       loop <<- n
     if l == target:

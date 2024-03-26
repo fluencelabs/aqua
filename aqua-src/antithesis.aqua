@@ -18,6 +18,9 @@ func rereturnCapture() -> (string -> []string):
     <- capture
 
 func testStreamCaptureReturn(arr: []string) -> []string:
-    on HOST_PEER_ID:
+    s: *[]string
+    for incr <- arr:
         capture <- rereturnCapture()
-    <- capture("five")
+        s <- capture(incr)
+
+    <- s!
