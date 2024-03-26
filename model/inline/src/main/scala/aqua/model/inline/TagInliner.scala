@@ -338,8 +338,11 @@ object TagInliner extends Logging {
 
       case DeclareStreamTag(value) =>
         value match
-          case VarRaw(name, t) =>
-            Exports[S].resolved(name, VarModel(name, t)).as(TagInlined.Empty())
+          case VarRaw(name, t: StreamType) =>
+            for {
+              _ <- Exports[S].resolved(name, VarModel(name, t))
+              _ <- Exports[S].addStream(name, t)
+            } yield TagInlined.Empty()
           case _ => none
 
       case ServiceIdTag(id, serviceType, name) =>

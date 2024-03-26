@@ -76,13 +76,10 @@ trait Exports[S] extends Scoped[S] {
    */
   def exports: State[S, Map[String, ValueModel]]
 
-  def streams: State[S, Map[String, StreamType]] = for {
-    exps <- exports
-    streams = exps.collect { case (n, ValueModel.Stream(_, st)) => n -> st }
-    lasts <- streams.toList.flatTraverse { case (n, st) =>
-      getLastVarName(n).map(last => last.map(_ -> st).toList)
-    }
-  } yield lasts.toMap
+  def addStream(name: String, streamType: StreamType): State[S, Unit]
+  def deleteStream(name: String): State[S, Unit]
+
+  def streams: State[S, Map[String, StreamType]]
 
   final def gather(names: Seq[String]): State[S, Map[String, ValueModel]] =
     exports.map(Exports.gatherFrom(names, _))
@@ -97,6 +94,16 @@ trait Exports[S] extends Scoped[S] {
 
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
+
+
+    override def streams: State[R, Map[String, StreamType]] =
+      self.streams.transformS(f, g)
+
+    override def addStream(name: String, streamType: StreamType): State[R, Unit] =
+      self.addStream(name, streamType).transformS(f, g)
+
+    override def deleteStream(name: String): State[R, Unit] =
+      self.deleteStream(name).transformS(f, g)
 
     override def resolveAbilityField(
       abilityExportName: String,
@@ -169,7 +176,9 @@ object Exports {
     }
   }
 
-  object Simple extends Exports[Map[String, ValueModel]] {
+  case class ExportsState(values: Map[String, ValueModel] = Map.empty, streams: Map[String, StreamType] = Map.empty)
+
+  object Simple extends Exports[ExportsState] {
 
     // Make links from one set of abilities to another (for ability assignment)
     private def getAbilityPairs(
@@ -195,55 +204,74 @@ object Exports {
     override def resolved(
       exportName: String,
       value: ValueModel
-    ): State[Map[String, ValueModel], Unit] = State.modify { state =>
-      value match {
+    ): State[ExportsState, Unit] = State.modify { state =>
+      val newValues = value match {
         case Ability(vm, at) if vm.properties.isEmpty =>
-          val pairs = getAbilityPairs(vm.name, exportName, at, state)
-          state ++ pairs.toList.toMap + (exportName -> value)
-        case _ => state + (exportName -> value)
+          val pairs = getAbilityPairs(vm.name, exportName, at, state.values)
+          state.values ++ pairs.toList.toMap + (exportName -> value)
+        case _ => state.values + (exportName -> value)
       }
+      state.copy(values = newValues)
     }
 
-    override def getLastVarName(name: String): State[Map[String, ValueModel], Option[String]] =
-      State.get.map(st => getLastValue(name, st).collect { case VarModel(name, _, _) => name })
+    override def getLastVarName(name: String): State[ExportsState, Option[String]] =
+      State.get.map(st => getLastValue(name, st.values).collect { case VarModel(name, _, _) => name })
 
-    override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
-      State.modify(_ ++ exports)
+    override def resolved(exports: Map[String, ValueModel]): State[ExportsState, Unit] =
+      State.modify(st => st.copy(values = st.values ++ exports))
+
+    override def streams: State[ExportsState, Map[String, StreamType]] =
+      State.get.map(_.streams)
+
+    override def addStream(name: String, streamType: StreamType): State[ExportsState, Unit] =
+      State.modify(st => st.copy(streams = st.streams + (name -> streamType)))
+
+    override def deleteStream(name: String): State[ExportsState, Unit] =
+      State.modify(st => st.copy(streams = st.streams - name))
 
     override def resolveAbilityField(
       abilityExportName: String,
       fieldName: String,
       value: ValueModel
-    ): State[Map[String, ValueModel], Unit] =
-      State.modify(_ + (AbilityType.fullName(abilityExportName, fieldName) -> value))
+    ): State[ExportsState, Unit] =
+      State.modify(st => st.copy(values = st.values + (AbilityType.fullName(abilityExportName, fieldName) -> value)))
 
     override def copyWithAbilityPrefix(
       prefix: String,
       newPrefix: String
-    ): State[Map[String, ValueModel], Unit] =
+    ): State[ExportsState, Unit] =
       State.modify { state =>
-        state.flatMap {
+        val newValues = state.values.flatMap {
           case (k, v) if k.startsWith(prefix) =>
             List(k.replaceFirst(prefix, newPrefix) -> v, k -> v)
           case (k, v) => List(k -> v)
         }
+        state.copy(values = newValues)
       }
 
-    override def getKeys: State[Map[String, ValueModel], Set[String]] = State.get.map(_.keySet)
+    override def getKeys: State[ExportsState, Set[String]] = State.get.map(_.values.keySet)
 
     override def getAbilityField(
       name: String,
       field: String
-    ): State[Map[String, ValueModel], Option[ValueModel]] =
-      State.get.map(_.get(AbilityType.fullName(name, field)))
+    ): State[ExportsState, Option[ValueModel]] =
+      State.get.map(_.values.get(AbilityType.fullName(name, field)))
 
-    override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
-      State.get
+    override val exports: State[ExportsState, Map[String, ValueModel]] =
+      State.get.map(_.values)
 
-    override val purge: State[Map[String, ValueModel], Map[String, ValueModel]] =
-      State.get <* State.set(Map.empty)
+    override val purge: State[ExportsState, ExportsState] =
+      for {
+        st <- State.get
+        _ <- State.modify[ExportsState](st => ExportsState(streams = st.streams))
+      } yield st
 
-    override def set(s: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
-      State.set(s)
+
+    override def set(s: ExportsState): State[ExportsState, Unit] = {
+      for {
+        st <- State.get
+        _ <- State.set(s.copy(streams = st.streams ++ s.streams))
+      } yield {}
+    }
   }
 }

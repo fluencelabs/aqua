@@ -418,7 +418,7 @@ object ArrowInliner extends Logging {
         otherValues
       )
       otherArrowsValuesRenamed = Renamed(
-        otherValuesRenamed.renames.filterKeys(otherArrowsValues.keySet).toMap,
+        otherValuesRenamed.renames.view.filterKeys(otherArrowsValues.keySet).toMap,
         otherArrowsValues.renamed(otherValuesRenamed.renames)
       )
 
@@ -476,6 +476,7 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
+    exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
   ): State[S, (FuncArrow, OpModel.Tree)] = for {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
@@ -542,15 +543,18 @@ object ArrowInliner extends Logging {
       .traverse(getAbilityArrows.tupled)
       .map(_.flatMap(_.toList).toMap)
 
+    exports <- Exports[S].exports
     streams <- getOutsideStreamNames
     arrows = passArrows ++ arrowsFromAbilities
 
-    inlineResult <- Arrows[S].scope(
-      for {
-        // Process renamings, prepare environment
-        fnCanon <- ArrowInliner.prelude(arrow, call, arrows)
-        inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
-      } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
+    inlineResult <- Exports[S].scope(
+      Arrows[S].scope(
+        for {
+          // Process renamings, prepare environment
+          fnCanon <- ArrowInliner.prelude(arrow, call, exports, arrows)
+          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
+        } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
+      )
     )
 
     exportTo = call.exportTo.map(_.name)
