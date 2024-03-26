@@ -240,7 +240,7 @@ object ArrowInliner extends Logging {
       case arrow @ (_, ValueModel.Arrow(_, _)) =>
         arrow.some
       case (_, m) =>
-        internalError(s"($m) cannot be an arrow")
+        internalError(s"($m) cannot be an arrow for '$abilityName' ability")
     }
   }
 
@@ -272,7 +272,7 @@ object ArrowInliner extends Logging {
       case (_, ValueModel.Arrow(vm, _)) =>
         arrows.get(vm.name).map(vm.name -> _)
       case (_, m) =>
-        internalError(s"($m) cannot be an arrow")
+        internalError(s"($m) cannot be an arrow for '$name' ability")
     }
   }
 
