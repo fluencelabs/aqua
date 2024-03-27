@@ -21,13 +21,6 @@ trait Scoped[S] {
       _ <- set(r)
     } yield t
 
-  def subScope[T](scoped: State[S, T]): State[S, T] =
-    for {
-      r <- get
-      t <- scoped
-      _ <- set(r)
-    } yield t
-
   protected def purge: State[S, S]
 
   protected def set(s: S): State[S, Unit]
