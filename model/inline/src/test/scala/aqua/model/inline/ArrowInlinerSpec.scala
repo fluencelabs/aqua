@@ -279,7 +279,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
    *   stream <<- "asd"
    * <- stream
    */
-  // IGNORED: don't restrict streams in functions for now
+  // IGNORED: streams are not restricted in function bodies for now
   it should "rename restricted stream correctly" ignore {
     val streamType = StreamType(ScalarType.string)
     val someStr = VarRaw("someStr", streamType)

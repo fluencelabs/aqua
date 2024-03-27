@@ -14,13 +14,16 @@ object StreamRestrictions {
   )(children: State[S, Chain[OpModel.Tree]]): State[S, OpModel.Tree] =
     restrictStreamsAround(true)(children.map(childrenToModel))
 
-  // restrict streams that are generated in a tree
+  /**
+   * Restrict streams that are generated in a tree
+   * @param wrapInside if true, restrict around children in a tree, if false - restrict around a model
+   */
   def restrictStreamsAround[S: Mangler: Exports: Arrows: Config](wrapInside: Boolean = false)(
-    child: State[S, OpModel.Tree]
+    getTree: State[S, OpModel.Tree]
   ): State[S, OpModel.Tree] = {
     for {
       streamsBefore <- Exports[S].streams
-      tree <- child
+      tree <- getTree
       streamsAfter <- Exports[S].streams
       streams = streamsAfter.removedAll(streamsBefore.keySet)
       _ <- Exports[S].deleteStreams(streams.keySet)
