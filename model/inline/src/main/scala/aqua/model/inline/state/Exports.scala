@@ -176,6 +176,11 @@ object Exports {
     }
   }
 
+  /**
+   *
+   * @param values list of all values in scope.
+   * @param streams list of opened streams. Merged between states.
+   */
   case class ExportsState(values: Map[String, ValueModel] = Map.empty, streams: Map[String, StreamType] = Map.empty)
 
   object Simple extends Exports[ExportsState] {
@@ -263,6 +268,7 @@ object Exports {
     override val purge: State[ExportsState, ExportsState] =
       for {
         st <- State.get
+        // HACK: refactor
         _ <- State.modify[ExportsState](st => ExportsState(streams = st.streams))
       } yield st
 
@@ -270,6 +276,7 @@ object Exports {
     override def set(s: ExportsState): State[ExportsState, Unit] = {
       for {
         st <- State.get
+        // HACK: refactor
         _ <- State.set(s.copy(streams = st.streams ++ s.streams))
       } yield {}
     }
