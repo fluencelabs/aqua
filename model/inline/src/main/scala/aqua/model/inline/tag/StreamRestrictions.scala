@@ -1,9 +1,8 @@
 package aqua.model.inline.tag
 
-import aqua.model.inline.state.{Arrows, Config, Exports, Mangler}
 import aqua.model.{OpModel, RestrictionModel}
+import aqua.model.inline.state.{Arrows, Config, Exports, Mangler}
 import aqua.types.StreamType
-
 import cats.data.{Chain, State}
 
 object StreamRestrictions {
@@ -18,14 +17,14 @@ object StreamRestrictions {
   def restrictStreamsAround[S: Mangler: Exports: Arrows: Config](
     child: State[S, OpModel.Tree]
   ): State[S, OpModel.Tree] = {
-    Exports[S].subScope(for {
+    for {
       streamsBefore <- Exports[S].streams
       tree <- child
       streamsAfter <- Exports[S].streams
       streams = streamsAfter.removedAll(streamsBefore.keySet)
       _ <- Exports[S].deleteStreams(streams.keySet)
-    } yield streams.toList.foldLeft(tree) { case (acc, (name, st)) =>
-      RestrictionModel(name, st).wrap(acc)
+    } yield tree.head.wrap(streams.toList.foldLeft(tree.tail.value) { case (acc, (name, st)) =>
+      Chain.one(RestrictionModel(name, st).wrap(acc))
     })
   }
 

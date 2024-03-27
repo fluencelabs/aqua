@@ -1,26 +1,37 @@
-aqua StreamCapture
+aqua A
 
-export testStreamCaptureReturn
+export streamTry, streamFor
 
-func captureStream() -> (string -> []string):
-    stream: *string
+service FailureSrv("failure"):
+    fail(msg: string)
 
-    stream <<- "one"
+func streamTry() -> i8:
+    on HOST_PEER_ID:
+        try:
+            stream: *i8
+            stream <<- 1
+            FailureSrv.fail("try")
+        catch e:
+            stream: *i8
+            stream <<- 2
+            FailureSrv.fail("catch")
+        otherwise:
+            stream: *i8
+            stream <<- 3
 
-    capture = (s: string) -> []string:
-        stream <<- s
-        <- stream
+        stream: *i8
+        stream <<- 4
 
-    <- capture
+    <- stream!
 
-func rereturnCapture() -> (string -> []string):
-    capture <- captureStream()
-    <- capture
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
 
-func testStreamCaptureReturn(arr: []string) -> []string:
-    s: *[]string
-    for incr <- arr:
-        capture <- rereturnCapture()
-        s <- capture(incr)
+func callService(stream: *u32, n: u32):
+    stream <<- 1
+    StreamService.store(stream, n)
 
-    <- s!
+func streamFor():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      callService(*[], a)
