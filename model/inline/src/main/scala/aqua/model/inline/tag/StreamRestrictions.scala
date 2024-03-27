@@ -18,7 +18,7 @@ object StreamRestrictions {
   def restrictStreamsAround[S: Mangler: Exports: Arrows: Config](
     child: State[S, OpModel.Tree]
   ): State[S, OpModel.Tree] = {
-    for {
+    Exports[S].subScope(for {
       streamsBefore <- Exports[S].streams
       tree <- child
       streamsAfter <- Exports[S].streams
@@ -26,7 +26,7 @@ object StreamRestrictions {
       _ <- Exports[S].deleteStreams(streams.keySet)
     } yield streams.toList.foldLeft(tree) { case (acc, (name, st)) =>
       RestrictionModel(name, st).wrap(acc)
-    }
+    })
   }
 
 }
