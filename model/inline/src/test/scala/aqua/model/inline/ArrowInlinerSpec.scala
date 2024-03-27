@@ -164,23 +164,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .value
 
     model.equalsOrShowDiff(
-      RestrictionModel(streamVar.name, streamType).wrap(
-        MetaModel
-          .CallArrowModel("cb")
-          .wrap(
-            SeqModel.wrap(
-              CanonicalizeModel(
-                streamModel,
-                CallModel.Export(canonModel.name, canonModel.`type`)
-              ).leaf,
-              CallServiceModel(
-                LiteralModel.quote("test-service"),
-                "some-call",
-                CallModel(canonModel :: Nil, Nil)
-              ).leaf
-            )
+      MetaModel
+        .CallArrowModel("cb")
+        .wrap(
+          SeqModel.wrap(
+            CanonicalizeModel(
+              streamModel,
+              CallModel.Export(canonModel.name, canonModel.`type`)
+            ).leaf,
+            CallServiceModel(
+              LiteralModel.quote("test-service"),
+              "some-call",
+              CallModel(canonModel :: Nil, Nil)
+            ).leaf
           )
-      )
+        )
     ) should be(true)
 
   }
@@ -281,7 +279,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
    *   stream <<- "asd"
    * <- stream
    */
-  it should "rename restricted stream correctly" in {
+  // IGNORED: don't restrict streams in functions for now
+  it should "rename restricted stream correctly" ignore {
     val streamType = StreamType(ScalarType.string)
     val someStr = VarRaw("someStr", streamType)
 

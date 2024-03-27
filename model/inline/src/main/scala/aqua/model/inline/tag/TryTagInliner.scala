@@ -7,7 +7,6 @@ import cats.data.State
 
 object TryTagInliner {
   def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = {
-    val toModel = ForTagInliner.toModel[S](XorModel)
-    State.pure(TagInlined.Around(model = toModel, aroundChildren = ForTagInliner.aroundChild))
+    State.pure(TagInlined.Around(model = _.map(XorModel.wrap), aroundChildren = StreamRestrictions.aroundChild))
   }
 }

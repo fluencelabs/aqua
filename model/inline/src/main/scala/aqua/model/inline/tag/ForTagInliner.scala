@@ -9,7 +9,6 @@ import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.TagInlined
 import aqua.model.inline.TagInliner.flat
 import aqua.model.inline.state.*
-import aqua.model.inline.tag.ForTagInliner.toModel
 import aqua.raw.ops.ForTag
 import aqua.raw.value.ValueRaw
 import aqua.types.CollectionType
@@ -49,50 +48,8 @@ final case class ForTagInliner(
     }
     model = ForModel(n, v, modeModel)
   } yield TagInlined.Around(
-    model = toModel(model),
+    model = StreamRestrictions.toModel(model),
     aroundChildren = identity,
     prefix = p
   )
-}
-
-object ForTagInliner {
-
-  def toModel[S: Mangler: Exports: Arrows: Config](model: OpModel)(
-    children: State[S, Chain[OpModel.Tree]]
-  ): State[S, OpModel.Tree] = Exports[S].subScope(for {
-    streamsBefore <- Exports[S].streams
-    trees <- children
-    streamsAfter <- Exports[S].streams
-    streams = streamsAfter.removedAll(streamsBefore.keySet)
-    _ <- Exports[S].deleteStreams(streams.keySet)
-  } yield build(model, trees, streams))
-
-  def aroundChild[S: Mangler: Exports: Arrows: Config](
-    child: State[S, OpModel.Tree]
-  ): State[S, OpModel.Tree] = Exports[S].subScope(for {
-    streamsBefore <- Exports[S].streams
-    tree <- child
-    streamsAfter <- Exports[S].streams
-    streams = streamsAfter.removedAll(streamsBefore.keySet)
-    _ <- Exports[S].deleteStreams(streams.keySet)
-  } yield buildChild(tree, streams))
-
-  private def buildChild(
-    model: OpModel.Tree,
-    streams: Map[String, StreamType]
-  ): OpModel.Tree =
-    SeqModel.wrap(streams.toList.foldLeft(Chain.one(model)) { case (acc, (name, st)) =>
-      Chain.one(RestrictionModel(name, st).wrap(acc))
-    })
-
-  private def build(
-    model: OpModel,
-    children: Chain[OpModel.Tree],
-    streams: Map[String, StreamType]
-  ): OpModel.Tree = model.wrap(
-    streams.toList.foldLeft(children) { case (acc, (name, st)) =>
-      Chain.one(RestrictionModel(name, st).wrap(acc))
-    }
-  )
-
 }

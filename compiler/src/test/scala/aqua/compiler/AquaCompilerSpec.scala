@@ -169,52 +169,54 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
       val expected =
         XorRes.wrap(
-          SeqRes.wrap(
-            getDataSrv("-relay-", "-relay-", ScalarType.string),
-            getDataSrv("peers", peers.name, peers.`type`),
-            ParRes.wrap(
-              FoldRes
-                .lastNever(peer.name, peers)
-                .wrap(
-                  ParRes.wrap(
-                    XorRes.wrap(
-                      // better if first relay will be outside `for`
-                      SeqRes.wrap(
-                        through(ValueModel.fromRaw(relay)),
-                        CallServiceRes(
-                          LiteralModel.fromRaw(LiteralRaw.quote("op")),
-                          "identity",
-                          CallRes(
-                            LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
-                            Some(CallModel.Export(retVar.name, retVar.`type`))
-                          ),
-                          peer
-                        ).leaf,
-                        ApRes(retVar, CallModel.Export(results.name, results.`type`)).leaf,
-                        through(ValueModel.fromRaw(relay)),
-                        through(initPeer)
+          RestrictionRes("results", resultsType).wrap(
+            SeqRes.wrap(
+              getDataSrv("-relay-", "-relay-", ScalarType.string),
+              getDataSrv("peers", peers.name, peers.`type`),
+              ParRes.wrap(
+                FoldRes
+                  .lastNever(peer.name, peers)
+                  .wrap(
+                    ParRes.wrap(
+                      XorRes.wrap(
+                        // better if first relay will be outside `for`
+                        SeqRes.wrap(
+                          through(ValueModel.fromRaw(relay)),
+                          CallServiceRes(
+                            LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                            "identity",
+                            CallRes(
+                              LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                              Some(CallModel.Export(retVar.name, retVar.`type`))
+                            ),
+                            peer
+                          ).leaf,
+                          ApRes(retVar, CallModel.Export(results.name, results.`type`)).leaf,
+                          through(ValueModel.fromRaw(relay)),
+                          through(initPeer)
+                        ),
+                        SeqRes.wrap(
+                          through(ValueModel.fromRaw(relay)),
+                          through(initPeer),
+                          failErrorRes
+                        )
                       ),
-                      SeqRes.wrap(
-                        through(ValueModel.fromRaw(relay)),
-                        through(initPeer),
-                        failErrorRes
-                      )
-                    ),
-                    NextRes(peer.name).leaf
+                      NextRes(peer.name).leaf
+                    )
                   )
-                )
-            ),
-            join(results, LiteralModel.number(3)), // Compiler optimized addition
-            CanonRes(
-              results,
-              init,
-              CallModel.Export(canonResult.name, canonResult.`type`)
-            ).leaf,
-            ApRes(
-              canonResult,
-              CallModel.Export(flatResult.name, flatResult.`type`)
-            ).leaf,
-            respCall(transformCfg, flatResult, initPeer)
+              ),
+              join(results, LiteralModel.number(3)), // Compiler optimized addition
+              CanonRes(
+                results,
+                init,
+                CallModel.Export(canonResult.name, canonResult.`type`)
+              ).leaf,
+              ApRes(
+                canonResult,
+                CallModel.Export(flatResult.name, flatResult.`type`)
+              ).leaf,
+              respCall(transformCfg, flatResult, initPeer)
+            )
           ),
           errorCall(transformCfg, 0, initPeer)
         )
@@ -348,29 +350,31 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       val resFlatVM = VarModel("-res-flat-0", ArrayType(ScalarType.string))
 
       val expected = XorRes.wrap(
-        SeqRes.wrap(
-          // res <- foo()
-          ApRes(
-            LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
-            CallModel.Export(resVM.name, resVM.`type`)
-          ).leaf,
-          // res <- bar()
-          ApRes(
-            LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
-            CallModel.Export(resVM.name, resVM.`type`)
-          ).leaf,
-          // canonicalization
-          CanonRes(
-            resVM,
-            LiteralModel.fromRaw(ValueRaw.InitPeerId),
-            CallModel.Export(resCanonVM.name, resCanonVM.`type`)
-          ).leaf,
-          // flattening
-          ApRes(
-            VarModel(resCanonVM.name, resCanonVM.`type`),
-            CallModel.Export(resFlatVM.name, resFlatVM.`type`)
-          ).leaf,
-          respCall(transformCfg, resFlatVM, initPeer)
+        RestrictionRes(resVM.name, resVM.`type`).wrap(
+          SeqRes.wrap(
+            // res <- foo()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
+              CallModel.Export(resVM.name, resVM.`type`)
+            ).leaf,
+            // res <- bar()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
+              CallModel.Export(resVM.name, resVM.`type`)
+            ).leaf,
+            // canonicalization
+            CanonRes(
+              resVM,
+              LiteralModel.fromRaw(ValueRaw.InitPeerId),
+              CallModel.Export(resCanonVM.name, resCanonVM.`type`)
+            ).leaf,
+            // flattening
+            ApRes(
+              VarModel(resCanonVM.name, resCanonVM.`type`),
+              CallModel.Export(resFlatVM.name, resFlatVM.`type`)
+            ).leaf,
+            respCall(transformCfg, resFlatVM, initPeer)
+          )
         ),
         errorCall(transformCfg, 0, initPeer)
       )
@@ -416,14 +420,16 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     ).leaf
 
     val expected = XorRes.wrap(
-      SeqRes.wrap(
-        getDataSrv("-relay-", "-relay-", ScalarType.string),
-        getDataSrv("i", argName, argType),
-        ApRes(LiteralModel.quote("a"), CallModel.Export(streamName, streamType)).leaf,
-        ApRes(LiteralModel.quote("b"), CallModel.Export(streamName, streamType)).leaf,
-        join(VarModel(streamName, streamType), arg),
-        decrement,
-        emptyRespCall(transformCfg, initPeer)
+      RestrictionRes(streamName, streamType).wrap(
+        SeqRes.wrap(
+          getDataSrv("-relay-", "-relay-", ScalarType.string),
+          getDataSrv("i", argName, argType),
+          ApRes(LiteralModel.quote("a"), CallModel.Export(streamName, streamType)).leaf,
+          ApRes(LiteralModel.quote("b"), CallModel.Export(streamName, streamType)).leaf,
+          join(VarModel(streamName, streamType), arg),
+          decrement,
+          emptyRespCall(transformCfg, initPeer)
+        )
       ),
       errorCall(transformCfg, 0, initPeer)
     )

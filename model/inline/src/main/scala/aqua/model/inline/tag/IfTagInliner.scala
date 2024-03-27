@@ -49,7 +49,7 @@ final case class IfTagInliner(
     noProp <- Config[S].noErrorPropagation.toState
     model = if (noProp) toModelNoProp else toModel
     modelByChildren = model(leftValue, rightValue, shouldMatch)
-    stateModel = wrapWithRestrictions[S](modelByChildren)
+    stateModel = StreamRestrictions.wrapWithRestrictions[S](modelByChildren)
   } yield TagInlined.Around(
     prefix = prefix,
     model = stateModel,
@@ -218,26 +218,5 @@ object IfTagInliner {
   private val ifErrorName = "-if-error-"
   private val elseErrorName = "-else-error-"
   private val ifElseErrorName = "-if-else-error-"
-
-  def wrapWithRestrictions[S: Mangler: Exports: Arrows: Config](
-    childrenToModel: Chain[OpModel.Tree] => OpModel.Tree
-  )(
-    children: State[S, Chain[OpModel.Tree]]
-  ): State[S, OpModel.Tree] = Exports[S].subScope(for {
-    streamsBefore <- Exports[S].streams
-    trees <- children
-    model = childrenToModel(trees)
-    streamsAfter <- Exports[S].streams
-    streams = streamsAfter.removedAll(streamsBefore.keySet)
-    _ <- Exports[S].deleteStreams(streams.keySet)
-  } yield build(model, streams))
-
-  private def build(
-    model: OpModel.Tree,
-    streams: Map[String, StreamType]
-  ): OpModel.Tree =
-    streams.toList.foldLeft(model) { case (acc, (name, st)) =>
-      RestrictionModel(name, st).wrap(acc)
-    }
 
 }

@@ -1,16 +1,14 @@
 package aqua.model.inline
 
-import aqua.model.ForModel
-import aqua.model.ValueModel
+import aqua.model.*
 import aqua.model.inline.TagInliner.TagInlined
+import aqua.model.inline.state.Exports.ExportsState
 import aqua.model.inline.state.InliningState
-import aqua.model.{LiteralModel, OpModel, SeqModel}
-import aqua.raw.ops.ForTag
-import aqua.raw.ops.{Call, CanonicalizeTag, FlattenTag}
-import aqua.raw.value.ValueRaw
-import aqua.raw.value.VarRaw
+import aqua.raw.ops.{Call, CanonicalizeTag, FlattenTag, ForTag}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ScalarType, StreamType}
 
+import cats.data.{Chain, State}
 import cats.syntax.show.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
@@ -28,7 +26,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .run(InliningState())
       .value
 
-    state.resolvedExports(canonTo) shouldBe LiteralModel(
+    state.resolvedExports.values(canonTo) shouldBe LiteralModel(
       ValueRaw.Nil.value,
       ValueRaw.Nil.baseType
     )
@@ -48,7 +46,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .run(InliningState())
       .value
 
-    state.resolvedExports(canonTo) shouldBe LiteralModel(
+    state.resolvedExports.values(canonTo) shouldBe LiteralModel(
       ValueRaw.Nil.value,
       ValueRaw.Nil.baseType
     )
@@ -68,15 +66,20 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       .tagToModel[InliningState](tag)
       .run(
         InliningState(
-          resolvedExports = Map(
-            iterableRaw.name -> iterableModel
+          resolvedExports = ExportsState(
+            Map(
+              iterableRaw.name -> iterableModel
+            )
           )
         )
       )
       .value
 
-    inside(inlined) { case TagInlined.Single(ForModel(_, iter, ForModel.Mode.Never), _) =>
-      iter shouldBe iterableModel
+    inside(inlined) { case TagInlined.Around(st, _, _) =>
+      inside(st(State.pure(Chain.empty)).run(state).value._2.head) {
+        case ForModel(_, iter, ForModel.Mode.Never) =>
+          iter shouldBe iterableModel
+      }
     }
   }
 }
