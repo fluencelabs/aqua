@@ -87,6 +87,7 @@ object TagInliner extends Logging {
      */
     case Around[S](
       model: State[S, Chain[OpModel.Tree]] => State[S, OpModel.Tree],
+      aroundChildren: State[S, OpModel.Tree] => State[S, OpModel.Tree],
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined[S](prefix)
 
@@ -96,7 +97,7 @@ object TagInliner extends Logging {
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: State[T, Chain[OpModel.Tree]]): State[T, OpModel.Tree] = {
+    def build(children: Chain[State[T, OpModel.Tree]]): State[T, OpModel.Tree] = {
       def prefixSeq(sub: OpModel.Tree | Chain[OpModel.Tree]) = {
         val tree = sub match {
           case t: OpModel.Tree => Chain.one(t)
@@ -108,18 +109,18 @@ object TagInliner extends Logging {
 
       this match {
         case Empty(_) =>
-          children.map(prefixSeq)
+          children.sequence.map(prefixSeq)
         case Single(model, _) =>
-          children.map(model.wrap).map(prefixSeq)
+          children.sequence.map(model.wrap).map(prefixSeq)
         case Mapping(toModel, _) =>
-          children.map(toModel).map(prefixSeq)
+          children.sequence.map(toModel).map(prefixSeq)
         case After(model, _) =>
           for {
-            c <- children
+            c <- children.sequence
             m <- model
           } yield prefixSeq(m.wrap(c))
-        case Around(model, _) =>
-          model(children).map(prefixSeq)
+        case Around(model, aroundChildren, _) =>
+          model(children.traverse(aroundChildren)).map(prefixSeq)
       }
     }
   }
@@ -203,7 +204,8 @@ object TagInliner extends Logging {
       case IfTag(valueRaw) =>
         IfTagInliner(valueRaw).inlined
 
-      case TryTag => pure(XorModel)
+      case TryTag =>
+        TryTagInliner.inlined
 
       case ForTag(item, iterable, mode) =>
         ForTagInliner(item, iterable, mode).inlined
@@ -405,7 +407,7 @@ object TagInliner extends Logging {
     for {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
-      children = tail.traverse(traverseS[S](_, f))
+      children = tail.map(traverseS[S](_, f))
       inlined <- headInlined.build(children)
     } yield inlined
 

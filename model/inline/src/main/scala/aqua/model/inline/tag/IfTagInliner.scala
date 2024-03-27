@@ -52,7 +52,8 @@ final case class IfTagInliner(
     stateModel = wrapWithRestrictions[S](modelByChildren)
   } yield TagInlined.Around(
     prefix = prefix,
-    model = stateModel
+    model = stateModel,
+    aroundChildren = identity
   )
 
   private def toModelNoProp(
