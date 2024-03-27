@@ -49,7 +49,7 @@ final case class IfTagInliner(
     noProp <- Config[S].noErrorPropagation.toState
     model = if (noProp) toModelNoProp else toModel
     modelByChildren = model(leftValue, rightValue, shouldMatch)
-    stateModel = StreamRestrictions.wrapWithRestrictions[S](modelByChildren)
+    stateModel = StreamRestrictions.restrictStreams[S](modelByChildren)
   } yield TagInlined.Around(
     prefix = prefix,
     model = stateModel,
