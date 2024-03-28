@@ -75,8 +75,8 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       )
       .value
 
-    inside(inlined) { case TagInlined.Around(st, _, _) =>
-      inside(st(State.pure(Chain.empty)).runA(state).value.head) {
+    inside(inlined) { case TagInlined.Around(st, _) =>
+      inside(st(Chain.empty).runA(state).value.head) {
         case ForModel(_, iter, ForModel.Mode.Never) =>
           iter shouldBe iterableModel
       }
