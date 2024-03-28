@@ -5,11 +5,11 @@ func some_string() -> string:
   <- "some_string_func"
 
 
-service TestService("test-service"):
+service TestServiceRename("test-service"):
     get_records(key: string) -> []string
 
 func append_records(peer: string, srum: *[]string):
-  srum <- TestService.get_records(peer)
+  srum <- TestServiceRename.get_records(peer)
 
 func retrieve_records(peer: string) -> [][]string:
     records: *[]string

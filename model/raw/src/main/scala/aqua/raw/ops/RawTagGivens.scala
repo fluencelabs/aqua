@@ -1,11 +1,10 @@
 package aqua.raw.ops
 
-import aqua.raw.value.{LiteralRaw, ValueRaw}
-
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.data.Chain
 import cats.free.Cofree
-import cats.syntax.all.*
 import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.semigroup.*
 import cats.{Eval, Semigroup}
@@ -46,11 +45,7 @@ trait RawTagGivens {
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }
 
-    /**
-     * Get all variable names used by this tree
-     * but not exported in it (free variables).
-     */
-    def usesVarNames: Eval[Set[String]] =
+    def exportedAndUsesNames: Eval[(Set[String], Set[String])] =
       Cofree
         .cata(tree)((tag, childs: Chain[(Set[String], Set[String])]) =>
           Eval.later {
@@ -60,7 +55,18 @@ trait RawTagGivens {
             (exports, uses)
           }
         )
+
+    /**
+     * Get all variable names used by this tree
+     * but not exported in it (free variables).
+     */
+    def usesVarNames: Eval[Set[String]] =
+      exportedAndUsesNames
         .map { case (_, uses) => uses }
+
+    def exportsVarNames: Eval[Set[String]] =
+      exportedAndUsesNames
+        .map { case (exports, _) => exports }
 
     private def collect[A](pf: PartialFunction[RawTag, A]): Eval[Chain[A]] =
       Cofree.cata(tree)((tag, acc: Chain[Chain[A]]) =>

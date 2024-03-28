@@ -3,6 +3,7 @@ package aqua.model.inline
 import aqua.mangler.ManglerState
 import aqua.model.*
 import aqua.model.inline.raw.StreamGateInliner
+import aqua.model.inline.state.Exports.ExportsState
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.*
 import aqua.types.*
@@ -204,7 +205,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     valueToModel[InliningState](`raw res.c`)
       .runA(
         InliningState(resolvedExports =
-          Map("res" -> VarModel("a", aType, Chain.one(IntoFieldModel("b", bType))))
+          ExportsState(Map("res" -> VarModel("a", aType, Chain.one(IntoFieldModel("b", bType)))))
         )
       )
       .value shouldBe (
@@ -608,7 +609,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         expr <- genAllExprs(perm)
       } {
         val state = InliningState(
-          resolvedExports = vars.map(v => v.name -> VarModel.fromVarRaw(v)).toMap
+          resolvedExports = ExportsState(vars.map(v => v.name -> VarModel.fromVarRaw(v)).toMap)
         )
         val (model, inline) = valueToModel[InliningState](expr).runA(state).value
 

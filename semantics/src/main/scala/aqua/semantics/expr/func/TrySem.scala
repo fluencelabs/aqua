@@ -1,8 +1,8 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, TryTag}
 import aqua.parser.expr.func.TryExpr
 import aqua.raw.Raw
+import aqua.raw.ops.{FuncOp, TryTag}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -10,9 +10,9 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 
+import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
-import cats.Monad
 
 class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
 
@@ -27,10 +27,7 @@ class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
       .after((ops: Raw) =>
         ops match {
           case FuncOp(op) =>
-            for {
-              restricted <- FuncOpSem.restrictStreamsInScope(op)
-              tag = TryTag.wrap(restricted)
-            } yield tag.toFuncOp
+            TryTag.wrap(op).toFuncOp.pure
           case _ =>
             Raw.error("Wrong body of the `try` expression").pure[Alg]
         }

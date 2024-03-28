@@ -1,7 +1,7 @@
 import {
   test,
   testCapture,
-  registerTestService,
+  registerTestServiceAsAbility,
 } from "../compiled/examples/servicesAsAbilities.js";
 
 const serviceIds = {
@@ -37,7 +37,7 @@ export const expectedServiceResults = serviceIdsSequence.flatMap((id) =>
 
 export async function servicesAsAbilitiesCall() {
   Object.entries(serviceIds).forEach(([_key, id], _idx) =>
-    registerTestService(id, {
+    registerTestServiceAsAbility(id, {
       concatId: (s: string) => {
         return `${id}: ${s}`;
       },
@@ -57,7 +57,7 @@ export const expectedServiceCaptureResults = [
 
 export async function servicesAsAbilitiesCaptureCall() {
   ["resolved-id-in-capture", "default-id"].forEach((id) =>
-    registerTestService(id, {
+    registerTestServiceAsAbility(id, {
       concatId: (s: string) => {
         return `${id}: ${s}`;
       },

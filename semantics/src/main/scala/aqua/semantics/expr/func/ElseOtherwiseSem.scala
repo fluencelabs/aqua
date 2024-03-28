@@ -1,16 +1,16 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, IfTag, TryTag}
 import aqua.parser.expr.func.ElseOtherwiseExpr
 import aqua.raw.Raw
+import aqua.raw.ops.{FuncOp, IfTag, TryTag}
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 
+import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
-import cats.Monad
 
 class ElseOtherwiseSem[S[_]](val expr: ElseOtherwiseExpr[S]) extends AnyVal {
 
@@ -23,15 +23,14 @@ class ElseOtherwiseSem[S[_]](val expr: ElseOtherwiseExpr[S]) extends AnyVal {
       .after((ops: Raw) =>
         ops match {
           case FuncOp(op) =>
-            for {
-              restricted <- FuncOpSem.restrictStreamsInScope(op)
-              tag = expr.kind
-                .fold(
-                  ifElse = IfTag.Else,
-                  ifOtherwise = TryTag.Otherwise
-                )
-                .wrap(restricted)
-            } yield tag.toFuncOp
+            expr.kind
+              .fold(
+                ifElse = IfTag.Else,
+                ifOtherwise = TryTag.Otherwise
+              )
+              .wrap(op)
+              .toFuncOp
+              .pure
           case _ =>
             val name = expr.kind.fold("`else`", "`otherwise`")
             Raw.error(s"Wrong body of the $name expression").pure

@@ -7,6 +7,7 @@ import aqua.types.*
 
 import cats.data.State
 import cats.instances.list.*
+import cats.syntax.apply.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.show.*
@@ -20,6 +21,7 @@ import cats.syntax.traverse.*
  */
 trait Arrows[S] extends Scoped[S] {
   self =>
+
   def save(name: String, arrow: FuncArrow): State[S, Unit]
 
   /**
@@ -44,8 +46,7 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Save arrows to the state [[S]]
    *
-   * @param arrows
-   *   Resolved arrows, accessible by key name which could differ from arrow's name
+   * @param arrows Resolved arrows, accessible by key name which could differ from arrow's name
    */
   final def resolved(arrows: Map[String, FuncArrow]): State[S, Unit] =
     arrows.toList.traverse(save).void
@@ -53,22 +54,18 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * All arrows available for use in scope
    */
-  val arrows: State[S, Map[String, FuncArrow]]
+  def arrows: State[S, Map[String, FuncArrow]]
 
   /**
    * Pick a subset of arrows by names
    *
-   * @param names
-   *   What arrows should be taken
+   * @param names What arrows should be taken
    */
   def pickArrows(names: Set[String]): State[S, Map[String, FuncArrow]] =
     arrows.map(_.view.filterKeys(names).toMap)
 
   /**
    * Take arrows selected by the function call arguments
-   *
-   * @param args
-   * @return
    */
   def argsArrows(args: ArgsCall): State[S, Map[String, FuncArrow]] =
     arrows.map(args.arrowArgsMap)
@@ -76,26 +73,21 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Changes the [[S]] type to [[R]]
    *
-   * @param f
-   *   Lens getter
-   * @param g
-   *   Lens setter
-   * @tparam R
-   *   New state type
+   * @param f Lens getter
+   * @param g Lens setter
    */
   def transformS[R](f: R => S, g: (R, S) => R): Arrows[R] = new Arrows[R] {
 
     override def save(name: String, arrow: FuncArrow): State[R, Unit] =
       self.save(name, arrow).transformS(f, g)
 
-    override val arrows: State[R, Map[String, FuncArrow]] = self.arrows.transformS(f, g)
+    override def arrows: State[R, Map[String, FuncArrow]] = self.arrows.transformS(f, g)
 
-    override val purge: State[R, R] =
+    override protected def purge: State[R, R] =
       self.purgeR(f, g)
 
-    override protected def fill(s: R): State[R, Unit] =
-      self.fillR(s, f, g)
-
+    override protected def set(r: R): State[R, Unit] =
+      self.setR(f, g)(r)
   }
 }
 
@@ -119,7 +111,7 @@ object Arrows {
     }
   }
 
-  def apply[S](implicit arrows: Arrows[S]): Arrows[S] = arrows
+  def apply[S](using arrows: Arrows[S]): Arrows[S] = arrows
 
   // Default implementation with the most straightforward state – just a Map
   object Simple extends Arrows[Map[String, FuncArrow]] {
@@ -127,16 +119,13 @@ object Arrows {
     override def save(name: String, arrow: FuncArrow): State[Map[String, FuncArrow], Unit] =
       State.modify(_ + (name -> arrow))
 
-    override val arrows: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
+    override def arrows: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
       State.get
 
     override val purge: State[Map[String, FuncArrow], Map[String, FuncArrow]] =
-      for {
-        s <- State.get
-        _ <- State.set(Map.empty)
-      } yield s
+      State.get <* State.set(Map.empty)
 
-    override protected def fill(s: Map[String, FuncArrow]): State[Map[String, FuncArrow], Unit] =
+    override def set(s: Map[String, FuncArrow]): State[Map[String, FuncArrow], Unit] =
       State.set(s)
   }
 }

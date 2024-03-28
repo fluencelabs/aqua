@@ -9,9 +9,11 @@ import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 
 import cats.data.{Chain, IndexedStateT, State, StateT}
+import cats.free.Cofree
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
+import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
@@ -146,6 +148,7 @@ object ArrowInliner extends Logging {
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body)
+
     callableFuncBody =
       fn.capturedTopology
         .fold(SeqModel)(ApplyTopologyModel.apply)
@@ -173,14 +176,15 @@ object ArrowInliner extends Logging {
 
     // find and get resolved arrows if we return them from the function
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
-    arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+    arrowsFromClosures <- Arrows[S].pickArrows(returnedArrows)
+    arrowsToSave = arrowsFromAbilities ++ arrowsFromClosures
 
     body = SeqModel.wrap(callableFuncBody :: ops)
   } yield InlineResult(
     body,
     rets,
     varsFromAbilities,
-    arrowsFromAbilities ++ arrowsToSave
+    arrowsToSave
   )
 
   /**
@@ -236,7 +240,7 @@ object ArrowInliner extends Logging {
       case arrow @ (_, ValueModel.Arrow(_, _)) =>
         arrow.some
       case (_, m) =>
-        internalError(s"($m) cannot be an arrow")
+        internalError(s"($m) cannot be an arrow for '$abilityName' ability")
     }
   }
 
@@ -268,7 +272,7 @@ object ArrowInliner extends Logging {
       case (_, ValueModel.Arrow(vm, _)) =>
         arrows.get(vm.name).map(vm.name -> _)
       case (_, m) =>
-        internalError(s"($m) cannot be an arrow")
+        internalError(s"($m) cannot be an arrow for '$name' ability")
     }
   }
 
@@ -324,14 +328,10 @@ object ArrowInliner extends Logging {
    * Correctly rename captured values and arrows of a function
    *
    * @param fn Function
-   * @param exports Exports state before calling/inlining
-   * @param arrows Arrows state before calling/inlining
    * @return Renamed values and arrows
    */
   def renameCaptured[S: Mangler](
-    fn: FuncArrow,
-    exports: Map[String, ValueModel],
-    arrows: Map[String, FuncArrow]
+    fn: FuncArrow
   ): State[S, (Renamed[ValueModel], Renamed[FuncArrow])] = {
     // Gather abilities related values
     val abilitiesValues = fn.capturedValues.collect {
@@ -418,7 +418,7 @@ object ArrowInliner extends Logging {
         otherValues
       )
       otherArrowsValuesRenamed = Renamed(
-        otherValuesRenamed.renames.filterKeys(otherArrowsValues.keySet).toMap,
+        otherValuesRenamed.renames.view.filterKeys(otherArrowsValues.keySet).toMap,
         otherArrowsValues.renamed(otherValuesRenamed.renames)
       )
 
@@ -481,9 +481,6 @@ object ArrowInliner extends Logging {
   ): State[S, (FuncArrow, OpModel.Tree)] = for {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
-    argNames = args.argNames
-    capturedNames = fn.capturedValues.keySet ++ fn.capturedArrows.keySet
-
     /**
      * Substitute all arguments inside function body.
      * Data arguments could be passed as variables or values (expressions),
@@ -497,7 +494,7 @@ object ArrowInliner extends Logging {
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
-    captured <- renameCaptured(fn, exports, arrows)
+    captured <- renameCaptured(fn)
     (capturedValues, capturedArrows) = captured
 
     /**
@@ -523,11 +520,6 @@ object ArrowInliner extends Logging {
         renamedCanonStreams ++
         streamRenames
 
-    /**
-     * TODO: Optimize resolve.
-     * It seems that resolving whole `exports`
-     * and `arrows` is not necessary.
-     */
     arrowsResolved = arrows ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
