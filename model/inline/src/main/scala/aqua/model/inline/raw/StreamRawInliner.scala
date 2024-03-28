@@ -33,7 +33,6 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
       }
 
       _ <- Exports[S].resolved(raw.streamName, streamVal)
-      _ <- Exports[S].addStream(raw.streamName, raw.streamType)
     } yield streamVal -> Inline.tree(
       SeqModel.wrap(inlines ++ vals)
     )

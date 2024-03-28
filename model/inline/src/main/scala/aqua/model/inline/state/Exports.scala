@@ -1,6 +1,6 @@
 package aqua.model.inline.state
 
-import aqua.model.ValueModel.Ability
+import aqua.model.ValueModel.{Ability, Stream}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.StreamType
 import aqua.types.{AbilityType, GeneralAbilityType, NamedType}
@@ -95,7 +95,6 @@ trait Exports[S] extends Scoped[S] {
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
 
-
     override def streams: State[R, Map[String, StreamType]] =
       self.streams.transformS(f, g)
 
@@ -177,11 +176,13 @@ object Exports {
   }
 
   /**
-   *
    * @param values list of all values in scope.
    * @param streams list of opened streams. Merged between states.
    */
-  case class ExportsState(values: Map[String, ValueModel] = Map.empty, streams: Map[String, StreamType] = Map.empty)
+  case class ExportsState(
+    values: Map[String, ValueModel] = Map.empty,
+    streams: Map[String, StreamType] = Map.empty
+  )
 
   object Simple extends Exports[ExportsState] {
 
@@ -210,17 +211,23 @@ object Exports {
       exportName: String,
       value: ValueModel
     ): State[ExportsState, Unit] = State.modify { state =>
-      val newValues = value match {
+      value match {
         case Ability(vm, at) if vm.properties.isEmpty =>
           val pairs = getAbilityPairs(vm.name, exportName, at, state.values)
-          state.values ++ pairs.toList.toMap + (exportName -> value)
-        case _ => state.values + (exportName -> value)
+          state.copy(values = state.values ++ pairs.toList.toMap + (exportName -> value))
+        case Stream(_, st) =>
+          state.copy(
+            values = state.values + (exportName -> value),
+            streams = state.streams + (exportName -> st)
+          )
+        case _ => state.copy(values = state.values + (exportName -> value))
       }
-      state.copy(values = newValues)
     }
 
     override def getLastVarName(name: String): State[ExportsState, Option[String]] =
-      State.get.map(st => getLastValue(name, st.values).collect { case VarModel(name, _, _) => name })
+      State.get.map(st =>
+        getLastValue(name, st.values).collect { case VarModel(name, _, _) => name }
+      )
 
     override def resolved(exports: Map[String, ValueModel]): State[ExportsState, Unit] =
       State.modify(st => st.copy(values = st.values ++ exports))
@@ -239,7 +246,9 @@ object Exports {
       fieldName: String,
       value: ValueModel
     ): State[ExportsState, Unit] =
-      State.modify(st => st.copy(values = st.values + (AbilityType.fullName(abilityExportName, fieldName) -> value)))
+      State.modify(st =>
+        st.copy(values = st.values + (AbilityType.fullName(abilityExportName, fieldName) -> value))
+      )
 
     override def copyWithAbilityPrefix(
       prefix: String,
@@ -271,7 +280,6 @@ object Exports {
         // HACK: refactor
         _ <- State.modify[ExportsState](st => ExportsState(streams = st.streams))
       } yield st
-
 
     override def set(s: ExportsState): State[ExportsState, Unit] = {
       for {
