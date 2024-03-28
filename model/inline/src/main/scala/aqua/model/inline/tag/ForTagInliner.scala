@@ -49,7 +49,6 @@ final case class ForTagInliner(
     model = ForModel(n, v, modeModel)
   } yield TagInlined.Around(
     model = StreamRestrictions.restrictStreams(model.wrap),
-    aroundChildren = identity,
     prefix = p
   )
 }

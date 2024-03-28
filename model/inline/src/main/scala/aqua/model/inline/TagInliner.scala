@@ -86,8 +86,7 @@ object TagInliner extends Logging {
      * @param model computation producing model based on children computation
      */
     case Around[S](
-      model: State[S, Chain[OpModel.Tree]] => State[S, OpModel.Tree],
-      aroundChildren: State[S, OpModel.Tree] => State[S, OpModel.Tree],
+      model: Chain[State[S, OpModel.Tree]] => State[S, OpModel.Tree],
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined[S](prefix)
 
@@ -119,8 +118,8 @@ object TagInliner extends Logging {
             c <- children.sequence
             m <- model
           } yield prefixSeq(m.wrap(c))
-        case Around(model, aroundChildren, _) =>
-          model(children.traverse(aroundChildren)).map(prefixSeq)
+        case Around(model, _) =>
+          model(children).map(prefixSeq)
       }
     }
   }

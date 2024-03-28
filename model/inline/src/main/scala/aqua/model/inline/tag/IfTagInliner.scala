@@ -52,8 +52,7 @@ final case class IfTagInliner(
     stateModel = StreamRestrictions.restrictStreams[S](modelByChildren)
   } yield TagInlined.Around(
     prefix = prefix,
-    model = stateModel,
-    aroundChildren = identity
+    model = stateModel
   )
 
   private def toModelNoProp(

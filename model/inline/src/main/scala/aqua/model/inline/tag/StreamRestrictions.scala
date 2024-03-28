@@ -5,37 +5,25 @@ import aqua.model.{OpModel, RestrictionModel}
 import aqua.types.StreamType
 
 import cats.data.{Chain, State}
+import cats.syntax.traverse.*
 
 object StreamRestrictions {
 
   // restrict streams that are generated in a tree
   def restrictStreams[S: Mangler: Exports: Arrows: Config](
     childrenToModel: Chain[OpModel.Tree] => OpModel.Tree
-  )(children: State[S, Chain[OpModel.Tree]]): State[S, OpModel.Tree] =
-    restrictStreamsAround(true)(children.map(childrenToModel))
+  )(children: Chain[State[S, OpModel.Tree]]): State[S, OpModel.Tree] =
+    children.traverse(restrictStreamsAround).map(childrenToModel)
 
   /**
    * Restrict streams that are generated in a tree
-   * @param wrapInside if true, restrict around children in a tree, if false - restrict around a model
    */
-  def restrictStreamsAround[S: Mangler: Exports: Arrows: Config](wrapInside: Boolean = false)(
+  private def restrictStreamsAround[S: Mangler: Exports: Arrows: Config](
     getTree: State[S, OpModel.Tree]
-  ): State[S, OpModel.Tree] = {
-    for {
-      streamsBefore <- Exports[S].streams
-      tree <- getTree
-      streamsAfter <- Exports[S].streams
-      streams = streamsAfter.removedAll(streamsBefore.keySet)
-      _ <- Exports[S].deleteStreams(streams.keySet)
-    } yield
-      if (wrapInside)
-        tree.head.wrap(streams.toList.foldLeft(tree.tail.value) { case (acc, (name, st)) =>
-          Chain.one(RestrictionModel(name, st).wrap(acc))
-        })
-      else
-        streams.toList.foldLeft(tree) { case (acc, (name, st)) =>
-          RestrictionModel(name, st).wrap(acc)
-        }
-  }
-
+  ): State[S, OpModel.Tree] =
+    Exports[S].streamScope(getTree).map { case (tree, streams) =>
+      streams.toList.foldLeft(tree) { case (acc, (name, st)) =>
+        RestrictionModel(name, st).wrap(acc)
+      }
+    }
 }

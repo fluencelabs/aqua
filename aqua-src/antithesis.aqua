@@ -9,10 +9,12 @@ func streamTry() -> i8:
     on HOST_PEER_ID:
         try:
             stream: *i8
+            anotherStream = stream
             stream <<- 1
+            anotherStream <<- 1
             FailureSrv.fail("try")
         catch e:
-            stream: *i8
+            stream = *[88,88,88]
             stream <<- 2
             FailureSrv.fail("catch")
         otherwise:

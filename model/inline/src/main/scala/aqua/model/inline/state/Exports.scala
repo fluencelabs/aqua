@@ -76,10 +76,18 @@ trait Exports[S] extends Scoped[S] {
    */
   def exports: State[S, Map[String, ValueModel]]
 
-  def addStream(name: String, streamType: StreamType): State[S, Unit]
   def deleteStreams(names: Set[String]): State[S, Unit]
 
   def streams: State[S, Map[String, StreamType]]
+
+  def streamScope[T](inside: State[S, T]): State[S, (T, Map[String, StreamType])] =
+    for {
+      streamsBefore <- streams
+      tree <- inside
+      streamsAfter <- streams
+      streams = streamsAfter.removedAll(streamsBefore.keySet)
+      _ <- deleteStreams(streams.keySet)
+    } yield (tree, streams)
 
   final def gather(names: Seq[String]): State[S, Map[String, ValueModel]] =
     exports.map(Exports.gatherFrom(names, _))
@@ -97,9 +105,6 @@ trait Exports[S] extends Scoped[S] {
 
     override def streams: State[R, Map[String, StreamType]] =
       self.streams.transformS(f, g)
-
-    override def addStream(name: String, streamType: StreamType): State[R, Unit] =
-      self.addStream(name, streamType).transformS(f, g)
 
     override def deleteStreams(names: Set[String]): State[R, Unit] =
       self.deleteStreams(names).transformS(f, g)
@@ -215,7 +220,7 @@ object Exports {
         case Ability(vm, at) if vm.properties.isEmpty =>
           val pairs = getAbilityPairs(vm.name, exportName, at, state.values)
           state.copy(values = state.values ++ pairs.toList.toMap + (exportName -> value))
-        case Stream(_, st) =>
+        case Stream(VarModel(streamName, _, _), st) if exportName == streamName =>
           state.copy(
             values = state.values + (exportName -> value),
             streams = state.streams + (exportName -> st)
@@ -234,9 +239,6 @@ object Exports {
 
     override def streams: State[ExportsState, Map[String, StreamType]] =
       State.get.map(_.streams)
-
-    override def addStream(name: String, streamType: StreamType): State[ExportsState, Unit] =
-      State.modify(st => st.copy(streams = st.streams + (name -> streamType)))
 
     override def deleteStreams(names: Set[String]): State[ExportsState, Unit] =
       State.modify(st => st.copy(streams = st.streams -- names))

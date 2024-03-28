@@ -6,7 +6,6 @@ import aqua.model.XorModel
 import cats.data.State
 
 object TryTagInliner {
-  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = {
-    State.pure(TagInlined.Around(model = _.map(XorModel.wrap), aroundChildren = StreamRestrictions.restrictStreamsAround()))
-  }
+  def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] =
+    State.pure(TagInlined.Around(model = StreamRestrictions.restrictStreams(XorModel.wrap)))
 }
