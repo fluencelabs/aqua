@@ -138,7 +138,13 @@ object Picker {
       name: String,
       rename: Option[String],
       declared: Boolean
-    ): Option[RawContext] =
+    ): Option[RawContext] = {
+      println("pick: " + name)
+      println("all: " + ctx.all)
+      println("declared: " + declared)
+      println("from: " + ctx.module)
+      println("that declares: " + ctx.declares)
+      println("that have: " + ctx.parts.map(c => s"${c._1.module} ${c._2.name}").toList.mkString(", "))
       Option
         .when(!declared || ctx.declares(name)) {
           RawContext.blank
@@ -147,6 +153,7 @@ object Picker {
             })
         }
         .filter(_.nonEmpty)
+    }
 
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)

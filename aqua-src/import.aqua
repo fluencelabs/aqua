@@ -1,15 +1,6 @@
-service GetStr("multiret-test"):
-    retStr(s: *string, a: *string)
+aqua Reimport declares someFunc
 
+export someFunc
 
-func foo_wrapper():
-    GetStr.retStr(nil, nil)
-
-func invalid_append() -> *string:
-    stream: *string
-    cream: *string
-    dream: *string
-    str: *string
-    asdasd: *string
-    GetStr.retStr(stream, nil)
-    <- stream
+func someFunc() -> string:
+  <- "some func"

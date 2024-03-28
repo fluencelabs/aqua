@@ -1,15 +1,8 @@
 aqua Main
 
-export main
+import someFunc from "import.aqua"
 
-service Srv("srv"):
-    call(x: i32) -> i32
+export someFunc
 
-func main(a: i32, b: i32) -> i32:
-    res: *i32
-    if a > b:
-        on "peer" via "relay":
-            res <- Srv.call(a)
-
-    <- res!
-
+func a() -> string:
+  <- "srrt"
