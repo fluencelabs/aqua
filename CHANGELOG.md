@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.4...aqua-v0.14.5) (2024-03-28)
+
+
+### Features
+
+* **compiler:** Reimplement `noXor` compiler flag [LNG-347] ([#1096](https://github.com/fluencelabs/aqua/issues/1096)) ([5c7f6a8](https://github.com/fluencelabs/aqua/commit/5c7f6a89c60a199a73e7002481b9578c63ffce32))
+
+
+### Bug Fixes
+
+* **ci:** disable system services in Nox ([#1100](https://github.com/fluencelabs/aqua/issues/1100)) ([92d0450](https://github.com/fluencelabs/aqua/commit/92d04504819f75e93ac555fd8d28a02b5893d817))
+* **compiler:** Create restrictions in inliner [LNG-346] ([#1099](https://github.com/fluencelabs/aqua/issues/1099)) ([14748c7](https://github.com/fluencelabs/aqua/commit/14748c7646dad9970058c298f8c919a04e54dfb7))
+* **deps:** update dependency @fluencelabs/js-client to v0.9.0 ([#1088](https://github.com/fluencelabs/aqua/issues/1088)) ([6aa78ee](https://github.com/fluencelabs/aqua/commit/6aa78eeb6fae3ca7e2060ba962496b502ae54592))
+
 ## [0.14.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.3...aqua-v0.14.4) (2024-02-29)
 
 
