@@ -1,7 +1,7 @@
 aqua Import declares someFunc
 
 service GetStr("multiret-test"):
-    retStr(s: *string, a: *string)
+    retStr(s: []string, a: []string)
 
 func someFunc() -> string:
     <- "some func call"
