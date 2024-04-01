@@ -32,11 +32,12 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         shouldDeclare
       ),
       (ctx, initCtx) =>
-        val sumCtx = initCtx |+| ctx
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
-          sumCtx.setModule(name.value, declares = sumCtx.all).validNec
-        else
+          ctx.setModule(name.value, declares = ctx.all).validNec
+        else {
+          // summarize contexts to allow redeclaration of imports
+          val sumCtx = ctx |+| initCtx
           (
             declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
           ).map { case (n, t) =>
@@ -55,6 +56,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
             // TODO: why module name and declares is lost? where is it lost?
             ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
           }
+        }
     )
 
     word.value.fold(
