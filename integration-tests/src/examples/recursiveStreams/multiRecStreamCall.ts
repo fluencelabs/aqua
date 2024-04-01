@@ -1,6 +1,6 @@
 import {
   multiRecStream,
-  registerTestService,
+  registerTestServiceMultiRec,
 } from "../../compiled/examples/recursiveStreams/multiRec.js";
 
 export async function multiRecStreamCall(
@@ -8,7 +8,7 @@ export async function multiRecStreamCall(
   target: number,
   handle: (i: number) => number[],
 ): Promise<number[]> {
-  registerTestService({ handle });
+  registerTestServiceMultiRec({ handle });
 
   return await multiRecStream(init, target);
 }

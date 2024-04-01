@@ -168,13 +168,6 @@ class NamesInterpreter[S[_], X](using
         )
     }
 
-  override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
-    mapStackHead(Map.empty) { frame =>
-      frame -> frame.names.collect { case (n, st @ StreamType(_)) =>
-        n -> st
-      }
-    }
-
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(NamesState.Frame(token))
 

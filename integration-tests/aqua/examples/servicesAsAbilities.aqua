@@ -1,8 +1,8 @@
 aqua Test
 
-export test, testCapture, TestService
+export test, testCapture, TestServiceAsAbility
 
-service TestService("default-id"):
+service TestServiceAsAbility("default-id"):
     getId() -> string
     concatId(s: string) -> string
 
@@ -20,14 +20,14 @@ func test() -> []string:
     result: *string
 
     -- Test service
-    result <- TestService.concatId("call")
-    capture = TestService.concatId
+    result <- TestServiceAsAbility.concatId("call")
+    capture = TestServiceAsAbility.concatId
     result <- capture("capture call")
-    result <- acceptClosure(TestService.concatId, "accept closure call")
-    result <- acceptAbility{TestService}("accept ability call")
+    result <- acceptClosure(TestServiceAsAbility.concatId, "accept closure call")
+    result <- acceptAbility{TestServiceAsAbility}("accept ability call")
     
     -- Test renamed service
-    Renamed = TestService
+    Renamed = TestServiceAsAbility
     result <- Renamed.concatId("call")
     captureRenamed = Renamed.concatId
     result <- captureRenamed("capture call")
@@ -35,15 +35,15 @@ func test() -> []string:
     result <- acceptAbility{Renamed}("accept ability call")
 
     -- Test resolved service
-    TestService "resolved-id-1"
-    result <- TestService.concatId("call")
-    captureResolved = TestService.concatId
+    TestServiceAsAbility "resolved-id-1"
+    result <- TestServiceAsAbility.concatId("call")
+    captureResolved = TestServiceAsAbility.concatId
     result <- captureResolved("capture call")
-    result <- acceptClosure(TestService.concatId, "accept closure call")
-    result <- acceptAbility{TestService}("accept ability call")
+    result <- acceptClosure(TestServiceAsAbility.concatId, "accept closure call")
+    result <- acceptAbility{TestServiceAsAbility}("accept ability call")
 
     -- Test renamed resolved service
-    Renamed1 = TestService
+    Renamed1 = TestServiceAsAbility
     result <- Renamed1.concatId("call")
     captureRenamed1 = Renamed1.concatId
     result <- captureRenamed1("capture call")
@@ -59,8 +59,8 @@ func test() -> []string:
 
     -- Test resolved in scope service
     for i <- ["iter-id-1", "iter-id-2"]:
-        TestService i
-        RenamedI = TestService
+        TestServiceAsAbility i
+        RenamedI = TestServiceAsAbility
         result <- RenamedI.concatId("call")
         captureI = RenamedI.concatId
         result <- captureI("capture call")
@@ -68,28 +68,28 @@ func test() -> []string:
         result <- acceptAbility{RenamedI}("accept ability call")
 
     -- Test resolved service again (should save id)
-    result <- TestService.concatId("call")
-    captureAgain = TestService.concatId
+    result <- TestServiceAsAbility.concatId("call")
+    captureAgain = TestServiceAsAbility.concatId
     result <- captureAgain("capture call")
-    result <- acceptClosure(TestService.concatId, "accept closure call")
-    result <- acceptAbility{TestService}("accept ability call")
+    result <- acceptClosure(TestServiceAsAbility.concatId, "accept closure call")
+    result <- acceptAbility{TestServiceAsAbility}("accept ability call")
 
     -- Test re resolved service in same scope
-    TestService "resolved-id-2"
-    result <- TestService.concatId("call")
-    captureReResolved = TestService.concatId
+    TestServiceAsAbility "resolved-id-2"
+    result <- TestServiceAsAbility.concatId("call")
+    captureReResolved = TestServiceAsAbility.concatId
     result <- captureReResolved("capture call")
-    result <- acceptClosure(TestService.concatId, "accept closure call")
-    result <- acceptAbility{TestService}("accept ability call")
+    result <- acceptClosure(TestServiceAsAbility.concatId, "accept closure call")
+    result <- acceptAbility{TestServiceAsAbility}("accept ability call")
 
     <- result
 
 func callCapture{MatchingAbility}() -> string, string:
-    TestService "resolved-id-in-capture"
-    res1 <- TestService.concatId("in capture")
+    TestServiceAsAbility "resolved-id-in-capture"
+    res1 <- TestServiceAsAbility.concatId("in capture")
     res2 <- MatchingAbility.concatId("in capture")
     <- res1, res2
 
 func testCapture() -> string, string:
-    res1, res2 <- callCapture{TestService}()
+    res1, res2 <- callCapture{TestServiceAsAbility}()
     <- res1, res2

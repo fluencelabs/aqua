@@ -1,24 +1,24 @@
 package aqua.model.transform.topology
 
-import aqua.model.transform.ModelBuilder
 import aqua.model.*
-import aqua.res.*
-import aqua.raw.ops.Call
-import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
-import aqua.types.{LiteralType, ScalarType, StreamType}
-import aqua.types.ArrayType
-import aqua.raw.ConstantRaw.initPeerId
 import aqua.model.ForModel
+import aqua.model.transform.ModelBuilder
+import aqua.raw.ConstantRaw.initPeerId
+import aqua.raw.ops.Call
 import aqua.raw.value.ValueRaw
+import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.res.*
+import aqua.types.ArrayType
+import aqua.types.{LiteralType, ScalarType, StreamType}
 
 import cats.Eval
-import cats.data.{Chain, NonEmptyList}
 import cats.data.Chain.*
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
+import cats.syntax.option.*
+import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.syntax.show.*
-import cats.syntax.option.*
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
@@ -481,7 +481,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
-    val stream = ValueModel.fromRaw(streamRaw)
+    val stream = VarModel(streamRaw.name, streamRaw.baseType)
     val streamEl = ValueModel.fromRaw(streamRawEl)
 
     val (joinModel, joinRes) = joinModelRes(streamEl)
@@ -499,7 +499,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
     val init = SeqModel.wrap(
-      DeclareStreamModel(stream).leaf,
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldModel +:
           joinModel :+
@@ -534,10 +533,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         )
     )
     val expected = SeqRes.wrap(
-      Chain(
-        through(relay),
-        foldRes
-      ) ++
+      foldRes +:
         joinRes :+
         callRes(3, initPeer, None, stream :: Nil)
     )
@@ -552,13 +548,12 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
-    val stream = ValueModel.fromRaw(streamRaw)
+    val stream = VarModel(streamRaw.name, streamRaw.baseType)
     val streamEl = ValueModel.fromRaw(streamRawEl)
 
     val (joinModel, joinRes) = joinModelRes(streamEl)
 
     val init = SeqModel.wrap(
-      DeclareStreamModel(stream).leaf,
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(
           "i",
@@ -608,10 +603,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         )
     )
     val expected = SeqRes.wrap(
-      Chain(
-        through(relay),
-        fold
-      ) ++
+      fold +:
         joinRes :+
         callRes(3, initPeer, None, stream :: Nil)
     )

@@ -1,18 +1,18 @@
 aqua Test
 
-export test, TestService
+export test, TestServiceClosureArrowCapture
 
-service TestService:
+service TestServiceClosureArrowCapture:
     call(s: string) -> string
 
 ability TestAbility:
     arrow(s: string) -> string
 
 func returnCapture() -> string -> string:
-    TestService "test-service"
+    TestServiceClosureArrowCapture "test-service"
 
     closure = (s: string) -> string:
-        <- TestService.call(s)
+        <- TestServiceClosureArrowCapture.call(s)
     
     closure1 = closure
     closure2 = closure1
@@ -26,7 +26,7 @@ func returnCapture() -> string -> string:
         s1 <- closure(s) -- capture closure
         s2 <- closure3(s1) -- capture renamed closure
         s3 <- Ab.arrow(s2) -- capture ability
-        s4 <- TestService.call(s3) -- capture service
+        s4 <- TestServiceClosureArrowCapture.call(s3) -- capture service
         <- s4
     
     <- capture

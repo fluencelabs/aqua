@@ -7,7 +7,6 @@ import aqua.raw.ops.*
 import aqua.raw.ops.ForTag.Mode
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
-import aqua.semantics.expr.func.FuncOpSem
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -38,37 +37,35 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
         (iterable, ops: Raw) =>
           (iterable, ops) match {
             case (Some(vm), FuncOp(op)) =>
-              FuncOpSem.restrictStreamsInScope(op).map { restricted =>
-                val mode = expr.mode.fold(ForTag.Mode.SeqMode) {
-                  case ForExpr.Mode.ParMode => ForTag.Mode.ParMode
-                  case ForExpr.Mode.TryMode => ForTag.Mode.TryMode
-                  case ForExpr.Mode.RecMode => ForTag.Mode.RecMode
-                }
-
-                val innerTag = mode match {
-                  case ForTag.Mode.SeqMode => SeqTag
-                  case ForTag.Mode.ParMode => ParTag
-                  case ForTag.Mode.TryMode => TryTag
-                  case ForTag.Mode.RecMode => ParTag
-                }
-
-                val forTag = ForTag(expr.item.value, vm, mode).wrap(
-                  innerTag.wrap(
-                    restricted,
-                    NextTag(expr.item.value).leaf
-                  )
-                )
-
-                // Fix: continue execution after fold par immediately,
-                // without finding a path out from par branches
-                val result = mode match {
-                  case ForTag.Mode.ParMode | ForTag.Mode.RecMode =>
-                    ParTag.Detach.wrap(forTag)
-                  case _ => forTag
-                }
-
-                result.toFuncOp
+              val mode = expr.mode.fold(ForTag.Mode.SeqMode) {
+                case ForExpr.Mode.ParMode => ForTag.Mode.ParMode
+                case ForExpr.Mode.TryMode => ForTag.Mode.TryMode
+                case ForExpr.Mode.RecMode => ForTag.Mode.RecMode
               }
+
+              val innerTag = mode match {
+                case ForTag.Mode.SeqMode => SeqTag
+                case ForTag.Mode.ParMode => ParTag
+                case ForTag.Mode.TryMode => TryTag
+                case ForTag.Mode.RecMode => ParTag
+              }
+
+              val forTag = ForTag(expr.item.value, vm, mode).wrap(
+                innerTag.wrap(
+                  op,
+                  NextTag(expr.item.value).leaf
+                )
+              )
+
+              // Fix: continue execution after fold par immediately,
+              // without finding a path out from par branches
+              val result = mode match {
+                case ForTag.Mode.ParMode | ForTag.Mode.RecMode =>
+                  ParTag.Detach.wrap(forTag)
+                case _ => forTag
+              }
+
+              result.toFuncOp.pure
             case _ => Raw.error("Wrong body of the `for` expression").pure[F]
           }
       )

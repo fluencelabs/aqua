@@ -80,32 +80,47 @@ object TagInliner extends Logging {
     ) extends TagInlined[S](prefix)
 
     /**
+     * Tag inlining emitted computation
+     * that envelopes children computation
+     *
+     * @param model computation producing model based on children computation
+     */
+    case Around[S](
+      model: Chain[State[S, OpModel.Tree]] => State[S, OpModel.Tree],
+      prefix: Option[OpModel.Tree] = None
+    ) extends TagInlined[S](prefix)
+
+    /**
      * Finalize inlining, construct a tree
      *
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
-      def toSeqModel(tree: OpModel.Tree | Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
-        val treeChain = tree match {
-          case c: Chain[OpModel.Tree] => c
+    def build(children: Chain[State[T, OpModel.Tree]]): State[T, OpModel.Tree] = {
+      def prefixSeq(sub: OpModel.Tree | Chain[OpModel.Tree]) = {
+        val tree = sub match {
           case t: OpModel.Tree => Chain.one(t)
+          case c: Chain[OpModel.Tree] => c
         }
 
-        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ treeChain))
+        SeqModel.wrap(Chain.fromOption(prefix) ++ tree)
       }
 
       this match {
         case Empty(_) =>
-          toSeqModel(children)
+          children.sequence.map(prefixSeq)
         case Single(model, _) =>
-          toSeqModel(model.wrap(children))
+          children.sequence.map(model.wrap).map(prefixSeq)
         case Mapping(toModel, _) =>
-          toSeqModel(toModel(children))
+          children.sequence.map(toModel).map(prefixSeq)
         case After(model, _) =>
-          model.flatMap(m => toSeqModel(m.wrap(children)))
+          for {
+            c <- children.sequence
+            m <- model
+          } yield prefixSeq(m.wrap(c))
+        case Around(model, _) =>
+          model(children).map(prefixSeq)
       }
-
     }
   }
 
@@ -166,26 +181,6 @@ object TagInliner extends Logging {
     }
   }
 
-  private def flatCanonStream[S: Mangler](
-    canonV: VarModel,
-    op: Option[OpModel.Tree]
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    if (canonV.properties.nonEmpty) {
-      val apName = canonV.name + "_flatten"
-      Mangler[S].findAndForbidName(apName).map { apN =>
-        val apV = VarModel(apN, canonV.`type`)
-        val apOp = FlattenModel(canonV, apN).leaf
-        (
-          apV,
-          combineOpsWithSeq(op, apOp.some)
-        )
-      }
-    } else {
-      State.pure((canonV, op))
-    }
-
-  }
-
   /**
    * Processes a single [[RawTag]] that may lead to many changes, including calling [[ArrowInliner]]
    *
@@ -206,40 +201,13 @@ object TagInliner extends Logging {
         )
 
       case IfTag(valueRaw) =>
-        IfTagInliner(valueRaw).inlined.map(inlined =>
-          TagInlined.Mapping(
-            toModel = inlined.toModel,
-            prefix = inlined.prefix
-          )
-        )
+        IfTagInliner(valueRaw).inlined
 
-      case TryTag => pure(XorModel)
+      case TryTag =>
+        TryTagInliner.inlined
 
       case ForTag(item, iterable, mode) =>
-        for {
-          vp <- valueToModel(iterable)
-          flattened <- mode match {
-            case ForTag.Mode.RecMode => State.pure(vp)
-            case _ => flat(vp._1, vp._2)
-          }
-          (v, p) = flattened
-          n <- Mangler[S].findAndForbidName(item)
-          elementType = iterable.`type` match {
-            case b: CollectionType => b.element
-            case _ =>
-              internalError(
-                s"non-box type variable '$iterable' in 'for' expression."
-              )
-          }
-          _ <- Exports[S].resolved(item, VarModel(n, elementType))
-          modeModel = mode match {
-            case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
-            case ForTag.Mode.ParMode | ForTag.Mode.RecMode => ForModel.Mode.Never
-          }
-        } yield TagInlined.Single(
-          model = ForModel(n, v, modeModel),
-          prefix = p
-        )
+        ForTagInliner(item, iterable, mode).inlined
 
       case PushToStreamTag(operand, exportTo) =>
         (
@@ -369,24 +337,13 @@ object TagInliner extends Logging {
           }
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
-      case RestrictionTag(name, typ) =>
-        // Rename restriction after children are inlined with new exports
-        TagInlined
-          .After(
-            for {
-              exps <- Exports[S].exports
-              model = exps.get(name).collect { case VarModel(n, _, _) =>
-                RestrictionModel(n, typ)
-              }
-            } yield model.getOrElse(RestrictionModel(name, typ))
-          )
-          .pure
-
       case DeclareStreamTag(value) =>
         value match
-          case VarRaw(name, t) =>
-            Exports[S].resolved(name, VarModel(name, t)).as(TagInlined.Empty())
-          case _ => none
+          case VarRaw(name, t: StreamType) =>
+            for {
+              _ <- Exports[S].resolved(name, VarModel(name, t))
+            } yield TagInlined.Empty()
+          case _ => internalError(s"Cannot declare $value as stream, because it is not a stream type")
 
       case ServiceIdTag(id, serviceType, name) =>
         for {
@@ -448,7 +405,7 @@ object TagInliner extends Logging {
     for {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
-      children <- tail.traverse(traverseS[S](_, f))
+      children = tail.map(traverseS[S](_, f))
       inlined <- headInlined.build(children)
     } yield inlined
 

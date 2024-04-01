@@ -1,6 +1,7 @@
 package aqua.model.inline.state
 
 import aqua.mangler.ManglerState
+import aqua.model.inline.state.Exports.ExportsState
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.{FuncArrow, ValueModel}
 import aqua.raw.arrow.FuncRaw
@@ -26,7 +27,7 @@ import scribe.Logging
  */
 case class InliningState(
   noNames: ManglerState = ManglerState(),
-  resolvedExports: Map[String, ValueModel] = Map.empty,
+  resolvedExports: ExportsState = ExportsState(),
   resolvedArrows: Map[String, FuncArrow] = Map.empty,
   instructionCounter: Int = 0,
   config: Config.Values = Config.Values.default

@@ -128,7 +128,7 @@ class CallPreparer(
 
     FuncArrow(
       config.functionWrapperName,
-      SeqTag.wrap((getters.map(_.leaf) :+ body :+ finisherService.leaf): _*),
+      SeqTag.wrap(getters.map(_.leaf) :+ body :+ finisherService.leaf*),
       // no arguments and returns "ok" string
       ArrowType(NilType, returnCodomain),
       ret,

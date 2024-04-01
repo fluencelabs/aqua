@@ -41,11 +41,11 @@ func checkKeepArg() -> []string, []string:
   <- a, y
   
 -- failing Aqua code:
-service TestService("test-service"):
+service TestServiceRestrict("test-service"):
     get_records(key: string) -> []string
 
 func append_records(peer: string, srum: *[]string):
-  srum <- TestService.get_records(peer)
+  srum <- TestServiceRestrict.get_records(peer)
 
 func retrieve_records(peer: string) -> [][]string:
     records: *[]string
