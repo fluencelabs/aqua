@@ -139,12 +139,6 @@ object Picker {
       rename: Option[String],
       declared: Boolean
     ): Option[RawContext] = {
-      println("pick: " + name)
-      println("all: " + ctx.all)
-      println("declared: " + declared)
-      println("from: " + ctx.module)
-      println("that declares: " + ctx.declares)
-      println("that have: " + ctx.parts.map(c => s"${c._1.module} ${c._2.name}").toList.mkString(", "))
       Option
         .when(!declared || ctx.declares(name)) {
           RawContext.blank

@@ -74,10 +74,6 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
     val sumCtx = initCtx |+| ctxWithExportLocations
 
     pubs.map { case ((token, name), (_, rename)) =>
-      println("export: pick: " + name)
-      println("export: from: " + ctx.module)
-      println("export: from init: " + initCtx.module)
-      println("export: that declares: " + sumCtx.declares)
       sumCtx
         .pick(name, rename, declared = false)
         .as(Map(name -> rename))

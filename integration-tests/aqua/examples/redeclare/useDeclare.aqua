@@ -1,0 +1,8 @@
+aqua UseDeclare declares someFunc, a
+
+import someFunc from "redeclare.aqua"
+
+export someFunc, a
+
+func a() -> string:
+  <- "srrt"
