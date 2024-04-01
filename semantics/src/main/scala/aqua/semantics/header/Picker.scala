@@ -138,7 +138,7 @@ object Picker {
       name: String,
       rename: Option[String],
       declared: Boolean
-    ): Option[RawContext] = {
+    ): Option[RawContext] =
       Option
         .when(!declared || ctx.declares(name)) {
           RawContext.blank
@@ -147,7 +147,6 @@ object Picker {
             })
         }
         .filter(_.nonEmpty)
-    }
 
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
