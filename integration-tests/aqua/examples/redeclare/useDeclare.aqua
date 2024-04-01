@@ -1,4 +1,4 @@
-aqua UseDeclare declares someFunc, a
+aqua UseDeclare declares someFunc
 
 import someFunc from "redeclare.aqua"
 
