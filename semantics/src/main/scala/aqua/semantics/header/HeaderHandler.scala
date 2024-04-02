@@ -4,8 +4,8 @@ import aqua.parser.Ast
 import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Token}
 import aqua.semantics.header.Picker.*
-import aqua.semantics.{HeaderError, SemanticError}
 import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.{HeaderError, SemanticError}
 
 import cats.data.*
 import cats.data.Validated.*
@@ -20,7 +20,7 @@ class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C],
-  // NOTE: This typeclass is here to reuse 
+  // NOTE: This typeclass is here to reuse
   // the code from the body semantics
   locations: LocationsAlgebra[S, State[C, *]]
 ) {

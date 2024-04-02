@@ -2,6 +2,7 @@ package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.{AbilityType, ArrowType, Type}
+
 import cats.Semigroup
 import cats.syntax.semigroup.*
 
@@ -13,7 +14,7 @@ trait Picker[A] {
   def definedAbilityNames(ctx: A): Set[String]
   def blank: A
   def pick(ctx: A, name: String, rename: Option[String], declared: Boolean): Option[A]
-  def pickDeclared(ctx: A)(implicit semi: Semigroup[A]): A
+  def pickDeclared(ctx: A)(using semi: Semigroup[A]): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
   def exports(ctx: A): Map[String, Option[String]]
@@ -40,7 +41,7 @@ object Picker {
 
     def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
       Picker[A].pick(p, name, rename, declared)
-    def pickDeclared(implicit semi: Semigroup[A]): A = Picker[A].pickDeclared(p)
+    def pickDeclared(using semi: Semigroup[A]): A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
     def exports: Map[String, Option[String]] = Picker[A].exports(p)
@@ -52,7 +53,9 @@ object Picker {
     def funcAcceptAbility(name: String): Boolean = Picker[A].funcAcceptAbility(p, name)
     def declares: Set[String] = Picker[A].declares(p)
     def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
-    def setImportPaths(importPaths: Map[String, String]): A = Picker[A].setImportPaths(p, importPaths)
+
+    def setImportPaths(importPaths: Map[String, String]): A =
+      Picker[A].setImportPaths(p, importPaths)
     def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
@@ -151,7 +154,7 @@ object Picker {
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
 
-    override def pickDeclared(ctx: RawContext)(implicit semi: Semigroup[RawContext]): RawContext =
+    override def pickDeclared(ctx: RawContext)(using semi: Semigroup[RawContext]): RawContext =
       if (ctx.module.isEmpty) ctx
       else
         ctx.declares.toList
