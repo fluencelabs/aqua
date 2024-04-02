@@ -1,6 +1,10 @@
-service GetStr("multiret-test"):
-    retStr(s: *string, a: *string)
+aqua Import declares someFunc
 
+service GetStr("multiret-test"):
+    retStr(s: []string, a: []string)
+
+func someFunc() -> string:
+    <- "some func call"
 
 func foo_wrapper():
     GetStr.retStr(nil, nil)
