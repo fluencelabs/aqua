@@ -331,28 +331,22 @@ object RawSemantics extends Logging {
     astToState[S](ast)
       .run(initState)
       .map {
-        case (state, _: Raw.Empty) =>
-          // No `parts`, but has `init`
-          (
-            state,
-            RawContext.blank.copy(
-              init = Some(init.copy(module = init.module.map(_ + "|init")))
-                .filter(_ != RawContext.blank)
-            )
+        case (state, raw: (Raw.Empty | RawPart | RawPart.Parts)) =>
+          val parts = raw match {
+            case rps: RawPart.Parts => rps.parts
+            case rp: RawPart => Chain.one(rp)
+            case _: Raw.Empty => Chain.empty
+          }
+          val initCtx = RawContext.blank.copy(
+            init = Some(init.copy(module = init.module.map(_ + "|init")))
+              .filter(_ != RawContext.blank)
           )
 
-        case (state, part: (RawPart | RawPart.Parts)) =>
-          state -> RawPart
-            .contextPart(part)
-            .parts
-            .foldLeft(
-              RawContext.blank.copy(
-                init = Some(init.copy(module = init.module.map(_ + "|init")))
-                  .filter(_ != RawContext.blank)
-              )
-            ) { case (ctx, p) =>
-              ctx.copy(parts = ctx.parts :+ (ctx -> p))
-            }
+          val resultCtx = parts.foldLeft(initCtx) { case (ctx, p) =>
+            ctx.copy(parts = ctx.parts :+ (ctx -> p))
+          }
+
+          state -> resultCtx
 
         case (_, m) =>
           internalError(
