@@ -35,7 +35,8 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         val sumCtx = initCtx |+| ctx
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
-          sumCtx.setModule(name.value, declares = ctx.all).validNec
+          val allDeclared = initCtx.all ++ ctx.all
+          sumCtx.setModule(name.value, declares = allDeclared).validNec
         else {
           // summarize contexts to allow redeclaration of imports
           (

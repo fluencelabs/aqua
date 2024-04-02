@@ -729,7 +729,7 @@ class TypesInterpreter[S[_], X](using
         report
           .error(
             token,
-            s"Name `${name}` was already defined here"
+            s"Name `$name` was already defined here"
           )
           .as(ifDefined)
       case None => ifNotDefined
