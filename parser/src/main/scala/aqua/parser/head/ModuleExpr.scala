@@ -10,8 +10,10 @@ import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 import cats.Comonad
 import cats.parse.Parser
+import cats.syntax.applicative.*
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.~>
 
 case class ModuleExpr[F[_]](
@@ -79,7 +81,13 @@ object ModuleExpr extends HeaderExpr.Companion {
     (
       (` *`.with1 *> moduleWord) ~
         (` ` *> Ability.dotted) ~
-        (` declares ` *> nameOrAbListOrAll).?
+        ` *`.flatMap(spaces =>
+          // flatMap is costly, but there is no other way
+          // to allow either a bunch of spaces or a declares part
+          if (spaces.nonEmpty)
+            (`declares` *> ` ` *> nameOrAbListOrAll).?
+          else none.pure
+        )
     ).map {
       case ((word, name), None) =>
         ModuleExpr(word, name, None, Nil, Nil)
