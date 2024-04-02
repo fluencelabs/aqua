@@ -1,0 +1,5 @@
+aqua UseDeclare declares someFunc
+
+import someFunc from "redeclare.aqua"
+
+export someFunc

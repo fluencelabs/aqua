@@ -1,0 +1,4 @@
+aqua Import declares someFunc
+
+func someFunc() -> string:
+  <- "some func"

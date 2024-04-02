@@ -1,39 +1,8 @@
-aqua A
+aqua Main
 
-export streamTry, streamFor
+import someFunc from "import.aqua"
 
-service FailureSrv("failure"):
-    fail(msg: string)
+export someFunc
 
-func streamTry() -> i8:
-    on HOST_PEER_ID:
-        try:
-            stream: *i8
-            anotherStream = stream
-            stream <<- 1
-            anotherStream <<- 1
-            FailureSrv.fail("try")
-        catch e:
-            stream = *[88,88,88]
-            stream <<- 2
-            FailureSrv.fail("catch")
-        otherwise:
-            stream: *i8
-            stream <<- 3
-
-        stream: *i8
-        stream <<- 4
-
-    <- stream!
-
-service StreamService("test-service"):
-    store(numbers: []u32, n: u32)
-
-func callService(stream: *u32, n: u32):
-    stream <<- 1
-    StreamService.store(stream, n)
-
-func streamFor():
-    arr = [1,2,3,4,5]
-    for a <- arr:
-      callService(*[], a)
+func a() -> string:
+  <- "srrt"

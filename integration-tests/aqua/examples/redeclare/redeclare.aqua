@@ -1,0 +1,3 @@
+aqua Redeclare declares someFunc
+
+import someFunc from "import.aqua"
