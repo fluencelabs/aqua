@@ -48,10 +48,10 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
                   t,
                   s"`$n` is expected to be declared, but declaration is not found in the file"
                 )
-              )
-          }.combineAll.map { newCtx =>
+              ).void
+          }.combineAll.as {
             val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = newCtx.addOccurences(tokens)
+            val ctxWithDeclaresLoc = sumCtx.addOccurences(tokens)
             // TODO: why module name and declares is lost? where is it lost?
             ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
           }
