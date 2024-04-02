@@ -10,8 +10,10 @@ import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 import cats.Comonad
 import cats.parse.Parser
+import cats.syntax.applicative.*
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.~>
 
 case class ModuleExpr[F[_]](
@@ -69,7 +71,7 @@ object ModuleExpr extends HeaderExpr.Companion {
     comma[NameOrAb[Span.S]](nameOrAb).map(_.toList)
 
   private val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.S]], Token[Span.S]]] =
-    nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
+    nameOrAbList.map(Left(_)) | (`star` <* ` *`).lift.map(Token.lift(_)).map(Right(_))
 
   private val moduleWord: Parser[Word[Span.S]] =
     (`module`.as(Word.Kind.Module).lift.backtrack |
@@ -79,7 +81,9 @@ object ModuleExpr extends HeaderExpr.Companion {
     (
       (` *`.with1 *> moduleWord) ~
         (` ` *> Ability.dotted) ~
-        (` declares ` *> nameOrAbListOrAll).?
+        (` declares ` *> nameOrAbListOrAll).backtrack
+          .map(_.some)
+          .orElse(` *`.as(none)) // Allow trailing spaces
     ).map {
       case ((word, name), None) =>
         ModuleExpr(word, name, None, Nil, Nil)
