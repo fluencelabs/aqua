@@ -81,13 +81,9 @@ object ModuleExpr extends HeaderExpr.Companion {
     (
       (` *`.with1 *> moduleWord) ~
         (` ` *> Ability.dotted) ~
-        ` *`.flatMap(spaces =>
-          // flatMap is costly, but there is no other way
-          // to allow either a bunch of spaces or a declares part
-          if (spaces.nonEmpty)
-            (`declares` *> ` ` *> nameOrAbListOrAll).?
-          else none.pure
-        )
+        (` declares ` *> nameOrAbListOrAll).backtrack
+          .map(_.some)
+          .orElse(` *`.as(none)) // Allow trailing spaces
     ).map {
       case ((word, name), None) =>
         ModuleExpr(word, name, None, Nil, Nil)

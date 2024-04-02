@@ -39,6 +39,7 @@ object Token {
   val `module`: P[Unit] = P.string("module")
   val `aqua-word`: P[Unit] = P.string("aqua")
   val `declares`: P[Unit] = P.string("declares")
+  val ` declares ` : P[Unit] = `declares`.surroundedBy(` `)
   val `declare`: P[Unit] = P.string("declare")
   val `_export`: P[Unit] = P.string("export")
   val `star`: P[Unit] = P.char('*')
