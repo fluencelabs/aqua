@@ -54,7 +54,9 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   it should "be parsed with `declares *` with spaces in the end" in {
-    parseModuleExpr("aqua MyModule declares *") should be(declaresAll)
+    (0 to 10).foreach(sp =>
+      parseModuleExpr("aqua MyModule declares *" + " ".repeat(sp)) should be(declaresAll)
+    )
   }
 
   it should "be parsed with `declares`" in {

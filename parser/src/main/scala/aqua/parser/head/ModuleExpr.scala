@@ -71,7 +71,7 @@ object ModuleExpr extends HeaderExpr.Companion {
     comma[NameOrAb[Span.S]](nameOrAb).map(_.toList)
 
   private val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.S]], Token[Span.S]]] =
-    nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
+    nameOrAbList.map(Left(_)) | (`star` <* ` *`).lift.map(Token.lift(_)).map(Right(_))
 
   private val moduleWord: Parser[Word[Span.S]] =
     (`module`.as(Word.Kind.Module).lift.backtrack |
