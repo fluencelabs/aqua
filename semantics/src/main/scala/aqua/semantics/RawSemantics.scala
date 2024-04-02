@@ -41,7 +41,8 @@ class RawSemantics[S[_]](using
       new DummyLocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics
-      .interpret(ast, CompilerState.init(init), init)
+      .interpret(ast, init)
+      .run(CompilerState.init(init))
       .map { case (state, ctx) =>
         EitherT(
           Writer
@@ -323,34 +324,29 @@ object RawSemantics extends Logging {
   // If there are any errors, they're inside CompilerState[S]
   def interpret[S[_]](
     ast: Ast[S],
-    initState: CompilerState[S],
     init: RawContext
   )(using
     LocationsAlgebra[S, Interpreter[S, *]]
-  ): Eval[(CompilerState[S], RawContext)] =
-    astToState[S](ast)
-      .run(initState)
-      .map {
-        case (state, raw: (Raw.Empty | RawPart | RawPart.Parts)) =>
-          val parts = raw match {
-            case rps: RawPart.Parts => rps.parts
-            case rp: RawPart => Chain.one(rp)
-            case _: Raw.Empty => Chain.empty
-          }
-          val initCtx = RawContext.blank.copy(
-            init = Some(init.copy(module = init.module.map(_ + "|init")))
-              .filter(_ != RawContext.blank)
-          )
+  ): Interpreter[S, RawContext] =
+    astToState(ast).map {
+      case raw: (Raw.Empty | RawPart | RawPart.Parts) =>
+        val parts = raw match {
+          case rps: RawPart.Parts => rps.parts
+          case rp: RawPart => Chain.one(rp)
+          case _: Raw.Empty => Chain.empty
+        }
+        val initCtx = RawContext.blank.copy(
+          init = Some(init.copy(module = init.module.map(_ + "|init")))
+            .filter(_ != RawContext.blank)
+        )
 
-          val resultCtx = parts.foldLeft(initCtx) { case (ctx, p) =>
-            ctx.copy(parts = ctx.parts :+ (ctx -> p))
-          }
+        parts.foldLeft(initCtx) { case (ctx, p) =>
+          ctx.copy(parts = ctx.parts :+ (ctx -> p))
+        }
 
-          state -> resultCtx
-
-        case (_, m) =>
-          internalError(
-            s"Unexpected Raw ($m)"
-          )
-      }
+      case m =>
+        internalError(
+          s"Unexpected Raw ($m)"
+        )
+    }
 }

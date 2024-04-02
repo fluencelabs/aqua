@@ -55,7 +55,8 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       new LocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics
-      .interpret(ast, initState, init.raw)
+      .interpret(ast, init.raw)
+      .run(initState)
       .map { case (state, ctx) =>
         LspContext(
           raw = ctx,
