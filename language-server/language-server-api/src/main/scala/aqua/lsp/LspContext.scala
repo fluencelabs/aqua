@@ -3,10 +3,10 @@ package aqua.lsp
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
+import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
 import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.types.{AbilityType, ArrowType, Type}
-import aqua.semantics.rules.locations.LocationsState
 
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
@@ -85,9 +85,6 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def setInit(ctx: LspContext[S], ctxInit: Option[LspContext[S]]): LspContext[S] =
-      ctx.copy(raw = ctx.raw.setInit(ctxInit.map(_.raw)))
-
     override def all(ctx: LspContext[S]): Set[String] =
       ctx.raw.all
     override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
@@ -103,7 +100,10 @@ object LspContext {
         )
       )
 
-    override def setImportPaths(ctx: LspContext[S], importPaths: Map[String, String]): LspContext[S] =
+    override def setImportPaths(
+      ctx: LspContext[S],
+      importPaths: Map[String, String]
+    ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
     override def setModule(
@@ -162,14 +162,14 @@ object LspContext {
 
   /*
     NOTE: This instance is used to generate LocationsAlgebra[S, State[LspContext[S], *]]
-          to reuse the code from the body semantics in the header semantics 
+          to reuse the code from the body semantics in the header semantics
    */
   given [S[_]]: Lens[LspContext[S], LocationsState[S]] = {
-    val get: LspContext[S] => LocationsState[S] = 
+    val get: LspContext[S] => LocationsState[S] =
       ctx => LocationsState(ctx.variables)
     val replace: LocationsState[S] => LspContext[S] => LspContext[S] =
       locs => ctx => ctx.copy(variables = locs.variables)
-    
+
     Lens(get)(replace)
   }
 }

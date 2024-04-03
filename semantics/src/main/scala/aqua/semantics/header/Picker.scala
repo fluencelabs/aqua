@@ -26,7 +26,6 @@ trait Picker[A] {
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
   def setModule(ctx: A, name: Option[String], declares: Set[String]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
-  def setInit(ctx: A, ctxInit: Option[A]): A
   def addPart(ctx: A, part: (A, RawPart)): A
 }
 
@@ -56,7 +55,6 @@ object Picker {
 
     def setImportPaths(importPaths: Map[String, String]): A =
       Picker[A].setImportPaths(p, importPaths)
-    def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
     def setModule(name: String, declares: Set[String]): A =
@@ -110,9 +108,6 @@ object Picker {
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
-
-    override def setInit(ctx: RawContext, ctxInit: Option[RawContext]): RawContext =
-      ctx.copy(init = ctxInit)
 
     override def all(ctx: RawContext): Set[String] =
       ctx.`type`("").map(_.fields.toNel.map(_._1).toList.toSet).getOrElse(Set.empty)

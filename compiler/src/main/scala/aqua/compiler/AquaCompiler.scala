@@ -6,12 +6,13 @@ import aqua.parser.{Ast, ParserError}
 import aqua.semantics.header.Picker.setImportPaths
 import aqua.semantics.header.{HeaderHandler, Picker}
 import aqua.semantics.{FileId, SemanticError, Semantics}
+
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.syntax.either.*
 import cats.syntax.functor.*
 import cats.syntax.show.*
-import cats.{~>, Comonad, Monad, Monoid, Order, Show}
+import cats.{Comonad, Monad, Monoid, Order, Show, ~>}
 import scribe.Logging
 
 class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](

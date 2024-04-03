@@ -49,7 +49,8 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
                   t,
                   s"`$n` is expected to be declared, but declaration is not found in the file"
                 )
-              ).void
+              )
+              .void
           }.combineAll.as {
             val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
             val ctxWithDeclaresLoc = sumCtx.addOccurences(tokens)
