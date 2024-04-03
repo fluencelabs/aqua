@@ -87,38 +87,32 @@ class HeaderHandler[S[_]: Comonad, C](using
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
+        resolve(f).map(HeaderSem.fromInit)
 
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
-          .map { ctx =>
-            HeaderSem(ctx, (c, _) => validNec(c))
-          }
+          .map(HeaderSem.fromInit)
 
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
-          .map { fc =>
-            HeaderSem(fc, (c, _) => validNec(c))
-          }
+          .map(HeaderSem.fromInit)
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
-          .map { fc =>
-            HeaderSem(fc, (c, _) => validNec(c))
-          }
+          .map(HeaderSem.fromInit)
 
       case ee: ExportExpr[S] =>
         ExportSem(ee).headerSem
 
       case f: FilenameExpr[S] =>
-        resolve(f).map(fc => HeaderSem(fc, (c, _) => validNec(c)))
+        resolve(f).map(HeaderSem.fromInit)
     }
 
     val (module, other) =
