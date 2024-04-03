@@ -340,7 +340,7 @@ object RawSemantics extends Logging {
             .filter(_ != RawContext.blank)
         )
 
-        parts.foldLeft(initCtx) { case (ctx, p) =>
+        parts.foldLeft(init) { case (ctx, p) =>
           ctx.copy(parts = ctx.parts :+ (ctx -> p))
         }
 
