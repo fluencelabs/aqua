@@ -3,6 +3,8 @@ import {
   returnOptional,
   useOptional,
   registerSomeS,
+  getDefault,
+  getArg
 } from "../compiled/examples/option.js";
 
 export function registerHandlers(): void {
@@ -30,4 +32,12 @@ export async function returnOptionalCall(): Promise<string | null> {
 
 export async function returnNull(): Promise<string | null> {
   return await returnNone();
+}
+
+export async function getDefaultCall(): Promise<string | null> {
+  return await getDefault();
+}
+
+export async function getArgCall(num: number): Promise<string | null> {
+  return await getArg(num);
 }
