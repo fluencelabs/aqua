@@ -34,10 +34,10 @@ export async function returnNull(): Promise<string | null> {
   return await returnNone();
 }
 
-export async function getDefaultCall(): Promise<string | null> {
+export async function getDefaultCall(): Promise<number> {
   return await getDefault();
 }
 
-export async function getArgCall(num: number): Promise<string | null> {
+export async function getArgCall(num: number): Promise<number> {
   return await getArg(num);
 }
