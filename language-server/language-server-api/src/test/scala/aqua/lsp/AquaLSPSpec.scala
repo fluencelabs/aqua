@@ -448,7 +448,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     // from {SomeAbility} to 'ability SomeAbility'
     res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
     // from 'SomeAbility.someStr' to {SomeAbility}
-    res.checkLocations("SomeAbility", 1, 2, main) shouldBe true
+    res.checkLocations("SomeAbility", 0, 2, main) shouldBe true
 
     res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
     Range.inclusive(1, 3).foreach { n =>
