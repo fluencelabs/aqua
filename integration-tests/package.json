@@ -37,7 +37,7 @@
     "prettier": "3.1.1",
     "ts-jest": "29.1.2",
     "ts-node": "10.9.2",
-    "typescript": "5.3.3"
+    "typescript": "5.4.4"
   },
   "dependencies": {
     "@fluencelabs/fluence-network-environment": "1.2.1",
