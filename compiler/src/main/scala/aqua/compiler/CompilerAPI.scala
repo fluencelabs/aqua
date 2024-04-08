@@ -54,14 +54,12 @@ object CompilerAPI extends Logging {
       )
       .rawContextMonoid
 
-    val semantics = new RawSemantics[S]()
-
     given LocationsAlgebra[S, State[RawContext, *]] =
       DummyLocationsInterpreter()
 
-    new AquaCompiler[F, E, I, S, RawContext](
+    new AquaCompiler(
       new HeaderHandler(),
-      semantics
+      new RawSemantics()
     )
   }
 

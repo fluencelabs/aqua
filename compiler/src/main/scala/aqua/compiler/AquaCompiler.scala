@@ -15,7 +15,7 @@ import cats.syntax.show.*
 import cats.{Comonad, Monad, Monoid, Order, Show, ~>}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
+class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 ) extends Logging {

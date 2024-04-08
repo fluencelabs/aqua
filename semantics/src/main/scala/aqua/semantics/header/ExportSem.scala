@@ -21,7 +21,6 @@ import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
 class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
-  acm: Monoid[C],
   picker: Picker[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
