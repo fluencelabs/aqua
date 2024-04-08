@@ -1,6 +1,6 @@
 aqua Option
 
-export SomeS, useOptional, returnOptional, returnNone
+export SomeS, useOptional, returnOptional, returnNone, getDefault, getArg
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
@@ -27,3 +27,13 @@ func returnNone() -> ?string:
     result: *string
     Op.noop()
     <- result
+
+func reward(amount: ?u32) -> u32:
+  result = ?[amount! / 10, 42]
+  <- result!
+
+func getArg(a: u32) -> u32:
+  <- reward(?[a])
+
+func getDefault() -> u32:
+  <- reward(?[])

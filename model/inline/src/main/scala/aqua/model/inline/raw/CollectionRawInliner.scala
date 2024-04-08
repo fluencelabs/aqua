@@ -34,13 +34,9 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
         .map(Chain.fromSeq)
 
       // push values to the stream, that is gathering the collection
-      vals = valsWithInlines.map { case (v, _) =>
-        PushToStreamModel(v, streamExp).leaf
-      }
-
-      // all inlines will be added before pushing values to the stream
-      inlines = valsWithInlines.flatMap { case (_, t) =>
-        Chain.fromOption(t)
+      vals = valsWithInlines.map { case (v, tOp) =>
+        val pts = PushToStreamModel(v, streamExp).leaf
+        tOp.map(t => SeqModel.wrap(Chain(t, pts))).getOrElse(pts)
       }
 
       canonName <-
@@ -52,18 +48,17 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       raw.collectionType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, streamType).wrap(
-            SeqModel.wrap(inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf)
+            SeqModel.wrap(vals :+ CanonicalizeModel(stream, canon).leaf)
           )
         case OptionType(_) =>
           RestrictionModel(streamName, streamType).wrap(
             SeqModel.wrap(
-              SeqModel.wrap(inlines),
               XorModel.wrap(vals :+ NullModel.leaf),
               CanonicalizeModel(stream, canon).leaf
             )
           )
         case _ =>
-          SeqModel.wrap(inlines ++ vals)
+          SeqModel.wrap(vals)
       }
     )
 }

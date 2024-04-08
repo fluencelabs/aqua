@@ -68,6 +68,8 @@ import {
   returnNull,
   returnOptionalCall,
   useOptionalCall,
+  getDefaultCall,
+  getArgCall
 } from "../examples/useOptionalCall.js";
 import {
   viaArrCall,
@@ -605,6 +607,14 @@ describe("Testing examples", () => {
     expect(optionResult).toBe("hello");
     expect(optionalResult).toBe("optional");
     expect(noneResult).toBe(null);
+  });
+
+  it("option.aqua default values LNG-351", async () => {
+    registerHandlers();
+    let defaultResult = await getDefaultCall();
+    let argResult = await getArgCall(1000);
+    expect(defaultResult).toBe(42);
+    expect(argResult).toBe(100);
   });
 
   it("nestedFuncs.aqua", async () => {
