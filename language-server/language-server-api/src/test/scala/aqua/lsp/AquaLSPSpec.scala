@@ -448,7 +448,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     // from {SomeAbility} to 'ability SomeAbility'
     res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
     // from 'SomeAbility.someStr' to {SomeAbility}
-    res.checkLocations("SomeAbility", 1, 2, main) shouldBe true
+    res.checkLocations("SomeAbility", 0, 2, main) shouldBe true
 
     res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
     Range.inclusive(1, 3).foreach { n =>
@@ -502,5 +502,40 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkLocations("someString", 1, 0, firstImport, Some(main)) shouldBe true
     res.checkLocations("someString", 1, 2, firstImport, Some(main)) shouldBe true
     res.checkLocations("someString", 1, 3, firstImport, Some(main)) shouldBe true
+  }
+
+  it should "return right tokens for multiple abilities" in {
+    val main =
+      """aqua Import declares *
+        |
+        |export main
+        |
+        |ability Abilyy:
+        |  field: string
+        |
+        |func firstFunc{Abilyy}() -> string:
+        |  <- "str"
+        |
+        |func secondFunc{Abilyy}() -> string:
+        |  <- "str"
+        |
+        |func main() -> string:
+        |  ab = Abilyy(field = "123")
+        |  res <- firstFunc{ab}()
+        |  secondFunc{ab}()
+        |  <- res
+        |""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val imports = Map.empty[String, String]
+
+    val res = compile(src, imports).toOption.get.values.head
+
+    res.errors shouldBe empty
+    res.checkLocations("Abilyy", 0, 1, main) shouldBe true
+    res.checkLocations("Abilyy", 0, 2, main) shouldBe true
+    res.checkLocations("Abilyy", 0, 3, main) shouldBe true
   }
 }
