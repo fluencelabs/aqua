@@ -1,8 +1,10 @@
 aqua Main
 
-import someFunc from "import.aqua"
+export main
 
-export someFunc
+func reward(amount: ?u32) -> u32:
+  result = ?[amount! / 10, 0]
+  <- result!
 
-func a() -> string:
-  <- "srrt"
+func main(a: u32) -> u32:
+  <- reward(?[a])
