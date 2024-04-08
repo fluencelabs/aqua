@@ -6,21 +6,18 @@ import aqua.semantics.SemanticError
 import cats.data.*
 import cats.data.Validated.validNec
 import cats.syntax.monoid.*
+import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
 case class HeaderSem[S[_], C](
-  initCtx: C,
-  finInitCtx: (C, C) => ValidatedNec[SemanticError[S], C]
-) {
-
-  def finCtx: C => ValidatedNec[SemanticError[S], C] =
-    finInitCtx(_, initCtx)
-}
+  init: C,
+  fin: C => ValidatedNec[SemanticError[S], C]
+)
 
 object HeaderSem {
 
   def fromInit[S[_], C](init: C): HeaderSem[S, C] =
-    HeaderSem(init, (c, _) => validNec(c))
+    HeaderSem(init, c => c.validNec)
 
   given [S[_]: Comonad, C](using
     rc: Monoid[C]
@@ -32,8 +29,8 @@ object HeaderSem {
       b: HeaderSem[S, C]
     ): HeaderSem[S, C] =
       HeaderSem(
-        a.initCtx |+| b.initCtx,
-        (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
+        a.init |+| b.init,
+        c => a.fin(c).andThen(b.fin)
       )
   }
 }

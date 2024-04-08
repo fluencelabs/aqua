@@ -39,11 +39,11 @@ class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
         // Analyze the body, with prepared initial context
         _ = logger.trace("semantic processing...")
         processed <- semantics
-          .process(body, headerSem.initCtx)
+          .process(body, headerSem.init)
           .toCompileRes
         // Handle exports, declares - finalize the resulting context
         rc <- headerSem
-          .finCtx(processed)
+          .fin(processed)
           .toCompileRes
       } yield rc.setImportPaths(importPaths)
 

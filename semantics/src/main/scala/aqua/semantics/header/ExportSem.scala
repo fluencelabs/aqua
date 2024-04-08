@@ -56,7 +56,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
     ).validNec
   }
 
-  private def finSem(ctx: C, initCtx: C): ValidatedNec[SemanticError[S], C] = {
+  private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
     val pubs = expr.pubs
       .map(
         _.bimap(

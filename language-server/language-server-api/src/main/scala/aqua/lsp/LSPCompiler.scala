@@ -34,15 +34,15 @@ object LSPCompiler {
 
     given Monoid[HeaderSem[S, LspContext[S]]] with {
       override def empty: HeaderSem[S, LspContext[S]] =
-        HeaderSem(Monoid[LspContext[S]].empty, (c, _) => validNec(c))
+        HeaderSem.fromInit(Monoid[LspContext[S]].empty)
 
       override def combine(
         a: HeaderSem[S, LspContext[S]],
         b: HeaderSem[S, LspContext[S]]
       ): HeaderSem[S, LspContext[S]] = {
         HeaderSem(
-          a.initCtx |+| b.initCtx,
-          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
+          a.init |+| b.init,
+          (c) => a.fin(c).andThen(b.fin)
         )
       }
     }

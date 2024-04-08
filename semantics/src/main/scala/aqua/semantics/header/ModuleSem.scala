@@ -31,7 +31,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         name.value,
         shouldDeclare
       ),
-      (ctx, _) =>
+      ctx =>
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
           // TODO: Refactor, this is a hack:
