@@ -184,19 +184,15 @@ object AquaContext extends Logging {
           .foldLeft[(AquaContext, Cache)] {
             // Laziness unefficiency happens here
             logger.trace(s"raw: ${rawContext.module}")
-            val (i, c) =
-              rawContext.init
-                .map(fromRawContext(_, cache))
-                .getOrElse(blank -> cache)
 
             val (abs, absCache) =
-              rawContext.abilities.foldLeft[(Map[String, AquaContext], Cache)]((Map.empty, c)) {
+              rawContext.abilities.foldLeft[(Map[String, AquaContext], Cache)]((Map.empty, cache)) {
                 case ((acc, cAcc), (k, v)) =>
                   val (abCtx, abCache) = fromRawContext(v, cAcc)
                   (acc + (k -> abCtx), abCache)
               }
 
-            (i |+| blank.copy(abilities = abs)) -> absCache
+            blank.copy(abilities = abs) -> absCache
           } {
             case ((ctx, ctxCache), (partContext, c: ConstantRaw)) =>
               logger.trace("Adding constant " + c.name)

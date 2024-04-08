@@ -335,10 +335,6 @@ object RawSemantics extends Logging {
           case rp: RawPart => Chain.one(rp)
           case _: Raw.Empty => Chain.empty
         }
-        val initCtx = RawContext.blank.copy(
-          init = Some(init.copy(module = init.module.map(_ + "|init")))
-            .filter(_ != RawContext.blank)
-        )
 
         parts.foldLeft(init) { case (ctx, p) =>
           ctx.copy(parts = ctx.parts :+ (ctx -> p))
