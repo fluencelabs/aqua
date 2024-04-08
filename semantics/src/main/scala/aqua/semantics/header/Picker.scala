@@ -4,6 +4,7 @@ import aqua.raw.{RawContext, RawPart}
 import aqua.types.{AbilityType, ArrowType, Type}
 
 import cats.Semigroup
+import cats.syntax.foldable.*
 import cats.syntax.semigroup.*
 
 // Able to pick info from different contexts
@@ -14,7 +15,7 @@ trait Picker[A] {
   def definedAbilityNames(ctx: A): Set[String]
   def blank: A
   def pick(ctx: A, name: String, rename: Option[String], declared: Boolean): Option[A]
-  def pickDeclared(ctx: A)(using semi: Semigroup[A]): A
+  def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
   def exports(ctx: A): Map[String, Option[String]]
@@ -40,7 +41,7 @@ object Picker {
 
     def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
       Picker[A].pick(p, name, rename, declared)
-    def pickDeclared(using semi: Semigroup[A]): A = Picker[A].pickDeclared(p)
+    def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
     def exports: Map[String, Option[String]] = Picker[A].exports(p)
@@ -149,14 +150,12 @@ object Picker {
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
 
-    override def pickDeclared(ctx: RawContext)(using semi: Semigroup[RawContext]): RawContext =
+    override def pickDeclared(ctx: RawContext): RawContext =
       if (ctx.module.isEmpty) ctx
       else
         ctx.declares.toList
           .flatMap(n => pick(ctx, n, None, ctx.module.nonEmpty))
-          .foldLeft(pickHeader(ctx))(
-            _ |+| _
-          )
+          .foldLeft(pickHeader(ctx))(_ |+| _)
   }
 
 }

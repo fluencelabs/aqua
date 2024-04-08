@@ -154,9 +154,7 @@ object LspContext {
 
     override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
 
-    override def pickDeclared(
-      ctx: LspContext[S]
-    )(using Semigroup[LspContext[S]]): LspContext[S] =
+    override def pickDeclared(ctx: LspContext[S]): LspContext[S] =
       ctx.copy(raw = ctx.raw.pickDeclared)
   }
 
