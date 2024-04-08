@@ -22,7 +22,9 @@ object HeaderSem {
   given [S[_]: Comonad, C](using
     rc: Monoid[C]
   ): Monoid[HeaderSem[S, C]] with {
-    override def empty: HeaderSem[S, C] = HeaderSem.fromInit(rc.empty)
+
+    override def empty: HeaderSem[S, C] =
+      HeaderSem.fromInit(rc.empty)
 
     override def combine(
       a: HeaderSem[S, C],
@@ -30,7 +32,7 @@ object HeaderSem {
     ): HeaderSem[S, C] =
       HeaderSem(
         a.init |+| b.init,
-        c => a.fin(c).andThen(b.fin)
+        c => a.fin(c) |+| b.fin(c)
       )
   }
 }
