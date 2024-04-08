@@ -31,21 +31,20 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         name.value,
         shouldDeclare
       ),
-      (ctx, initCtx) =>
-        val sumCtx = ctx |+| initCtx
+      (ctx, _) =>
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
           // TODO: Refactor, this is a hack:
           // Remove module name so method `.all` works correctly
-          val allDeclared = sumCtx.setOptModule(None, Set.empty).all
-          sumCtx.setModule(name.value, declares = allDeclared).validNec
+          val allDeclared = ctx.setOptModule(None, Set.empty).all
+          ctx.setModule(name.value, declares = allDeclared).validNec
         else {
           // summarize contexts to allow redeclaration of imports
           (
             declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
           ).map { case (n, t) =>
-            sumCtx
-              .pick(n, None, sumCtx.module.nonEmpty)
+            ctx
+              .pick(n, None, ctx.module.nonEmpty)
               .toValidNec(
                 error(
                   t,
@@ -55,7 +54,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
               .void
           }.combineAll.as {
             val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = sumCtx.addOccurences(tokens)
+            val ctxWithDeclaresLoc = ctx.addOccurences(tokens)
             // TODO: why module name and declares is lost? where is it lost?
             ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
           }
