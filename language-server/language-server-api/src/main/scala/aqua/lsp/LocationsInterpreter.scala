@@ -3,6 +3,7 @@ package aqua.lsp
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
 import aqua.types.AbilityType
+
 import cats.data.State
 import monocle.Lens
 import scribe.Logging
@@ -13,9 +14,13 @@ class LocationsInterpreter[S[_], X](using
 
   type SX[A] = State[X, A]
 
-  override def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] = modify { st =>
-    st.addDefinition(definition)
-  }
+  override def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] =
+    definition.`type` match {
+      // case where ability is an {Argument} in a function
+      case t: AbilityType if definition.name == t.name =>
+        pointLocation(definition.name, definition.token)
+      case _ => modify { st => st.addDefinition(definition) }
+    }
 
   override def addDefinitionWithFields(
     definition: DefinitionInfo[S],
