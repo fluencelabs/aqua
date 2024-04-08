@@ -16,7 +16,6 @@ import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
 class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
-  acm: Monoid[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
@@ -27,7 +26,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
 
     lazy val sem = HeaderSem(
       // Save module header info
-      acm.empty.setModule(
+      Picker[C].blank.setModule(
         name.value,
         shouldDeclare
       ),
