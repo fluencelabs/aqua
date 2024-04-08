@@ -133,7 +133,6 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    println(tree.get.show)
 
     tree.get.equalsOrShowDiff(expected) shouldBe true
   }
