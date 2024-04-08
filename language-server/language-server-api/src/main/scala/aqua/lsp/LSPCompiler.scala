@@ -32,29 +32,12 @@ object LSPCompiler {
       )
       .lspContextMonoid
 
-    given Monoid[HeaderSem[S, LspContext[S]]] with {
-      override def empty: HeaderSem[S, LspContext[S]] =
-        HeaderSem.fromInit(Monoid[LspContext[S]].empty)
-
-      override def combine(
-        a: HeaderSem[S, LspContext[S]],
-        b: HeaderSem[S, LspContext[S]]
-      ): HeaderSem[S, LspContext[S]] = {
-        HeaderSem(
-          a.init |+| b.init,
-          (c) => a.fin(c).andThen(b.fin)
-        )
-      }
-    }
-
-    val semantics = new LspSemantics[S]()
-
     given LocationsAlgebra[S, State[LspContext[S], *]] =
       LocationsInterpreter[S, LspContext[S]]()
 
-    new AquaCompiler[F, E, I, S, LspContext[S]](
-      new HeaderHandler(),
-      semantics
+    new AquaCompiler(
+      headerHandler = new HeaderHandler(),
+      semantics = new LspSemantics()
     )
   }
 
