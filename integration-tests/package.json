@@ -40,7 +40,7 @@
     "typescript": "5.3.3"
   },
   "dependencies": {
-    "@fluencelabs/fluence-network-environment": "1.2.0",
+    "@fluencelabs/fluence-network-environment": "1.2.1",
     "@fluencelabs/js-client": "0.9.0",
     "deep-equal": "2.2.1",
     "loglevel": "1.9.1"
