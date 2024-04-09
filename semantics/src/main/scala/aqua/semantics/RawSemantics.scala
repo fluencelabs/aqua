@@ -30,8 +30,7 @@ import scribe.Logging
 
 class RawSemantics[S[_]](
   constants: List[ConstantRaw] = Nil
-)(using Picker[RawContext])
-    extends Semantics[S, RawContext] {
+) extends Semantics[S, RawContext] {
 
   override def process(
     ast: Ast[S],
