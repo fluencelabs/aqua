@@ -318,11 +318,6 @@ object RawSemantics extends Logging {
       .map(_.raw)
   }
 
-  private def astToState[S[_]](ast: Ast[S])(using
-    locations: LocationsAlgebra[S, Interpreter[S, *]]
-  ): Interpreter[S, Raw] =
-    transpile[S](ast)
-
   // If there are any errors, they're inside CompilerState[S]
   def interpret[S[_]](
     ast: Ast[S],
@@ -330,7 +325,7 @@ object RawSemantics extends Logging {
   )(using
     LocationsAlgebra[S, Interpreter[S, *]]
   ): Interpreter[S, RawContext] =
-    astToState(ast).map {
+    transpile(ast).map {
       case raw: (Raw.Empty | RawPart | RawPart.Parts) =>
         val parts = raw match {
           case rps: RawPart.Parts => rps.parts.toList
