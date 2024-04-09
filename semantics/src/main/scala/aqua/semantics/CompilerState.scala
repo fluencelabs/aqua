@@ -2,8 +2,7 @@ package aqua.semantics
 
 import aqua.mangler.ManglerState
 import aqua.parser.lexer.Token
-import aqua.raw.Raw
-import aqua.raw.RawContext
+import aqua.raw.{Raw, RawContext}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.definitions.DefinitionsState
 import aqua.semantics.rules.locations.LocationsState

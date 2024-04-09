@@ -4,7 +4,7 @@ import aqua.errors.Errors.internalError
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.{Ast, Expr}
 import aqua.raw.ops.*
-import aqua.raw.{Raw, RawContext, RawPart}
+import aqua.raw.{ConstantRaw, Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -28,9 +28,10 @@ import cats.syntax.traverse.*
 import cats.{Eval, Monad}
 import scribe.Logging
 
-class RawSemantics[S[_]](using
-  Picker[RawContext]
-) extends Semantics[S, RawContext] {
+class RawSemantics[S[_]](
+  constants: List[ConstantRaw]
+)(using Picker[RawContext])
+    extends Semantics[S, RawContext] {
 
   override def process(
     ast: Ast[S],
@@ -40,9 +41,11 @@ class RawSemantics[S[_]](using
     given LocationsAlgebra[S, State[CompilerState[S], *]] =
       new DummyLocationsInterpreter[S, CompilerState[S]]()
 
+    val withConstants = init.addFreeParts(constants)
+
     RawSemantics
-      .interpret(ast, init)
-      .run(CompilerState.init(init))
+      .interpret(ast, withConstants)
+      .run(CompilerState.init(withConstants))
       .map { case (state, ctx) =>
         EitherT(
           Writer

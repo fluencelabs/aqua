@@ -44,22 +44,14 @@ object CompilerAPI extends Logging {
   private def getAquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, RawContext] = {
-    given Monoid[RawContext] = RawContext
-      .implicits(
-        RawContext.blank.copy(
-          parts = Chain
-            .fromSeq(config.constants ++ ConstantRaw.defaultConstants(config.relayVarName))
-            .map(const => RawContext.blank -> const)
-        )
-      )
-      .rawContextMonoid
-
     given LocationsAlgebra[S, State[RawContext, *]] =
       DummyLocationsInterpreter()
 
+    val constants = config.constants ++ ConstantRaw.defaultConstants(config.relayVarName)
+
     new AquaCompiler(
       new HeaderHandler(),
-      new RawSemantics()
+      new RawSemantics(constants)
     )
   }
 

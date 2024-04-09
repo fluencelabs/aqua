@@ -58,6 +58,9 @@ object Picker {
       Picker[A].setImportPaths(p, importPaths)
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
+    def addFreeParts(parts: List[RawPart]): A =
+      parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
+
     def setModule(name: String, declares: Set[String]): A =
       Picker[A].setModule(p, Some(name), declares)
 
