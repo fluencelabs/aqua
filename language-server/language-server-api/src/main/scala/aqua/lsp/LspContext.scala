@@ -3,10 +3,10 @@ package aqua.lsp
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
+import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
 import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.types.{AbilityType, ArrowType, Type}
-import aqua.semantics.rules.locations.LocationsState
 
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
@@ -32,8 +32,10 @@ object LspContext {
 
   def blank[S[_]]: LspContext[S] = LspContext[S](raw = RawContext())
 
-  given [S[_]]: Semigroup[LspContext[S]] =
-    (x: LspContext[S], y: LspContext[S]) =>
+  given [S[_]]: Monoid[LspContext[S]] with {
+    override def empty = blank[S]
+
+    override def combine(x: LspContext[S], y: LspContext[S]) =
       LspContext[S](
         raw = x.raw |+| y.raw,
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
@@ -45,21 +47,6 @@ object LspContext {
         warnings = x.warnings ++ y.warnings,
         importPaths = x.importPaths ++ y.importPaths
       )
-
-  trait Implicits[S[_]] {
-    val lspContextMonoid: Monoid[LspContext[S]]
-  }
-
-  def implicits[S[_]](init: LspContext[S]): Implicits[S] = new Implicits[S] {
-
-    override val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
-      override def empty: LspContext[S] = init
-
-      override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] = {
-        Semigroup[LspContext[S]].combine(x, y)
-      }
-    }
-
   }
 
   given [S[_]]: Picker[LspContext[S]] with {
@@ -85,13 +72,11 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def setInit(ctx: LspContext[S], ctxInit: Option[LspContext[S]]): LspContext[S] =
-      ctx.copy(raw = ctx.raw.setInit(ctxInit.map(_.raw)))
-
-    override def all(ctx: LspContext[S]): Set[String] =
-      ctx.raw.all
     override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
-    override def declares(ctx: LspContext[S]): Set[String] = ctx.raw.declares
+
+    override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
+
+    override def allNames(ctx: LspContext[S]): Set[String] = ctx.raw.allNames
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
       ctx.copy(
@@ -103,15 +88,23 @@ object LspContext {
         )
       )
 
-    override def setImportPaths(ctx: LspContext[S], importPaths: Map[String, String]): LspContext[S] =
+    override def setImportPaths(
+      ctx: LspContext[S],
+      importPaths: Map[String, String]
+    ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
     override def setModule(
       ctx: LspContext[S],
-      name: Option[String],
+      name: String
+    ): LspContext[S] =
+      ctx.copy(raw = ctx.raw.setModule(name))
+
+    override def setDeclares(
+      ctx: LspContext[S],
       declares: Set[String]
     ): LspContext[S] =
-      ctx.copy(raw = ctx.raw.setOptModule(name, declares))
+      ctx.copy(raw = ctx.raw.setDeclares(declares))
 
     override def setExports(
       ctx: LspContext[S],
@@ -154,22 +147,20 @@ object LspContext {
 
     override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
 
-    override def pickDeclared(
-      ctx: LspContext[S]
-    )(using Semigroup[LspContext[S]]): LspContext[S] =
+    override def pickDeclared(ctx: LspContext[S]): LspContext[S] =
       ctx.copy(raw = ctx.raw.pickDeclared)
   }
 
   /*
     NOTE: This instance is used to generate LocationsAlgebra[S, State[LspContext[S], *]]
-          to reuse the code from the body semantics in the header semantics 
+          to reuse the code from the body semantics in the header semantics
    */
   given [S[_]]: Lens[LspContext[S], LocationsState[S]] = {
-    val get: LspContext[S] => LocationsState[S] = 
+    val get: LspContext[S] => LocationsState[S] =
       ctx => LocationsState(ctx.variables)
     val replace: LocationsState[S] => LspContext[S] => LspContext[S] =
       locs => ctx => ctx.copy(variables = locs.variables)
-    
+
     Lens(get)(replace)
   }
 }

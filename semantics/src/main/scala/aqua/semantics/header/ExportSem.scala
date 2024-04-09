@@ -21,7 +21,6 @@ import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
 class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
-  acm: Monoid[C],
   picker: Picker[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
@@ -56,7 +55,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
     ).validNec
   }
 
-  private def finSem(ctx: C, initCtx: C): ValidatedNec[SemanticError[S], C] = {
+  private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
     val pubs = expr.pubs
       .map(
         _.bimap(
@@ -65,23 +64,21 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
         ).merge
       )
 
-    val tokens = pubs.toList.flatMap {
-      case ((token, name), (renameToken, _)) =>
-        renameToken.map(name -> _).toList :+ (name, token)
+    val tokens = pubs.toList.flatMap { case ((token, name), (renameToken, _)) =>
+      renameToken.map(name -> _).toList :+ (name, token)
     }
 
-    val ctxWithExportLocations = ctx.addOccurences(tokens)
-    val sumCtx = initCtx |+| ctxWithExportLocations
+    val resCtx = ctx.addOccurences(tokens)
 
     pubs.map { case ((token, name), (_, rename)) =>
-      sumCtx
+      resCtx
         .pick(name, rename, declared = false)
         .as(Map(name -> rename))
         .toValid(
           error(
             token,
             s"Files has no $name declaration or import, " +
-              s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
+              s"cannot export, available functions: ${resCtx.funcNames.mkString(", ")}"
           )
         )
         .ensure(
@@ -89,11 +86,11 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
             token,
             s"Can not export '$name' as it is an ability"
           )
-        )(_ => !sumCtx.isAbility(name))
-        .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
+        )(_ => !resCtx.isAbility(name))
+        .toValidatedNec <* exportFuncChecks(resCtx, token, name)
     }
-      .prepend(validNec(sumCtx.exports))
+      .prepend(validNec(resCtx.exports))
       .combineAll
-      .map(sumCtx.setExports)
+      .map(resCtx.setExports)
   }
 }

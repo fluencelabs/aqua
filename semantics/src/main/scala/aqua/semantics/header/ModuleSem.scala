@@ -16,46 +16,37 @@ import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
 class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
-  acm: Monoid[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
   import expr.*
 
   def headerSem: Res[S, C] = {
-    val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
-
     lazy val sem = HeaderSem(
       // Save module header info
-      acm.empty.setModule(
-        name.value,
-        shouldDeclare
-      ),
-      (ctx, initCtx) =>
-        val sumCtx = ctx |+| initCtx
+      Picker[C].blank.setModule(name.value),
+      ctx =>
         // When file is handled, check that all the declarations exists
-        if (declareAll.nonEmpty)
-          val allDeclared = ctx.all ++ initCtx.all
-          sumCtx.setModule(name.value, declares = allDeclared).validNec
+        if (declareAll.nonEmpty) ctx.setDeclares(ctx.allNames).validNec
         else {
+          val declares = declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
+          val names = declares.map { case (name, _) => name }.toSet
+          val res = ctx.setDeclares(names).addOccurences(declares)
+
           // summarize contexts to allow redeclaration of imports
-          (
-            declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-          ).map { case (n, t) =>
-            sumCtx
-              .pick(n, None, sumCtx.module.nonEmpty)
+          declares.map { case (n, t) =>
+            res
+              .pick(n, None, ctx.module.nonEmpty)
               .toValidNec(
                 error(
                   t,
                   s"`$n` is expected to be declared, but declaration is not found in the file"
                 )
-              ).void
-          }.combineAll.as {
-            val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = sumCtx.addOccurences(tokens)
-            // TODO: why module name and declares is lost? where is it lost?
-            ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
-          }
+              )
+              .void
+          // TODO: Should not it be possible to make `.combineAll` the final result?
+          // Seems like `.pick` does not return much information
+          }.combineAll.as(res)
         }
     )
 

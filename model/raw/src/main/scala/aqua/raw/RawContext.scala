@@ -15,8 +15,6 @@ import scala.collection.immutable.SortedMap
 /**
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
  *
- * @param init
- * Initial context – collected imports, needed for re-exporting in AquaContext later
  * @param module
  * This file's module name
  * @param declares
@@ -29,7 +27,6 @@ import scala.collection.immutable.SortedMap
  * Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
-  init: Option[RawContext] = None,
   module: Option[String] = None,
   declares: Set[String] = Set.empty,
   exports: Map[String, Option[String]] = Map.empty,
@@ -89,16 +86,11 @@ case class RawContext(
   lazy val allDefinedAbilities: Map[String, AbilityType] =
     all(_.definedAbilities)
 
-  def `type`(name: String): Option[StructType] =
-    NonEmptyMap
-      .fromMap(
-        SortedMap.from(
-          collectPartsMap {
-            case rp if declares(rp.name) || module.isEmpty => rp.rawPartType
-          }
-        )
-      )
-      .map(StructType(name, _))
+  lazy val allNames: Set[String] =
+    parts.map { case (_, p) => p.name }.toList.toSet
+
+  lazy val declaredNames: Set[String] =
+    allNames.filter(declares.contains)
 
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}
@@ -113,29 +105,17 @@ case class RawContext(
 object RawContext {
   val blank: RawContext = RawContext()
 
-  given Semigroup[RawContext] =
-    (x: RawContext, y: RawContext) =>
+  given Monoid[RawContext] with {
+
+    override def empty: RawContext = blank
+
+    override def combine(x: RawContext, y: RawContext) =
       RawContext(
-        x.init.flatMap(xi => y.init.map(xi |+| _)) orElse x.init orElse y.init,
         x.module orElse y.module,
         x.declares ++ y.declares,
         x.exports ++ y.exports,
         x.parts ++ y.parts,
         x.abilities ++ y.abilities
       )
-
-  trait Implicits {
-    val rawContextMonoid: Monoid[RawContext]
-  }
-
-  def implicits(init: RawContext): Implicits = new Implicits {
-
-    override val rawContextMonoid: Monoid[RawContext] = new Monoid[RawContext] {
-      override def empty: RawContext = init
-
-      override def combine(x: RawContext, y: RawContext): RawContext =
-        Semigroup[RawContext].combine(x, y)
-    }
-
   }
 }

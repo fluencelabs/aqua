@@ -6,15 +6,16 @@ import aqua.parser.{Ast, ParserError}
 import aqua.semantics.header.Picker.setImportPaths
 import aqua.semantics.header.{HeaderHandler, Picker}
 import aqua.semantics.{FileId, SemanticError, Semantics}
+
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.syntax.either.*
 import cats.syntax.functor.*
 import cats.syntax.show.*
-import cats.{~>, Comonad, Monad, Monoid, Order, Show}
+import cats.{Comonad, Monad, Monoid, Order, Show, ~>}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
+class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 ) extends Logging {
@@ -38,11 +39,11 @@ class AquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad, C: Monoid: Picker](
         // Analyze the body, with prepared initial context
         _ = logger.trace("semantic processing...")
         processed <- semantics
-          .process(body, headerSem.initCtx)
+          .process(body, headerSem.init)
           .toCompileRes
         // Handle exports, declares - finalize the resulting context
         rc <- headerSem
-          .finCtx(processed)
+          .fin(processed)
           .toCompileRes
       } yield rc.setImportPaths(importPaths)
 

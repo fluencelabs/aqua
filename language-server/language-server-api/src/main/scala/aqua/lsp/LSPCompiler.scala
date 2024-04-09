@@ -20,41 +20,14 @@ object LSPCompiler {
   private def getLspAquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, LspContext[S]] = {
-    given Monoid[LspContext[S]] = LspContext
-      .implicits(
-        LspContext.blank.copy(raw =
-          RawContext.blank.copy(
-            parts = Chain
-              .fromSeq(config.constants ++ ConstantRaw.defaultConstants(config.relayVarName))
-              .map(const => RawContext.blank -> const)
-          )
-        )
-      )
-      .lspContextMonoid
-
-    given Monoid[HeaderSem[S, LspContext[S]]] with {
-      override def empty: HeaderSem[S, LspContext[S]] =
-        HeaderSem(Monoid[LspContext[S]].empty, (c, _) => validNec(c))
-
-      override def combine(
-        a: HeaderSem[S, LspContext[S]],
-        b: HeaderSem[S, LspContext[S]]
-      ): HeaderSem[S, LspContext[S]] = {
-        HeaderSem(
-          a.initCtx |+| b.initCtx,
-          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-        )
-      }
-    }
-
-    val semantics = new LspSemantics[S]()
-
     given LocationsAlgebra[S, State[LspContext[S], *]] =
       LocationsInterpreter[S, LspContext[S]]()
 
-    new AquaCompiler[F, E, I, S, LspContext[S]](
-      new HeaderHandler(),
-      semantics
+    val constants = config.constants ++ ConstantRaw.defaultConstants(config.relayVarName)
+
+    new AquaCompiler(
+      headerHandler = new HeaderHandler(),
+      semantics = new LspSemantics(constants)
     )
   }
 

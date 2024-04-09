@@ -2,8 +2,7 @@ package aqua.semantics
 
 import aqua.mangler.ManglerState
 import aqua.parser.lexer.Token
-import aqua.raw.Raw
-import aqua.raw.RawContext
+import aqua.raw.{Raw, RawContext}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.definitions.DefinitionsState
 import aqua.semantics.rules.locations.LocationsState
@@ -33,7 +32,6 @@ case class CompilerState[S[_]](
 }
 
 object CompilerState {
-  type St[S[_]] = State[CompilerState[S], Raw]
 
   def init[F[_]](ctx: RawContext): CompilerState[F] =
     CompilerState(
@@ -59,29 +57,5 @@ object CompilerState {
 
   given [S[_]]: Lens[CompilerState[S], DefinitionsState[S]] =
     GenLens[CompilerState[S]](_.definitions)
-
-  given [S[_]]: Monoid[St[S]] with {
-    override def empty: St[S] = State.pure(Raw.Empty("compiler state monoid empty"))
-
-    override def combine(x: St[S], y: St[S]): St[S] = for {
-      a <- x.get
-      b <- y.get
-      _ <- State.set(
-        CompilerState[S](
-          a.report |+| b.report,
-          a.mangler |+| b.mangler,
-          a.names |+| b.names,
-          a.abilities |+| b.abilities,
-          a.types |+| b.types,
-          locations = a.locations |+| b.locations
-        )
-      )
-      am <- x
-      ym <- y
-    } yield {
-      // println(s"MONOID COMBINE $am $ym")
-      am |+| ym
-    }
-  }
 
 }

@@ -4,7 +4,7 @@ import aqua.errors.Errors.internalError
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.{Ast, Expr}
 import aqua.raw.ops.*
-import aqua.raw.{Raw, RawContext, RawPart}
+import aqua.raw.{ConstantRaw, Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -28,8 +28,8 @@ import cats.syntax.traverse.*
 import cats.{Eval, Monad}
 import scribe.Logging
 
-class RawSemantics[S[_]](using
-  Picker[RawContext]
+class RawSemantics[S[_]](
+  constants: List[ConstantRaw] = Nil
 ) extends Semantics[S, RawContext] {
 
   override def process(
@@ -40,8 +40,11 @@ class RawSemantics[S[_]](using
     given LocationsAlgebra[S, State[CompilerState[S], *]] =
       new DummyLocationsInterpreter[S, CompilerState[S]]()
 
+    val withConstants = init.addFreeParts(constants)
+
     RawSemantics
-      .interpret(ast, CompilerState.init(init), init)
+      .interpret(ast, withConstants)
+      .run(CompilerState.init(withConstants))
       .map { case (state, ctx) =>
         EitherT(
           Writer
@@ -315,48 +318,22 @@ object RawSemantics extends Logging {
       .map(_.raw)
   }
 
-  private def astToState[S[_]](ast: Ast[S])(using
-    locations: LocationsAlgebra[S, Interpreter[S, *]]
-  ): Interpreter[S, Raw] =
-    transpile[S](ast)
-
   // If there are any errors, they're inside CompilerState[S]
   def interpret[S[_]](
     ast: Ast[S],
-    initState: CompilerState[S],
     init: RawContext
   )(using
     LocationsAlgebra[S, Interpreter[S, *]]
-  ): Eval[(CompilerState[S], RawContext)] =
-    astToState[S](ast)
-      .run(initState)
-      .map {
-        case (state, _: Raw.Empty) =>
-          // No `parts`, but has `init`
-          (
-            state,
-            RawContext.blank.copy(
-              init = Some(init.copy(module = init.module.map(_ + "|init")))
-                .filter(_ != RawContext.blank)
-            )
-          )
+  ): Interpreter[S, RawContext] =
+    transpile(ast).map {
+      case raw: (Raw.Empty | RawPart | RawPart.Parts) =>
+        val parts = raw match {
+          case rps: RawPart.Parts => rps.parts.toList
+          case rp: RawPart => List(rp)
+          case _: Raw.Empty => List.empty
+        }
 
-        case (state, part: (RawPart | RawPart.Parts)) =>
-          state -> RawPart
-            .contextPart(part)
-            .parts
-            .foldLeft(
-              RawContext.blank.copy(
-                init = Some(init.copy(module = init.module.map(_ + "|init")))
-                  .filter(_ != RawContext.blank)
-              )
-            ) { case (ctx, p) =>
-              ctx.copy(parts = ctx.parts :+ (ctx -> p))
-            }
-
-        case (_, m) =>
-          internalError(
-            s"Unexpected Raw ($m)"
-          )
-      }
+        init.addParts(parts)
+      case m => internalError(s"Unexpected Raw ($m)")
+    }
 }

@@ -2,30 +2,31 @@ package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.{AbilityType, ArrowType, Type}
+
 import cats.Semigroup
+import cats.syntax.foldable.*
 import cats.syntax.semigroup.*
 
 // Able to pick info from different contexts
 trait Picker[A] {
-
-  def all(ctx: A): Set[String]
   def funcNames(ctx: A): Set[String]
   def definedAbilityNames(ctx: A): Set[String]
   def blank: A
   def pick(ctx: A, name: String, rename: Option[String], declared: Boolean): Option[A]
-  def pickDeclared(ctx: A)(implicit semi: Semigroup[A]): A
+  def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
+  def allNames(ctx: A): Set[String]
+  def declaredNames(ctx: A): Set[String]
   def exports(ctx: A): Map[String, Option[String]]
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
-  def declares(ctx: A): Set[String]
   def setAbility(ctx: A, name: String, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
-  def setModule(ctx: A, name: Option[String], declares: Set[String]): A
+  def setModule(ctx: A, name: String): A
+  def setDeclares(ctx: A, declares: Set[String]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
-  def setInit(ctx: A, ctxInit: Option[A]): A
   def addPart(ctx: A, part: (A, RawPart)): A
 }
 
@@ -34,15 +35,17 @@ object Picker {
   extension [A: Picker](p: A) {
 
     def blank: A = Picker[A].blank
-    def all: Set[String] = Picker[A].all(p)
+
     def funcNames: Set[String] = Picker[A].funcNames(p)
     def definedAbilityNames: Set[String] = Picker[A].definedAbilityNames(p)
 
     def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
       Picker[A].pick(p, name, rename, declared)
-    def pickDeclared(implicit semi: Semigroup[A]): A = Picker[A].pickDeclared(p)
+    def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
+    def declaredNames: Set[String] = Picker[A].declaredNames(p)
+    def allNames: Set[String] = Picker[A].allNames(p)
     def exports: Map[String, Option[String]] = Picker[A].exports(p)
 
     def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
@@ -50,17 +53,23 @@ object Picker {
     def funcReturnAbilityOrArrow(name: String): Boolean =
       Picker[A].funcReturnAbilityOrArrow(p, name)
     def funcAcceptAbility(name: String): Boolean = Picker[A].funcAcceptAbility(p, name)
-    def declares: Set[String] = Picker[A].declares(p)
     def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
-    def setImportPaths(importPaths: Map[String, String]): A = Picker[A].setImportPaths(p, importPaths)
-    def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
+
+    def setImportPaths(importPaths: Map[String, String]): A =
+      Picker[A].setImportPaths(p, importPaths)
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
-    def setModule(name: String, declares: Set[String]): A =
-      Picker[A].setModule(p, Some(name), declares)
+    def addParts(parts: List[RawPart]): A =
+      parts.foldLeft(p) { case (ctx, part) => ctx.addPart(ctx -> part) }
 
-    def setOptModule(name: Option[String], declares: Set[String]): A =
-      Picker[A].setModule(p, name, declares)
+    def addFreeParts(parts: List[RawPart]): A =
+      parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
+
+    def setModule(name: String): A =
+      Picker[A].setModule(p, name)
+
+    def setDeclares(declares: Set[String]): A =
+      Picker[A].setDeclares(p, declares)
 
     def setExports(exports: Map[String, Option[String]]): A =
       Picker[A].setExports(p, exports)
@@ -108,13 +117,11 @@ object Picker {
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
 
-    override def setInit(ctx: RawContext, ctxInit: Option[RawContext]): RawContext =
-      ctx.copy(init = ctxInit)
-
-    override def all(ctx: RawContext): Set[String] =
-      ctx.`type`("").map(_.fields.toNel.map(_._1).toList.toSet).getOrElse(Set.empty)
     override def module(ctx: RawContext): Option[String] = ctx.module
-    override def declares(ctx: RawContext): Set[String] = ctx.declares
+
+    override def declaredNames(ctx: RawContext): Set[String] = ctx.declaredNames
+
+    override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
       ctx.copy(abilities = Map(name -> ctxAb))
@@ -123,12 +130,11 @@ object Picker {
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
 
-    override def setModule(
-      ctx: RawContext,
-      name: Option[String],
-      declares: Set[String]
-    ): RawContext =
-      ctx.copy(module = name, declares = declares)
+    override def setModule(ctx: RawContext, name: String): RawContext =
+      ctx.copy(module = Some(name))
+
+    override def setDeclares(ctx: RawContext, declares: Set[String]): RawContext =
+      ctx.copy(declares = declares)
 
     override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
       ctx.copy(exports = exports)
@@ -151,14 +157,12 @@ object Picker {
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
 
-    override def pickDeclared(ctx: RawContext)(implicit semi: Semigroup[RawContext]): RawContext =
+    override def pickDeclared(ctx: RawContext): RawContext =
       if (ctx.module.isEmpty) ctx
       else
         ctx.declares.toList
           .flatMap(n => pick(ctx, n, None, ctx.module.nonEmpty))
-          .foldLeft(pickHeader(ctx))(
-            _ |+| _
-          )
+          .foldLeft(pickHeader(ctx))(_ |+| _)
   }
 
 }
