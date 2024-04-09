@@ -44,6 +44,8 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
                 )
               )
               .void
+          // TODO: Should not it be possible to make `.combineAll` the final result?
+          // Seems like `.pick` does not return much information
           }.combineAll.as(res)
         }
     )

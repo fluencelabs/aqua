@@ -9,6 +9,13 @@ import cats.syntax.monoid.*
 import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
+/**
+ * Semantics for handling a header expression
+ * (e.g. `aqua Name declares *`, `export`, `use` etc.)
+ *
+ * @param init Initial context that will be combined with others and passed to body semantics
+ * @param fin Finalization function to which context after body semantics will be passed
+ */
 case class HeaderSem[S[_], C](
   init: C,
   fin: C => ValidatedNec[SemanticError[S], C]
