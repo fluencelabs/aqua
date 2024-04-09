@@ -36,15 +36,6 @@ object TypesState {
     retVals: Option[List[ValueRaw]]
   )
 
-  given [S[_]]: Monoid[TypesState[S]] with {
-    override def empty: TypesState[S] = TypesState()
-
-    override def combine(x: TypesState[S], y: TypesState[S]): TypesState[S] =
-      TypesState(
-        strict = x.strict ++ y.strict,
-      )
-  }
-
   def init[S[_]](context: RawContext): TypesState[S] =
     TypesState(strict = context.allTypes)
 }

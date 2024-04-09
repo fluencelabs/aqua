@@ -49,18 +49,6 @@ object NamesState {
       copy[S](arrows = arrows.updated(n.value, at))
   }
 
-  given [S[_]]: Monoid[NamesState[S]] with {
-    override def empty: NamesState[S] = NamesState[S]()
-
-    override def combine(x: NamesState[S], y: NamesState[S]): NamesState[S] =
-      NamesState(
-        stack = Nil,
-        rootArrows = x.rootArrows ++ y.rootArrows,
-        definitions = x.definitions ++ y.definitions,
-        constants = x.constants ++ y.constants
-      )
-  }
-
   def init[S[_]](context: RawContext): NamesState[S] =
     NamesState(
       rootArrows = context.allFuncs.map { case (s, fc) =>

@@ -1,15 +1,15 @@
 package aqua.semantics.rules.abilities
 
-import aqua.raw.{RawContext, ServiceRaw}
-import aqua.raw.value.ValueRaw
+import aqua.parser.lexer.Token.name
 import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
+import aqua.raw.value.ValueRaw
+import aqua.raw.{RawContext, ServiceRaw}
 import aqua.types.ArrowType
 
 import cats.Monoid
+import cats.data.NonEmptyList
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
-import cats.data.NonEmptyList
-import aqua.parser.lexer.Token.name
 
 case class AbilitiesState[S[_]](
   stack: List[AbilitiesState.Frame[S]] = Nil,
@@ -58,19 +58,6 @@ object AbilitiesState {
     final case class ServiceState(
       rename: String
     )
-  }
-
-  given [S[_]]: Monoid[AbilitiesState[S]] with {
-    override def empty: AbilitiesState[S] = AbilitiesState()
-
-    override def combine(x: AbilitiesState[S], y: AbilitiesState[S]): AbilitiesState[S] =
-      AbilitiesState(
-        Nil,
-        x.services ++ y.services,
-        x.abilities ++ y.abilities,
-        x.rootServiceIds ++ y.rootServiceIds,
-        x.definitions ++ y.definitions
-      )
   }
 
   def init[S[_]](context: RawContext): AbilitiesState[S] =
