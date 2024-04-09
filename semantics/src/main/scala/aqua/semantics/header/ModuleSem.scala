@@ -34,8 +34,8 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
           // TODO: Refactor, this is a hack:
-          // Remove module name so method `.all` works correctly
-          val allDeclared = ctx.setOptModule(None, Set.empty).all
+          // Remove module name so method `.declaredNames` works correctly
+          val allDeclared = ctx.setOptModule(None, Set.empty).declaredNames
           ctx.setModule(name.value, declares = allDeclared).validNec
         else {
           // summarize contexts to allow redeclaration of imports

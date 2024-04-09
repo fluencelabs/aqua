@@ -334,18 +334,12 @@ object RawSemantics extends Logging {
     astToState(ast).map {
       case raw: (Raw.Empty | RawPart | RawPart.Parts) =>
         val parts = raw match {
-          case rps: RawPart.Parts => rps.parts
-          case rp: RawPart => Chain.one(rp)
-          case _: Raw.Empty => Chain.empty
+          case rps: RawPart.Parts => rps.parts.toList
+          case rp: RawPart => List(rp)
+          case _: Raw.Empty => List.empty
         }
 
-        parts.foldLeft(init) { case (ctx, p) =>
-          ctx.copy(parts = ctx.parts :+ (ctx -> p))
-        }
-
-      case m =>
-        internalError(
-          s"Unexpected Raw ($m)"
-        )
+        init.addParts(parts)
+      case m => internalError(s"Unexpected Raw ($m)")
     }
 }

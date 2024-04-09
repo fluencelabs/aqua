@@ -56,7 +56,7 @@ class HeaderHandler[S[_]: Comonad, C](using
                 .toValidNec(
                   error(
                     token,
-                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
+                    s"Imported file `declares ${ctx.declaredNames.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
                   )
                 )
           }

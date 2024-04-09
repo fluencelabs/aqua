@@ -85,10 +85,9 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def all(ctx: LspContext[S]): Set[String] =
-      ctx.raw.all
     override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
-    override def declares(ctx: LspContext[S]): Set[String] = ctx.raw.declares
+
+    override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
       ctx.copy(

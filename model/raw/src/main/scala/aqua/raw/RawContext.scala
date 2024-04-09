@@ -86,16 +86,10 @@ case class RawContext(
   lazy val allDefinedAbilities: Map[String, AbilityType] =
     all(_.definedAbilities)
 
-  def `type`(name: String): Option[StructType] =
-    NonEmptyMap
-      .fromMap(
-        SortedMap.from(
-          collectPartsMap {
-            case rp if declares(rp.name) || module.isEmpty => rp.rawPartType
-          }
-        )
-      )
-      .map(StructType(name, _))
+  lazy val declaredNames: Set[String] =
+    collectPartsMap {
+      case p if declares(p.name) || module.isEmpty => ()
+    }.keySet
 
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}
