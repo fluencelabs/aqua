@@ -89,6 +89,8 @@ object LspContext {
 
     override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
 
+    override def allNames(ctx: LspContext[S]): Set[String] = ctx.raw.allNames
+
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
       ctx.copy(
         raw = ctx.raw.setAbility(name, ctxAb.raw),

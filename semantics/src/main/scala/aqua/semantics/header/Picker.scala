@@ -16,6 +16,7 @@ trait Picker[A] {
   def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
+  def allNames(ctx: A): Set[String]
   def declaredNames(ctx: A): Set[String]
   def exports(ctx: A): Map[String, Option[String]]
   def isAbility(ctx: A, name: String): Boolean
@@ -43,6 +44,7 @@ object Picker {
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
     def declaredNames: Set[String] = Picker[A].declaredNames(p)
+    def allNames: Set[String] = Picker[A].allNames(p)
     def exports: Map[String, Option[String]] = Picker[A].exports(p)
 
     def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
@@ -117,6 +119,8 @@ object Picker {
     override def module(ctx: RawContext): Option[String] = ctx.module
 
     override def declaredNames(ctx: RawContext): Set[String] = ctx.declaredNames
+
+    override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
       ctx.copy(abilities = Map(name -> ctxAb))

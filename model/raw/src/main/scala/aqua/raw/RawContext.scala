@@ -86,10 +86,11 @@ case class RawContext(
   lazy val allDefinedAbilities: Map[String, AbilityType] =
     all(_.definedAbilities)
 
+  lazy val allNames: Set[String] =
+    parts.map { case (_, p) => p.name }.toList.toSet
+
   lazy val declaredNames: Set[String] =
-    collectPartsMap {
-      case p if declares(p.name) || module.isEmpty => ()
-    }.keySet
+    allNames.filter(declares.contains)
 
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}

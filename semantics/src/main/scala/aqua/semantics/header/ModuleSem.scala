@@ -22,26 +22,22 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
   import expr.*
 
   def headerSem: Res[S, C] = {
-    val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
+    val declares = declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
+    val names = declares.map { case (name, _) => name }.toSet
 
     lazy val sem = HeaderSem(
       // Save module header info
       Picker[C].blank.setModule(
         name.value,
-        shouldDeclare
+        names
       ),
       ctx =>
         // When file is handled, check that all the declarations exists
         if (declareAll.nonEmpty)
-          // TODO: Refactor, this is a hack:
-          // Remove module name so method `.declaredNames` works correctly
-          val allDeclared = ctx.setOptModule(None, Set.empty).declaredNames
-          ctx.setModule(name.value, declares = allDeclared).validNec
-        else {
+          ctx.setModule(name.value, declares = ctx.allNames).validNec
+        else
           // summarize contexts to allow redeclaration of imports
-          (
-            declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-          ).map { case (n, t) =>
+          declares.map { case (n, t) =>
             ctx
               .pick(n, None, ctx.module.nonEmpty)
               .toValidNec(
@@ -51,13 +47,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
                 )
               )
               .void
-          }.combineAll.as {
-            val tokens = declareNames.map(n => n.value -> n) ++ declareCustom.map(a => a.value -> a)
-            val ctxWithDeclaresLoc = ctx.addOccurences(tokens)
-            // TODO: why module name and declares is lost? where is it lost?
-            ctxWithDeclaresLoc.setModule(name.value, declares = shouldDeclare)
-          }
-        }
+          }.combineAll.as(ctx.addOccurences(declares))
     )
 
     word.value.fold(
