@@ -24,7 +24,8 @@ trait Picker[A] {
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def setAbility(ctx: A, name: String, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
-  def setModule(ctx: A, name: Option[String], declares: Set[String]): A
+  def setModule(ctx: A, name: String): A
+  def setDeclares(ctx: A, declares: Set[String]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
   def addPart(ctx: A, part: (A, RawPart)): A
 }
@@ -64,11 +65,11 @@ object Picker {
     def addFreeParts(parts: List[RawPart]): A =
       parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
 
-    def setModule(name: String, declares: Set[String]): A =
-      Picker[A].setModule(p, Some(name), declares)
+    def setModule(name: String): A =
+      Picker[A].setModule(p, name)
 
-    def setOptModule(name: Option[String], declares: Set[String]): A =
-      Picker[A].setModule(p, name, declares)
+    def setDeclares(declares: Set[String]): A =
+      Picker[A].setDeclares(p, declares)
 
     def setExports(exports: Map[String, Option[String]]): A =
       Picker[A].setExports(p, exports)
@@ -129,12 +130,11 @@ object Picker {
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
 
-    override def setModule(
-      ctx: RawContext,
-      name: Option[String],
-      declares: Set[String]
-    ): RawContext =
-      ctx.copy(module = name, declares = declares)
+    override def setModule(ctx: RawContext, name: String): RawContext =
+      ctx.copy(module = Some(name))
+
+    override def setDeclares(ctx: RawContext, declares: Set[String]): RawContext =
+      ctx.copy(declares = declares)
 
     override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
       ctx.copy(exports = exports)

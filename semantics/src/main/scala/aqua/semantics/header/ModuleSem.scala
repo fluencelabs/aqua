@@ -22,23 +22,20 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
   import expr.*
 
   def headerSem: Res[S, C] = {
-    val declares = declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-    val names = declares.map { case (name, _) => name }.toSet
-
     lazy val sem = HeaderSem(
       // Save module header info
-      Picker[C].blank.setModule(
-        name.value,
-        names
-      ),
+      Picker[C].blank.setModule(name.value),
       ctx =>
         // When file is handled, check that all the declarations exists
-        if (declareAll.nonEmpty)
-          ctx.setModule(name.value, declares = ctx.allNames).validNec
-        else
+        if (declareAll.nonEmpty) ctx.setDeclares(ctx.allNames).validNec
+        else {
+          val declares = declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
+          val names = declares.map { case (name, _) => name }.toSet
+          val res = ctx.setDeclares(names).addOccurences(declares)
+
           // summarize contexts to allow redeclaration of imports
           declares.map { case (n, t) =>
-            ctx
+            res
               .pick(n, None, ctx.module.nonEmpty)
               .toValidNec(
                 error(
@@ -47,7 +44,8 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
                 )
               )
               .void
-          }.combineAll.as(ctx.addOccurences(declares))
+          }.combineAll.as(res)
+        }
     )
 
     word.value.fold(
