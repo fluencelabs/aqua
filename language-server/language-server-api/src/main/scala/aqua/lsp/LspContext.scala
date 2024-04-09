@@ -32,8 +32,10 @@ object LspContext {
 
   def blank[S[_]]: LspContext[S] = LspContext[S](raw = RawContext())
 
-  given [S[_]]: Semigroup[LspContext[S]] =
-    (x: LspContext[S], y: LspContext[S]) =>
+  given [S[_]]: Monoid[LspContext[S]] with {
+    override def empty = blank[S]
+
+    override def combine(x: LspContext[S], y: LspContext[S]) =
       LspContext[S](
         raw = x.raw |+| y.raw,
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
@@ -45,21 +47,6 @@ object LspContext {
         warnings = x.warnings ++ y.warnings,
         importPaths = x.importPaths ++ y.importPaths
       )
-
-  trait Implicits[S[_]] {
-    val lspContextMonoid: Monoid[LspContext[S]]
-  }
-
-  def implicits[S[_]](init: LspContext[S]): Implicits[S] = new Implicits[S] {
-
-    override val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
-      override def empty: LspContext[S] = init
-
-      override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] = {
-        Semigroup[LspContext[S]].combine(x, y)
-      }
-    }
-
   }
 
   given [S[_]]: Picker[LspContext[S]] with {

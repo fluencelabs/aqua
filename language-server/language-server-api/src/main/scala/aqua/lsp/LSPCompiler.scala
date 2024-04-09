@@ -20,24 +20,14 @@ object LSPCompiler {
   private def getLspAquaCompiler[F[_]: Monad, E, I: FileId, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, LspContext[S]] = {
-    given Monoid[LspContext[S]] = LspContext
-      .implicits(
-        LspContext.blank.copy(raw =
-          RawContext.blank.copy(
-            parts = Chain
-              .fromSeq(config.constants ++ ConstantRaw.defaultConstants(config.relayVarName))
-              .map(const => RawContext.blank -> const)
-          )
-        )
-      )
-      .lspContextMonoid
-
     given LocationsAlgebra[S, State[LspContext[S], *]] =
       LocationsInterpreter[S, LspContext[S]]()
 
+    val constants = config.constants ++ ConstantRaw.defaultConstants(config.relayVarName)
+
     new AquaCompiler(
       headerHandler = new HeaderHandler(),
-      semantics = new LspSemantics()
+      semantics = new LspSemantics(constants)
     )
   }
 

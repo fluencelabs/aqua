@@ -3,6 +3,8 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.raw.ConstantRaw
+import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
 
@@ -18,7 +20,9 @@ import cats.syntax.reducible.*
 import monocle.Lens
 import monocle.macros.GenLens
 
-class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
+class LspSemantics[S[_]](
+  constants: List[ConstantRaw] = Nil
+) extends Semantics[S, LspContext[S]] {
 
   private def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] =
     ast.head.collect {
@@ -38,11 +42,12 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     init: LspContext[S]
   ): ProcessResult = {
 
-    val rawState = CompilerState.init[S](init.raw)
+    val withConstants = init.addFreeParts(constants)
+    val rawState = CompilerState.init[S](withConstants.raw)
 
     val initState = rawState.copy(
       locations = rawState.locations.copy(
-        variables = rawState.locations.variables ++ init.variables
+        variables = rawState.locations.variables ++ withConstants.variables
       )
     )
 
@@ -55,7 +60,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       new LocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics
-      .interpret(ast, init.raw)
+      .interpret(ast, withConstants.raw)
       .run(initState)
       .map { case (state, ctx) =>
         LspContext(
