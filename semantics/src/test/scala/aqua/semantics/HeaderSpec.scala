@@ -22,8 +22,6 @@ import org.scalatest.matchers.should.Matchers
 
 class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
 
-  given Monoid[RawContext] = RawContext.implicits(RawContext.blank).rawContextMonoid
-
   given LocationsAlgebra[Id, State[RawContext, *]] =
     DummyLocationsInterpreter[Id, RawContext]()
 

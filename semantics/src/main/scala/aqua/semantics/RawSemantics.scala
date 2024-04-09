@@ -29,7 +29,7 @@ import cats.{Eval, Monad}
 import scribe.Logging
 
 class RawSemantics[S[_]](
-  constants: List[ConstantRaw]
+  constants: List[ConstantRaw] = Nil
 )(using Picker[RawContext])
     extends Semantics[S, RawContext] {
 

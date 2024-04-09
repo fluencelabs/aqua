@@ -110,8 +110,11 @@ case class RawContext(
 object RawContext {
   val blank: RawContext = RawContext()
 
-  given Semigroup[RawContext] =
-    (x: RawContext, y: RawContext) =>
+  given Monoid[RawContext] with {
+
+    override def empty: RawContext = blank
+
+    override def combine(x: RawContext, y: RawContext) =
       RawContext(
         x.module orElse y.module,
         x.declares ++ y.declares,
@@ -119,19 +122,5 @@ object RawContext {
         x.parts ++ y.parts,
         x.abilities ++ y.abilities
       )
-
-  trait Implicits {
-    val rawContextMonoid: Monoid[RawContext]
-  }
-
-  def implicits(init: RawContext): Implicits = new Implicits {
-
-    override val rawContextMonoid: Monoid[RawContext] = new Monoid[RawContext] {
-      override def empty: RawContext = init
-
-      override def combine(x: RawContext, y: RawContext): RawContext =
-        Semigroup[RawContext].combine(x, y)
-    }
-
   }
 }

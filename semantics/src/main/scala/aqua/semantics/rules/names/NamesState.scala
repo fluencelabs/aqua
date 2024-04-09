@@ -49,7 +49,7 @@ object NamesState {
       copy[S](arrows = arrows.updated(n.value, at))
   }
 
-  implicit def namesStateMonoid[S[_]]: Monoid[NamesState[S]] = new Monoid[NamesState[S]] {
+  given [S[_]]: Monoid[NamesState[S]] with {
     override def empty: NamesState[S] = NamesState[S]()
 
     override def combine(x: NamesState[S], y: NamesState[S]): NamesState[S] =
