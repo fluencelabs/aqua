@@ -9,7 +9,7 @@ import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
 
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyChain, ValidatedNec}
+import cats.data.{EitherT, NonEmptyChain, ValidatedNec, Writer}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.either.*
@@ -63,18 +63,27 @@ class LspSemantics[S[_]](
       .interpret(ast, withConstants.raw)
       .run(initState)
       .map { case (state, ctx) =>
-        LspContext(
-          raw = ctx,
-          rootArrows = state.names.rootArrows,
-          constants = state.names.constants,
-          abDefinitions = state.abilities.definitions,
-          importTokens = importTokens,
-          variables = state.locations.variables,
-          errors = state.errors.toList,
-          warnings = state.warnings.toList
-        ).pure[Result]
+        EitherT(
+          Writer
+            .tell(state.warnings)
+            .as(
+              NonEmptyChain
+                .fromChain(state.errors)
+                .toLeft(
+                  LspContext(
+                    raw = ctx,
+                    rootArrows = state.names.rootArrows,
+                    constants = state.names.constants,
+                    abDefinitions = state.abilities.definitions,
+                    importTokens = importTokens,
+                    variables = state.locations.variables,
+                    errors = state.errors.toList,
+                    warnings = state.warnings.toList
+                  )
+                )
+            )
+        )
       }
-      // TODO: return as Eval
       .value
   }
 }
