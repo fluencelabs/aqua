@@ -27,9 +27,8 @@ case class UseFromExpr[F[_]](
 object UseFromExpr extends HeaderExpr.Companion {
 
   override val p: Parser[UseFromExpr[Span.S]] =
-    (`use` *> FromExpr.importFrom.surroundedBy(
-      ` `
-    ) ~ ValueToken.string ~ (` as ` *> Ability.ab)).map { case ((imports, filename), asModule) =>
+    (`use` *> FromExpr.importFrom.surroundedBy(` `) ~
+      ValueToken.string ~ (` as ` *> Ability.dotted)).map { case ((imports, filename), asModule) =>
       UseFromExpr(imports, filename, asModule)
     }
 }

@@ -25,7 +25,7 @@ case class UseExpr[F[_]](
 object UseExpr extends HeaderExpr.Companion {
 
   override val p: Parser[HeaderExpr[Span.S]] =
-    (`use` *> ` ` *> ValueToken.string ~ (` as ` *> Ability.ab).?).map {
+    (`use` *> ` ` *> ValueToken.string ~ (` as ` *> Ability.dotted).?).map {
       case (filename, asModule) =>
         UseExpr(filename, asModule)
     }
