@@ -63,27 +63,21 @@ class LspSemantics[S[_]](
       .interpret(ast, withConstants.raw)
       .run(initState)
       .map { case (state, ctx) =>
-        EitherT(
-          Writer
-            .tell(state.warnings)
-            .as(
-              NonEmptyChain
-                .fromChain(state.errors)
-                .toLeft(
-                  LspContext(
-                    raw = ctx,
-                    rootArrows = state.names.rootArrows,
-                    constants = state.names.constants,
-                    abDefinitions = state.abilities.definitions,
-                    importTokens = importTokens,
-                    variables = state.locations.variables,
-                    errors = state.errors.toList,
-                    warnings = state.warnings.toList
-                  )
-                )
-            )
+        (
+          state,
+          LspContext(
+            raw = ctx,
+            rootArrows = state.names.rootArrows,
+            constants = state.names.constants,
+            abDefinitions = state.abilities.definitions,
+            importTokens = importTokens,
+            variables = state.locations.variables,
+            errors = state.errors.toList,
+            warnings = state.warnings.toList
+          )
         )
       }
+      .map(stateToResult)
       .value
   }
 }
