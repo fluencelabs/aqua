@@ -497,10 +497,14 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
-  val moduleNames = List("Test", "Imp", "Sub", "Path").inits
-    .takeWhile(_.nonEmpty)
-    .map(_.mkString("."))
-    .toList
+  def paths(parts: List[String]): List[String] =
+    parts.inits
+      .takeWhile(_.nonEmpty)
+      .map(_.mkString("."))
+      .toList
+
+  val moduleNames = paths(List("Test", "Imp", "Sub", "Path"))
+  val renames = paths(List("Renamed", "With", "New", "Name"))
 
   it should "import function with `use`" in {
     def test(name: String, rename: Option[String]) = {
@@ -536,13 +540,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
@@ -664,13 +670,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
@@ -733,13 +741,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
