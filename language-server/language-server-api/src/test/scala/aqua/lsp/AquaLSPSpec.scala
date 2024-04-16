@@ -155,6 +155,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |      num(someVar)
         |    OneMore fooResult
         |    OneMore.more_call()
+        |    <- "123"
         |
         |ability Ab:
         |    someField: u32
@@ -364,26 +365,26 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |  a: SomeAlias
         |
         |data SomeStruct:
-        |  al: SomeAlias
+        |  al11: SomeAlias
         |  nested: NestedStruct
         |
         |ability SomeAbility:
         |  someStr: SomeStruct
         |  nested: NestedStruct
-        |  al: SomeAlias
-        |  someFunc(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
+        |  al11: SomeAlias
+        |  someFunc(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
         |
         |service Srv("a"):
-        |  check(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct
+        |  check(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> NestedStruct
         |  check2() -> SomeStruct
         |  check3() -> SomeAlias
         |
         |func withAb{SomeAbility}() -> SomeStruct:
-        |  Srv.check()
+        |  Srv.check(SomeAbility.someStr, SomeAbility.nested, SomeAbility.al11)
         |  Srv.check2()
         |  <- SomeAbility.someStr
         |
-        |func main(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> string:
+        |func main(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> string:
         |  Srv.check3()
         |  <- ""
         |""".stripMargin
@@ -396,11 +397,11 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
     val someStr =
-      StructType("SomeStruct", NonEmptyMap.of(("nested", nestedType), ("al", ScalarType.string)))
+      StructType("SomeStruct", NonEmptyMap.of(("nested", nestedType), ("al11", ScalarType.string)))
 
     val abFuncType = ArrowType(
       ProductType.labelled(
-        ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+        ("ss", someStr) :: ("nest", nestedType) :: ("al11", ScalarType.string) :: Nil
       ),
       ProductType(nestedType :: someStr :: ScalarType.string :: Nil)
     )
@@ -409,7 +410,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       NonEmptyMap.of(
         ("someStr", someStr),
         ("nested", nestedType),
-        ("al", ScalarType.string),
+        ("al11", ScalarType.string),
         ("someFunc", abFuncType)
       )
     )
@@ -421,7 +422,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
           "check",
           ArrowType(
             ProductType.labelled(
-              ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+              ("ss", someStr) :: ("nest", nestedType) :: ("al11", ScalarType.string) :: Nil
             ),
             ProductType(nestedType :: Nil)
           )
@@ -447,10 +448,14 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     res.checkTokenLoc(main, "SomeAbility", 0, someAb) shouldBe true
-    // from {SomeAbility} to 'ability SomeAbility'
-    res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
-    // from 'SomeAbility.someStr' to {SomeAbility}
-    res.checkLocations("SomeAbility", 0, 2, main) shouldBe true
+    Range.inclusive(1, 5).foreach { n =>
+      res.checkLocations("SomeAbility", 0, n, main) shouldBe true
+    }
+
+    res.checkLocations("someStr", 0, 1, main) shouldBe true
+    res.checkLocations("someStr", 0, 2, main) shouldBe true
+    res.checkLocations("nested", 1, 2, main) shouldBe true
+    res.checkLocations("al11", 1, 4, main) shouldBe true
 
     res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
     Range.inclusive(1, 3).foreach { n =>
