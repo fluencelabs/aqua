@@ -63,7 +63,7 @@ jobs:
           sed -i 's/aquaVersion =.*/aquaVersion = "${{ steps.version.outputs.version }}"/g' build.sbt
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.4.0
+        uses: pnpm/action-setup@v3.0.0
         with:
           version: 8
 
@@ -133,7 +133,7 @@ jobs:
           echo "found any?:" "${{ steps.status.outputs.found }}"
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.7.4
+        uses: hashicorp/vault-action@v3.0.0
         with:
           url: https://vault.fluence.dev
           path: jwt/github
