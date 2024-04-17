@@ -2,15 +2,15 @@ package aqua.lsp
 
 import aqua.compiler.FileIdString.given_FileId_String
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
-import aqua.compiler.AquaError.CompileError
 import aqua.parser.Parser
 import aqua.parser.lexer.Token
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
-import aqua.semantics.RulesViolated
+import aqua.semantics.{RulesViolated, SemanticError}
 import aqua.types.*
+
 import cats.Id
 import cats.data.*
 import org.scalatest.Inside
@@ -132,6 +132,16 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         println(ee)
         ee
       }
+
+  def insideError(err: SemanticError[S], str: String, pos: Int, code: String) = {
+    inside(err) { case RulesViolated(token, _) =>
+      val span = token.unit._1
+      val locatedOp = getByPosition(code, str, pos)
+      locatedOp shouldBe defined
+      val located = locatedOp.get
+      (span.startIndex, span.endIndex) shouldBe (located._1, located._2)
+    }
+  }
 
   it should "return right tokens" in {
     val main =
@@ -546,7 +556,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkLocations("Abilyy", 0, 3, main) shouldBe true
   }
 
-  it should "return correct errors" in {
+  it should "return correct locations of errors on exported functions (LNG-356)" in {
     val main =
       """aqua Job declares *
         |
@@ -564,23 +574,80 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     val imports = Map.empty[String, String]
 
-    val res = compile(src, imports).toEither.swap.toOption.get.toChain.toList
+    val res = compile(src, imports).toEither.toOption.get.values.head
 
-    def insideError(err: AquaError[String, String, Span.S], str: String, pos: Int) = {
-      inside(err) {
-        case CompileError(RulesViolated[S](token: Token[S], _)) =>
-          val span = token.unit._1
-          val locatedOp = getByPosition(main, str, pos)
-          locatedOp shouldBe defined
-          val located = locatedOp.get
-          (span.startIndex, span.endIndex) shouldBe (located._1, located._2)
-      }
-    }
+    val errors = res.errors
 
-
-    res.length shouldBe 3
-    insideError(res.head, "Pe2er", 0)
-    insideError(res(1), "peer", 1)
-    insideError(res(2), "string", 1)
+    insideError(errors.head, "Pe2er", 0, main)
+    insideError(errors(1), "peer", 1, main)
+    insideError(errors(2), "string", 1, main)
   }
+
+  it should "return correct locations in functions even if there is errors in other parts of a code" in {
+    val main =
+      """aqua Job declares *
+        |
+        |export aaa, bbb
+        |
+        |data Peer:
+        |  id: string
+        |
+        |func aaa() -> Peer:
+        |  peer1 = Peer(id = "123")
+        |  peer2 = Peer(id = peer1.id)
+        |  <- peer2
+        |
+        |data BrokenStruct:
+        |  fff: UnknownType1
+        |
+        |alias BrokenAlias: UnknownType2
+        |
+        |ability BrokenAbility:
+        |  fff: UnknownType3
+        |
+        |const BROKEN_CONST = UNKNOWN_CONST
+        |
+        |func bbb() -> string:
+        |  <- 323
+        |
+        |func ccc() -> Peer:
+        |  peer1 = Peer(id = "123")
+        |  peer2 = Peer(id = peer1.id)
+        |  <- peer2
+        |
+        |""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val imports = Map.empty[String, String]
+
+    val res = compile(src, imports).toOption.get.values.head
+    val errors = res.errors
+
+    // 'aaa' function
+    res.checkLocations("Peer", 0, 1, main) shouldBe true
+    res.checkLocations("Peer", 0, 2, main) shouldBe true
+    res.checkLocations("Peer", 0, 3, main) shouldBe true
+    res.checkLocations("peer1", 0, 1, main) shouldBe true
+    res.checkLocations("peer1", 0, 1, main) shouldBe true
+
+    // 'ccc' function
+    res.checkLocations("Peer", 0, 4, main) shouldBe true
+    res.checkLocations("Peer", 0, 5, main) shouldBe true
+    res.checkLocations("Peer", 0, 6, main) shouldBe true
+    res.checkLocations("peer1", 2, 3, main) shouldBe true
+    res.checkLocations("peer1", 2, 3, main) shouldBe true
+
+    // errors
+    insideError(errors.head, "UnknownType1", 0, main)
+    insideError(errors(1), "BrokenStruct", 0, main)
+    insideError(errors(2), "UnknownType2", 0, main)
+    insideError(errors(3), "UnknownType3", 0, main)
+    insideError(errors(4), "BrokenAbility", 0, main)
+    insideError(errors(5), "UNKNOWN_CONST", 0, main)
+    insideError(errors(6), "323", 0, main)
+    insideError(errors(7), "string", 1, main)
+  }
+
 }

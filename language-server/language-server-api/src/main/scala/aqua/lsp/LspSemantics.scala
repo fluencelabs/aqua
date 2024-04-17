@@ -8,6 +8,9 @@ import aqua.semantics.*
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsState
 
+import cats.data.{EitherT, NonEmptyChain, Writer}
+import cats.syntax.functor.*
+import cats.syntax.applicative.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -54,21 +57,17 @@ class LspSemantics[S[_]](
       .interpret(ast, withConstants.raw)
       .run(initState)
       .map { case (state, ctx) =>
-        (
-          state,
-          LspContext(
-            raw = ctx,
-            rootArrows = state.names.rootArrows,
-            constants = state.names.constants,
-            abDefinitions = state.abilities.definitions,
-            importTokens = importTokens,
-            variables = state.locations.variables,
-            errors = state.errors.toList,
-            warnings = state.warnings.toList
-          )
-        )
+        LspContext(
+          raw = ctx,
+          rootArrows = state.names.rootArrows,
+          constants = state.names.constants,
+          abDefinitions = state.abilities.definitions,
+          importTokens = importTokens,
+          variables = state.locations.variables,
+          errors = state.errors.toList,
+          warnings = state.warnings.toList
+        ).pure[Result]
       }
-      .map(stateToResult)
       .value
   }
 }

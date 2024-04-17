@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.parser.expr.ConstantExpr
-import aqua.raw.{ConstantRaw, Raw}
+import aqua.raw.{ConstantRaw, ErroredPart, Raw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -27,12 +27,12 @@ class ConstantSem[S[_]](val expr: ConstantExpr[S]) extends AnyVal {
             case true =>
               Raw.empty(s"Constant with name ${expr.name} was already defined, skipping")
             case false =>
-              Raw.error(s"Constant with name ${expr.name} was defined with different type")
+              ErroredPart(expr.name.value)
           }
         case (Some(_), _, _) =>
           Raw.error(s"Name '${expr.name.value}' was already defined").pure[Alg]
         case (_, None, _) =>
-          Raw.error(s"There is no such variable ${expr.value}").pure[Alg]
+          ErroredPart(expr.name.value).pure[Alg]
         case (_, Some(t), _) =>
           N.defineConstant(expr.name, t._2) as (ConstantRaw(
             expr.name.value,

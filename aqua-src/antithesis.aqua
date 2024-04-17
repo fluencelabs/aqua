@@ -1,8 +1,29 @@
 aqua Job declares *
 
+export aaa, bbb
+
 data Peer:
   id: string
 
-func aaa() -> string: 
-  p = Pe2er(id = "123")
-  <- p.id
+func aaa() -> Peer:
+  peer1 = Peer(id = "123")
+  peer2 = Peer(id = peer1.id)
+  <- peer2
+
+data BrokenStruct:
+  fff: UnknownType
+
+alias BrokenAlias: str3ng
+
+ability BrokenAbility:
+  fff: str4ng
+
+const BROKEN_CONST = UNKNOWN_CONST
+
+func bbb() -> string:
+  <- 323
+
+func ccc() -> Peer:
+  peer1 = Peer(id = "123")
+  peer2 = Peer(id = peer1.id)
+  <- peer2
