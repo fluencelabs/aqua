@@ -42,7 +42,7 @@ object AquaSpec {
 
   def toQName(str: String): QName[Id] = QName[Id](
     str,
-    NonEmptyList.fromListUnsafe(str.split(".").toList)
+    NonEmptyList.fromListUnsafe(str.split("\\.").toList)
   )
 
   def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
