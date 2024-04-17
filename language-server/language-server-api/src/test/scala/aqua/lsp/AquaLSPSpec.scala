@@ -3,10 +3,12 @@ package aqua.lsp
 import aqua.compiler.FileIdString.given_FileId_String
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
 import aqua.parser.Parser
+import aqua.parser.lexer.Token
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
+import aqua.semantics.{RulesViolated, SemanticError}
 import aqua.types.*
 
 import cats.Id
@@ -131,6 +133,16 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         ee
       }
 
+  def insideError(err: SemanticError[S], str: String, pos: Int, code: String) = {
+    inside(err) { case RulesViolated(token, _) =>
+      val span = token.unit._1
+      val locatedOp = getByPosition(code, str, pos)
+      locatedOp shouldBe defined
+      val located = locatedOp.get
+      (span.startIndex, span.endIndex) shouldBe (located._1, located._2)
+    }
+  }
+
   it should "return right tokens" in {
     val main =
       """aqua Import declares foo_wrapper, Ab, Str, useAbAndStruct, SOME_CONST
@@ -153,6 +165,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |      num(someVar)
         |    OneMore fooResult
         |    OneMore.more_call()
+        |    <- "123"
         |
         |ability Ab:
         |    someField: u32
@@ -362,26 +375,26 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |  a: SomeAlias
         |
         |data SomeStruct:
-        |  al: SomeAlias
+        |  al11: SomeAlias
         |  nested: NestedStruct
         |
         |ability SomeAbility:
         |  someStr: SomeStruct
         |  nested: NestedStruct
-        |  al: SomeAlias
-        |  someFunc(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
+        |  al11: SomeAlias
+        |  someFunc(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> NestedStruct, SomeStruct, SomeAlias
         |
         |service Srv("a"):
-        |  check(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> NestedStruct
+        |  check(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> NestedStruct
         |  check2() -> SomeStruct
         |  check3() -> SomeAlias
         |
         |func withAb{SomeAbility}() -> SomeStruct:
-        |  Srv.check()
+        |  Srv.check(SomeAbility.someStr, SomeAbility.nested, SomeAbility.al11)
         |  Srv.check2()
         |  <- SomeAbility.someStr
         |
-        |func main(ss: SomeStruct, nest: NestedStruct, al: SomeAlias) -> string:
+        |func main(ss: SomeStruct, nest: NestedStruct, al11: SomeAlias) -> string:
         |  Srv.check3()
         |  <- ""
         |""".stripMargin
@@ -394,11 +407,11 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
     val someStr =
-      StructType("SomeStruct", NonEmptyMap.of(("nested", nestedType), ("al", ScalarType.string)))
+      StructType("SomeStruct", NonEmptyMap.of(("nested", nestedType), ("al11", ScalarType.string)))
 
     val abFuncType = ArrowType(
       ProductType.labelled(
-        ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+        ("ss", someStr) :: ("nest", nestedType) :: ("al11", ScalarType.string) :: Nil
       ),
       ProductType(nestedType :: someStr :: ScalarType.string :: Nil)
     )
@@ -407,7 +420,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       NonEmptyMap.of(
         ("someStr", someStr),
         ("nested", nestedType),
-        ("al", ScalarType.string),
+        ("al11", ScalarType.string),
         ("someFunc", abFuncType)
       )
     )
@@ -419,7 +432,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
           "check",
           ArrowType(
             ProductType.labelled(
-              ("ss", someStr) :: ("nest", nestedType) :: ("al", ScalarType.string) :: Nil
+              ("ss", someStr) :: ("nest", nestedType) :: ("al11", ScalarType.string) :: Nil
             ),
             ProductType(nestedType :: Nil)
           )
@@ -445,10 +458,14 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     res.checkTokenLoc(main, "SomeAbility", 0, someAb) shouldBe true
-    // from {SomeAbility} to 'ability SomeAbility'
-    res.checkLocations("SomeAbility", 0, 1, main) shouldBe true
-    // from 'SomeAbility.someStr' to {SomeAbility}
-    res.checkLocations("SomeAbility", 0, 2, main) shouldBe true
+    Range.inclusive(1, 5).foreach { n =>
+      res.checkLocations("SomeAbility", 0, n, main) shouldBe true
+    }
+
+    res.checkLocations("someStr", 0, 1, main) shouldBe true
+    res.checkLocations("someStr", 0, 2, main) shouldBe true
+    res.checkLocations("nested", 1, 2, main) shouldBe true
+    res.checkLocations("al11", 1, 4, main) shouldBe true
 
     res.checkTokenLoc(main, "Srv", 0, srvType) shouldBe true
     Range.inclusive(1, 3).foreach { n =>
@@ -538,4 +555,99 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkLocations("Abilyy", 0, 2, main) shouldBe true
     res.checkLocations("Abilyy", 0, 3, main) shouldBe true
   }
+
+  it should "return correct locations of errors on exported functions (LNG-356)" in {
+    val main =
+      """aqua Job declares *
+        |
+        |export aaa
+        |
+        |data Peer:
+        |  id: string
+        |
+        |func aaa() -> string:
+        |  peer = Pe2er(id = "123")
+        |  <- peer.id""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val imports = Map.empty[String, String]
+
+    val res = compile(src, imports).toEither.toOption.get.values.head
+
+    val errors = res.errors
+
+    insideError(errors.head, "Pe2er", 0, main)
+    insideError(errors(1), "peer", 1, main)
+    insideError(errors(2), "string", 1, main)
+  }
+
+  it should "return correct locations in functions even if there is errors in other parts of a code" in {
+    val main =
+      """aqua Job declares *
+        |
+        |export aaa, bbb
+        |
+        |data Peer:
+        |  id: string
+        |
+        |func aaa() -> Peer:
+        |  peer1 = Peer(id = "123")
+        |  peer2 = Peer(id = peer1.id)
+        |  <- peer2
+        |
+        |data BrokenStruct:
+        |  fff: UnknownType1
+        |
+        |alias BrokenAlias: UnknownType2
+        |
+        |ability BrokenAbility:
+        |  fff: UnknownType3
+        |
+        |const BROKEN_CONST = UNKNOWN_CONST
+        |
+        |func bbb() -> string:
+        |  <- 323
+        |
+        |func ccc() -> Peer:
+        |  peer1 = Peer(id = "123")
+        |  peer2 = Peer(id = peer1.id)
+        |  <- peer2
+        |
+        |""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val imports = Map.empty[String, String]
+
+    val res = compile(src, imports).toOption.get.values.head
+    val errors = res.errors
+
+    // 'aaa' function
+    res.checkLocations("Peer", 0, 1, main) shouldBe true
+    res.checkLocations("Peer", 0, 2, main) shouldBe true
+    res.checkLocations("Peer", 0, 3, main) shouldBe true
+    res.checkLocations("peer1", 0, 1, main) shouldBe true
+    res.checkLocations("peer1", 0, 1, main) shouldBe true
+
+    // 'ccc' function
+    res.checkLocations("Peer", 0, 4, main) shouldBe true
+    res.checkLocations("Peer", 0, 5, main) shouldBe true
+    res.checkLocations("Peer", 0, 6, main) shouldBe true
+    res.checkLocations("peer1", 2, 3, main) shouldBe true
+    res.checkLocations("peer1", 2, 3, main) shouldBe true
+
+    // errors
+    insideError(errors.head, "UnknownType1", 0, main)
+    insideError(errors(1), "BrokenStruct", 0, main)
+    insideError(errors(2), "UnknownType2", 0, main)
+    insideError(errors(3), "UnknownType3", 0, main)
+    insideError(errors(4), "BrokenAbility", 0, main)
+    insideError(errors(5), "UNKNOWN_CONST", 0, main)
+    insideError(errors(6), "323", 0, main)
+    insideError(errors(7), "string", 1, main)
+  }
+
 }

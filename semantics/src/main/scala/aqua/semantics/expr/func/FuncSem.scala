@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.Raw
+import aqua.raw.{ErroredPart, Raw}
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
@@ -22,7 +22,7 @@ class FuncSem[S[_]](val expr: FuncExpr[S]) extends AnyVal {
         N.defineArrow(expr.name, arrow.`type`, isRoot = true) as FuncRaw(expr.name.value, arrow)
 
       case _ =>
-        Raw.error("Func must continue with an arrow definition").pure[Alg]
+        ErroredPart(expr.name.value).pure[Alg]
     }
 
 }

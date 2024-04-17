@@ -1,10 +1,29 @@
-aqua Main
+aqua Job declares *
 
-export main
+export aaa, bbb
 
-func reward(amount: ?u32) -> u32:
-  result = ?[amount! / 10, 0]
-  <- result!
+data Peer:
+  id: string
 
-func main(a: u32) -> u32:
-  <- reward(?[a])
+func aaa() -> Peer:
+  peer1 = Peer(id = "123")
+  peer2 = Peer(id = peer1.id)
+  <- peer2
+
+data BrokenStruct:
+  fff: UnknownType
+
+alias BrokenAlias: str3ng
+
+ability BrokenAbility:
+  fff: str4ng
+
+const BROKEN_CONST = UNKNOWN_CONST
+
+func bbb() -> string:
+  <- 323
+
+func ccc() -> Peer:
+  peer1 = Peer(id = "123")
+  peer2 = Peer(id = peer1.id)
+  <- peer2

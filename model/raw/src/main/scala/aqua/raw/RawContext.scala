@@ -90,7 +90,7 @@ case class RawContext(
     parts.map { case (_, p) => p.name }.toList.toSet
 
   lazy val declaredNames: Set[String] =
-    allNames.filter(declares.contains)
+    allNames.intersect(declares)
 
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}
@@ -109,7 +109,7 @@ object RawContext {
 
     override def empty: RawContext = blank
 
-    override def combine(x: RawContext, y: RawContext) =
+    override def combine(x: RawContext, y: RawContext): RawContext =
       RawContext(
         x.module orElse y.module,
         x.declares ++ y.declares,

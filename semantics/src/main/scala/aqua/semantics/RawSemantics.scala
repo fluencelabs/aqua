@@ -56,7 +56,6 @@ class RawSemantics[S[_]](
             )
         )
       }
-      // TODO: return as Eval
       .value
   }
 }
