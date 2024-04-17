@@ -1,0 +1,45 @@
+package aqua.parser.lexer
+
+import aqua.parser.lexer.Token.*
+import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
+
+import cats.Comonad
+import cats.arrow.FunctionK
+import cats.data.NonEmptyList
+import cats.parse.{Parser => P}
+import cats.syntax.comonad.*
+import cats.syntax.functor.*
+
+final case class QName[F[_]: Comonad](
+  name: F[String],
+  parts: NonEmptyList[F[String]]
+) extends Token[F] {
+
+  def value: String = name.extract
+  override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): QName[K] =
+    copy(fk(name), parts.map(p => fk(p)))
+}
+
+object QName {
+
+  final case class As[F[_]: Comonad](
+    name: QName[F],
+    rename: Option[QName[F]]
+  )
+
+  val p: P[QName[Span.S]] =
+    anyName.lift
+      .repSep(`.`)
+      .withString
+      .lift
+      .map(span => {
+        val name = span.fmap { case (_, name) => name }
+        val parts = span.fmap { case (parts, _) => parts }.extract
+        QName(name, parts)
+      })
+}

@@ -40,6 +40,11 @@ object AquaSpec {
 
   def toAb(str: String): Ability[Id] = Ability[Id](str)
 
+  def toQName(str: String): QName[Id] = QName[Id](
+    str,
+    NonEmptyList.fromListUnsafe(str.split(".").toList)
+  )
+
   def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
 
   def toVarOp(name: Option[String]): Option[VarToken[Id]] =

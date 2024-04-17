@@ -1,5 +1,6 @@
 package aqua.parser.head
 
+import aqua.parser.lexer.QName
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, LiteralToken, Name, ValueToken}
@@ -18,7 +19,7 @@ import cats.~>
 
 case class ModuleExpr[F[_]](
   word: ModuleExpr.Word[F],
-  name: Ability[F],
+  name: QName[F],
   declareAll: Option[Token[F]],
   declareNames: List[Name[F]],
   declareCustom: List[Ability[F]]
@@ -80,7 +81,7 @@ object ModuleExpr extends HeaderExpr.Companion {
   override val p: Parser[ModuleExpr[Span.S]] =
     (
       (` *`.with1 *> moduleWord) ~
-        (` ` *> Ability.dotted) ~
+        (` ` *> QName.p) ~
         (` declares ` *> nameOrAbListOrAll).backtrack
           .map(_.some)
           .orElse(` *`.as(none)) // Allow trailing spaces

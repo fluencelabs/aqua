@@ -15,7 +15,7 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   val myModule = ModuleExpr(
     ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
-    toAb("MyModule"),
+    toQName("MyModule"),
     None,
     Nil,
     Nil
