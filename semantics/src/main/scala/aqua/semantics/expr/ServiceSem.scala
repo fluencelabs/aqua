@@ -37,13 +37,13 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
         defaultId <- expr.id.traverse(id => OptionT(V.valueToStringRaw(id)))
         serviceType <- OptionT(T.defineServiceType(expr.name, arrowsByName.toSortedMap))
         arrowsDefs = arrows.map { case (name, _) => name.value -> name }.toNem
-        _ <- OptionT.whenM(
+        _ <- OptionT.withFilterF(
           A.defineService(
             expr.name,
             arrowsDefs,
             defaultId
           )
-        )(().pure[Alg])
+        )
       } yield ServiceRaw(
         expr.name.value,
         serviceType,
