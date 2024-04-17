@@ -45,8 +45,17 @@ class RawSemantics[S[_]](
     RawSemantics
       .interpret(ast, withConstants)
       .run(CompilerState.init(withConstants))
-      .map(stateToResult)
-      // TODO: return as Eval
+      .map { case (state, ctx) =>
+        EitherT(
+          Writer
+            .tell(state.warnings)
+            .as(
+              NonEmptyChain
+                .fromChain(state.errors)
+                .toLeft(ctx)
+            )
+        )
+      }
       .value
   }
 }

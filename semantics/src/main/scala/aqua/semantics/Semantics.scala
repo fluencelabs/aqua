@@ -3,7 +3,6 @@ package aqua.semantics
 import aqua.parser.Ast
 
 import cats.data.{Chain, EitherT, NonEmptyChain, Writer}
-import cats.syntax.functor.*
 
 trait Semantics[S[_], C] {
 
@@ -24,15 +23,4 @@ trait Semantics[S[_], C] {
     ast: Ast[S],
     init: C
   ): ProcessResult
-
-  def stateToResult(state: CompilerState[S], ctx: C): ProcessResult =
-    EitherT(
-      Writer
-        .tell(state.warnings)
-        .as(
-          NonEmptyChain
-            .fromChain(state.errors)
-            .toLeft(ctx)
-        )
-    )
 }
