@@ -1,11 +1,12 @@
 package aqua.parser.lexer
 
 import aqua.parser.lift.LiftParser
-import cats.parse.{Parser => P}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
+
 import Token._
 import cats.Comonad
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.parse.{Parser => P}
 
 case class Arg[F[_]](name: Name[F], `type`: TypeToken[F])
 

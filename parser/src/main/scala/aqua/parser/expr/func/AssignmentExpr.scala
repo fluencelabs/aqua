@@ -5,10 +5,11 @@ import aqua.parser.expr.func.AssignmentExpr
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{CollectionToken, Name, ValueToken}
 import aqua.parser.lift.LiftParser
-import cats.parse.Parser as P
-import cats.{~>, Comonad}
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
+
+import cats.parse.Parser as P
+import cats.{Comonad, ~>}
 
 case class AssignmentExpr[F[_]](
   variable: Name[F],

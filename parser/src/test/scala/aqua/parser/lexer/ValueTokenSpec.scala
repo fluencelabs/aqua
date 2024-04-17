@@ -1,13 +1,13 @@
 package aqua.parser.lexer
 
-import org.scalatest.EitherValues
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 import aqua.types.LiteralType
 
 import cats.Id
 import cats.data.NonEmptyList
+import org.scalatest.EitherValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class ValueTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 

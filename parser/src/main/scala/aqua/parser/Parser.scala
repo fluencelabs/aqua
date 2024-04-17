@@ -2,9 +2,10 @@ package aqua.parser
 
 import aqua.parser.expr.RootExpr
 import aqua.parser.head.Header
-import aqua.parser.lift.LiftParser.LiftErrorOps
-import aqua.parser.lift.Span.S
-import aqua.parser.lift.{LiftParser, Span}
+import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
 
 import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree

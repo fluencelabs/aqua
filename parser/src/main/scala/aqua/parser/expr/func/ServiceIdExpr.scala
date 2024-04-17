@@ -5,10 +5,11 @@ import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{NamedTypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
-import cats.parse.Parser as P
-import cats.{~>, Comonad}
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
+
+import cats.parse.Parser as P
+import cats.{Comonad, ~>}
 
 case class ServiceIdExpr[F[_]](service: NamedTypeToken[F], id: ValueToken[F])
     extends Expr[F](ServiceIdExpr, service) {

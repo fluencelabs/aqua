@@ -4,14 +4,14 @@ import aqua.AquaSpec
 import aqua.AquaSpec.*
 import aqua.parser.expr.func.{CallArrowExpr, ForExpr, JoinExpr, OnExpr, ParExpr}
 import aqua.parser.lexer.{CallArrowToken, Token}
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
-import cats.{Eval, Id}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
+import cats.{Eval, Id}
+import org.scalatest.Inside
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class ParExprSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
 

@@ -4,13 +4,15 @@ import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.Name
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
 import aqua.parser.{Ast, Expr, ParserError}
+
 import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser
-import cats.{~>, Comonad}
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.{Comonad, ~>}
 
 case class ClosureExpr[F[_]](
   name: Name[F],

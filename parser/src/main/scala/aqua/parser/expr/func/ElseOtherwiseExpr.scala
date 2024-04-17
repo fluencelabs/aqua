@@ -6,12 +6,13 @@ import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
+
 import cats.parse.Parser
-import cats.{~>, Comonad}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.{Comonad, ~>}
 
 case class ElseOtherwiseExpr[F[_]](kind: ElseOtherwiseExpr.Kind, point: Token[F])
     extends Expr[F](ElseOtherwiseExpr, point) {

@@ -4,11 +4,12 @@ import aqua.parser.Expr
 import aqua.parser.expr.func.{IfExpr, TryExpr}
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span.{given, *}
+import aqua.parser.lift.{LiftParser, Span}
+
 import cats.parse.Parser as P
 import cats.{Comonad, ~>}
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class TryExpr[F[_]](point: Token[F]) extends Expr[F](TryExpr, point) {
 

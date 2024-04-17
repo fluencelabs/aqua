@@ -1,23 +1,22 @@
 package aqua.parser
 
 import aqua.parser.Ast.Tree
+import aqua.parser.ListToTreeConverter
+import aqua.parser.expr.func.ReturnExpr
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.expr.func.ReturnExpr
 import aqua.parser.lift.LiftParser.*
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.parser.Ast.Tree
-import aqua.parser.ListToTreeConverter
 
+import cats.Show
 import cats.data.Chain.:==
+import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
-import cats.Show
-import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.parse.{Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
-import cats.{~>, Comonad, Eval}
+import cats.{Comonad, Eval, ~>}
 import scribe.Logging
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {

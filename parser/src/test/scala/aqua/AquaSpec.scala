@@ -11,9 +11,9 @@ import aqua.parser.lexer.InfixToken.Op as InfixOp
 import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.lexer.PrefixToken.Op as PrefixOp
 import aqua.parser.lexer.Token.LiftToken
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
 import aqua.types.{LiteralType, ScalarType}
 

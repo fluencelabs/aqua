@@ -1,16 +1,16 @@
 package aqua.parser.head
 
-import cats.Comonad
-import cats.data.NonEmptyList
-import cats.parse.Parser as P
-import cats.~>
-import cats.syntax.bifunctor.*
-
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Name}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
+
+import cats.Comonad
+import cats.data.NonEmptyList
+import cats.parse.Parser as P
+import cats.syntax.bifunctor.*
+import cats.~>
 
 trait FromExpr[F[_]] {
   def imports: NonEmptyList[FromExpr.NameOrAbAs[F]]

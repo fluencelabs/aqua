@@ -3,8 +3,10 @@ package aqua.parser.expr
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
+import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
-import aqua.parser.lift.{LiftParser, Span}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
 import aqua.parser.{Expr, ParserError}
 
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
@@ -21,7 +23,6 @@ case class RootExpr[F[_]](point: Token[F]) extends Expr[F](RootExpr, point) {
 }
 
 object RootExpr extends Expr.Companion {
-  import Span.*
 
   def validChildren: List[Expr.Lexem] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: AbilityExpr :: ConstantExpr :: FuncExpr :: Nil

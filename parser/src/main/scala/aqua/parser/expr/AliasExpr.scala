@@ -4,11 +4,12 @@ import aqua.parser.Expr
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{NamedTypeToken, TypeToken}
 import aqua.parser.lift.LiftParser
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
+
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan}
 
 case class AliasExpr[F[_]](name: NamedTypeToken[F], target: TypeToken[F])
     extends Expr[F](AliasExpr, name) {

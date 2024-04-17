@@ -13,25 +13,23 @@ trait LiftParser[S[_]] {
 
 object LiftParser {
 
-  implicit class LiftErrorOps[S[_]: LiftParser, T](e: Parser.Error) {
-    def wrapErr: S[Parser.Error] = implicitly[LiftParser[S]].wrapErr(e)
+  def apply[S[_]](using lp: LiftParser[S]): LiftParser[S] = lp
+
+  extension [S[_]: LiftParser, T](e: Parser.Error) {
+    def wrapErr: S[Parser.Error] = LiftParser[S].wrapErr(e)
   }
 
-  implicit class LiftParserOps[S[_]: LiftParser, T](parser: Parser[T]) {
-    def lift: Parser[S[T]] = implicitly[LiftParser[S]].lift(parser)
+  extension [S[_]: LiftParser, T](parser: Parser[T]) {
+    def lift: Parser[S[T]] = LiftParser[S].lift(parser)
   }
 
-  implicit class LiftParser0Ops[S[_]: LiftParser, T](parser0: Parser0[T]) {
-    def lift0: Parser0[S[T]] = implicitly[LiftParser[S]].lift0(parser0)
+  extension [S[_]: LiftParser, T](parser0: Parser0[T]) {
+    def lift0: Parser0[S[T]] = LiftParser[S].lift0(parser0)
   }
 
-  object Implicits {
-
-    implicit object idLiftParser extends LiftParser[Id] {
-      override def lift[T](p: Parser[T]): Parser[Id[T]] = p
-      override def lift0[T](p0: Parser0[T]): Parser0[Id[T]] = p0
-      override def wrapErr(e: Parser.Error): Id[Parser.Error] = e
-    }
-
+  given LiftParser[Id] with {
+    override def lift[T](p: Parser[T]): Parser[Id[T]] = p
+    override def lift0[T](p0: Parser0[T]): Parser0[Id[T]] = p0
+    override def wrapErr(e: Parser.Error): Id[Parser.Error] = e
   }
 }

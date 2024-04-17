@@ -5,7 +5,7 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{BasicTypeToken, Name, StreamTypeToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 
 import cats.Comonad
 import cats.parse.Parser
