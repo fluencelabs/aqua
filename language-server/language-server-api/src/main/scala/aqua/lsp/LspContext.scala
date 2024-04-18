@@ -33,9 +33,9 @@ object LspContext {
   def blank[S[_]]: LspContext[S] = LspContext[S](raw = RawContext())
 
   given [S[_]]: Monoid[LspContext[S]] with {
-    override def empty = blank[S]
+    override def empty: LspContext[S] = blank[S]
 
-    override def combine(x: LspContext[S], y: LspContext[S]) =
+    override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] =
       LspContext[S](
         raw = x.raw |+| y.raw,
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
@@ -52,7 +52,7 @@ object LspContext {
   given [S[_]]: Picker[LspContext[S]] with {
     import aqua.semantics.header.Picker.*
 
-    override def blank: LspContext[S] = LspContext[S](Picker[RawContext].blank, Map.empty)
+    override def blank: LspContext[S] = LspContext.blank[S]
     override def exports(ctx: LspContext[S]): Map[String, Option[String]] = ctx.raw.exports
 
     override def isAbility(ctx: LspContext[S], name: String): Boolean =

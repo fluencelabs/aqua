@@ -1,7 +1,8 @@
 package aqua.semantics.expr
 
+import aqua.helpers.syntax.optiont.withFilterF
 import aqua.parser.expr.ServiceExpr
-import aqua.raw.{Raw, ServiceRaw}
+import aqua.raw.{ErroredPart, Raw, ServiceRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -10,7 +11,7 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 
 import cats.Monad
-import cats.data.EitherT
+import cats.data.{EitherT, OptionT}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.either.*
@@ -27,44 +28,30 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg],
     D: DefinitionsAlgebra[S, Alg]
-  ): EitherT[Alg, Raw, ServiceRaw] = for {
-    arrows <- EitherT.fromOptionF(
-      // TODO:  Move to purgeDefs here, allow not only arrows
-      //        from parsing, throw errors here
-      D.purgeArrows(expr.name),
-      Raw.error("Service has no arrows")
-    )
-    arrowsByName = arrows.map { case (name, arrow) =>
-      name.value -> (name, arrow)
-    }.toNem
-    defaultId <- expr.id.traverse(id =>
-      EitherT.fromOptionF(
-        V.valueToStringRaw(id),
-        Raw.error("Failed to resolve default service id")
-      )
-    )
-    serviceType <- EitherT.fromOptionF(
-      T.defineServiceType(expr.name, arrowsByName.toSortedMap),
-      Raw.error("Failed to define service type")
-    )
-    arrowsDefs = arrows.map { case (name, _) => name.value -> name }.toNem
-    _ <- EitherT(
-      A.defineService(
-        expr.name,
-        arrowsDefs,
+  ): EitherT[Alg, Raw, ServiceRaw] = {
+    (
+      for {
+        arrows <- OptionT(D.purgeArrows(expr.name))
+        arrowsByName = arrows.map { case (name, arrow) =>
+          name.value -> (name, arrow)
+        }.toNem
+        defaultId <- expr.id.traverse(id => OptionT(V.valueToStringRaw(id)))
+        serviceType <- OptionT(T.defineServiceType(expr.name, arrowsByName.toSortedMap))
+        arrowsDefs = arrows.map { case (name, _) => name.value -> name }.toNem
+        _ <- OptionT.withFilterF(
+          A.defineService(
+            expr.name,
+            arrowsDefs,
+            defaultId
+          )
+        )
+      } yield ServiceRaw(
+        expr.name.value,
+        serviceType,
         defaultId
-      ).map(defined =>
-        Raw
-          .error("Service not created due to validation errors")
-          .asLeft
-          .whenA(!defined)
       )
-    )
-  } yield ServiceRaw(
-    expr.name.value,
-    serviceType,
-    defaultId
-  )
+    ).toRight(ErroredPart(expr.name.value))
+  }
 
   def program[Alg[_]: Monad](using
     A: AbilitiesAlgebra[S, Alg],

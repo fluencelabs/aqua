@@ -2,21 +2,15 @@ package aqua.lsp
 
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
-import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.parser.lexer.LiteralToken
 import aqua.raw.ConstantRaw
+import aqua.semantics.*
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
 
-import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyChain, ValidatedNec}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.either.*
-import cats.syntax.flatMap.*
-import cats.syntax.foldable.*
+import cats.data.{EitherT, NonEmptyChain, Writer}
 import cats.syntax.functor.*
-import cats.syntax.reducible.*
+import cats.syntax.applicative.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -74,7 +68,6 @@ class LspSemantics[S[_]](
           warnings = state.warnings.toList
         ).pure[Result]
       }
-      // TODO: return as Eval
       .value
   }
 }
