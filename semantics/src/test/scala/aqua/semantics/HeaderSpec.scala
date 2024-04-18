@@ -41,9 +41,7 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
         ModuleExpr(
           word = ModuleExpr.Word(ModuleExpr.Word.Kind.Aqua),
           name = QName("TestModule", NonEmptyList.one("TestModule")),
-          declareAll = None,
-          declareNames = Nil,
-          declareCustom = Nil
+          declares = None
         ),
         ExportExpr(NonEmptyList.of(exp))
       )

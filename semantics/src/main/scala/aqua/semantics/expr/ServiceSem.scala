@@ -9,16 +9,16 @@ import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 
-import cats.data.EitherT
-import cats.syntax.either.*
-import cats.syntax.option.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
-import cats.syntax.foldable.*
-import cats.syntax.applicative.*
 import cats.Monad
+import cats.data.EitherT
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.option.*
+import cats.syntax.traverse.*
 
 class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
 

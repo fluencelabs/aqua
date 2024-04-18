@@ -10,6 +10,7 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{given, *}
 
 import cats.Comonad
+import cats.data.NonEmptyList
 import cats.parse.Parser
 import cats.syntax.applicative.*
 import cats.syntax.comonad.*
@@ -20,9 +21,7 @@ import cats.~>
 case class ModuleExpr[F[_]](
   word: ModuleExpr.Word[F],
   name: QName[F],
-  declareAll: Option[Token[F]],
-  declareNames: List[Name[F]],
-  declareCustom: List[Ability[F]]
+  declares: Option[ModuleExpr.Declares[F]]
 ) extends HeaderExpr[F] {
   override def token: Token[F] = name
 
@@ -30,13 +29,30 @@ case class ModuleExpr[F[_]](
     copy(
       word = word.mapK(fk),
       name = name.mapK(fk),
-      declareAll = declareAll.map(_.mapK(fk)),
-      declareNames = declareNames.map(_.mapK(fk)),
-      declareCustom = declareCustom.map(_.mapK(fk))
+      declares = declares.map(_.mapK(fk))
     )
 }
 
 object ModuleExpr extends HeaderExpr.Companion {
+
+  enum Declares[F[_]] {
+    case All(point: Token[F])
+    case Names(names: NonEmptyList[QName[F]])
+
+    def mapK[K[_]: Comonad](fk: F ~> K): Declares[K] = this match {
+      case All(point) => All(point.mapK(fk))
+      case Names(names) => Names(names.map(_.mapK(fk)))
+    }
+  }
+
+  object Declares {
+
+    val p: Parser[Declares[Span.S]] =
+      (`declares` ~ ` *`) *> (
+        comma(QName.p).map(Names(_)) |
+          `star`.lift.map(Token.lift).map(All(_))
+      )
+  }
 
   final case class Word[F[_]: Comonad](
     token: F[Word.Kind]
@@ -61,49 +77,21 @@ object ModuleExpr extends HeaderExpr.Companion {
         case Kind.Aqua => aqua
       }
     }
-  }
 
-  type NameOrAb[F[_]] = Either[Name[F], Ability[F]]
-
-  private val nameOrAb: Parser[NameOrAb[Span.S]] =
-    Name.p.map(Left(_)) | Ability.ab.map(Right(_))
-
-  private val nameOrAbList: Parser[List[NameOrAb[Span.S]]] =
-    comma[NameOrAb[Span.S]](nameOrAb).map(_.toList)
-
-  private val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.S]], Token[Span.S]]] =
-    nameOrAbList.map(Left(_)) | (`star` <* ` *`).lift.map(Token.lift(_)).map(Right(_))
-
-  private val moduleWord: Parser[Word[Span.S]] =
-    (`module`.as(Word.Kind.Module).lift.backtrack |
+    val p = (`module`.as(Word.Kind.Module).lift.backtrack |
       `aqua-word`.as(Word.Kind.Aqua).lift).map(Word(_))
+  }
 
   override val p: Parser[ModuleExpr[Span.S]] =
     (
-      (` *`.with1 *> moduleWord) ~
-        (` ` *> QName.p) ~
-        (` declares ` *> nameOrAbListOrAll).backtrack
+      (` *`.with1 *> Word.p) ~
+        (` *` *> QName.p) ~
+        (` *` *> Declares.p <* ` *`).backtrack
           .map(_.some)
-          .orElse(` *`.as(none)) // Allow trailing spaces
-    ).map {
-      case ((word, name), None) =>
-        ModuleExpr(word, name, None, Nil, Nil)
-      case ((word, name), Some(Left(exportMembers))) =>
-        ModuleExpr(
-          word,
-          name,
-          None,
-          exportMembers.collect { case Left(x) => x },
-          exportMembers.collect { case Right(x) => x }
-        )
-      case ((word, name), Some(Right(point))) =>
-        ModuleExpr(
-          word,
-          name,
-          Some(point),
-          Nil,
-          Nil
-        )
+          // Allow trailing spaces without `declares`
+          .orElse(` *`.as(none))
+    ).map { case ((word, name), declares) =>
+      ModuleExpr(word, name, declares)
     }
 
 }

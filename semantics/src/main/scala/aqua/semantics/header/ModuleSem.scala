@@ -19,40 +19,40 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
-  import expr.*
-
   def headerSem: Res[S, C] = {
     lazy val sem = HeaderSem(
       // Save module header info
-      Picker[C].blank.setModule(name.value),
+      Picker[C].blank.setModule(expr.name.value),
       ctx =>
-        // When file is handled, check that all the declarations exists
-        if (declareAll.nonEmpty) ctx.setDeclares(ctx.allNames).validNec
-        else {
-          val declares = declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
-          val names = declares.map { case (name, _) => name }.toSet
-          val res = ctx.setDeclares(names).addOccurences(declares)
+        expr.declares match {
+          case None => ctx.validNec
+          case Some(ModuleExpr.Declares.All(_)) =>
+            ctx.setDeclares(ctx.allNames).validNec
+          case Some(ModuleExpr.Declares.Names(declareNames)) =>
+            val declares = declareNames.fproductLeft(_.value).toList
+            val names = declares.map { case (name, _) => name }.toSet
+            val res = ctx.setDeclares(names).addOccurences(declares)
 
-          // summarize contexts to allow redeclaration of imports
-          declares.map { case (n, t) =>
-            res
-              .pick(n, None, ctx.module.nonEmpty)
-              .toValidNec(
-                error(
-                  t,
-                  s"`$n` is expected to be declared, but declaration is not found in the file"
+            // summarize contexts to allow redeclaration of imports
+            declares.map { case (n, t) =>
+              res
+                .pick(n, None, ctx.module.nonEmpty)
+                .toValidNec(
+                  error(
+                    t,
+                    s"`$n` is expected to be declared, but declaration is not found in the file"
+                  )
                 )
-              )
-              .void
-          // TODO: Should not it be possible to make `.combineAll` the final result?
-          // Seems like `.pick` does not return much information
-          }.combineAll.as(res)
+                .void
+            // TODO: Should not it be possible to make `.combineAll` the final result?
+            // Seems like `.pick` does not return much information
+            }.combineAll.as(res)
         }
     )
 
-    word.value.fold(
+    expr.word.value.fold(
       module = error(
-        word,
+        expr.word,
         "Keyword `module` is deprecated, use `aqua` instead"
       ).invalidNec,
       aqua = sem.validNec

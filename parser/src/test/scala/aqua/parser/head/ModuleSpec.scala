@@ -7,6 +7,7 @@ import aqua.parser.lift.LiftParser.given
 import aqua.types.LiteralType
 
 import cats.Id
+import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -16,19 +17,16 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
   val myModule = ModuleExpr(
     ModuleExpr.Word[Id](Id(ModuleExpr.Word.Kind.Aqua)),
     toQName("MyModule"),
-    None,
-    Nil,
-    Nil
+    None
   )
 
   val declaresAll = myModule.copy(
-    declareAll = Some(Token.lift[Id, Unit](()))
+    declares = Some(ModuleExpr.Declares.All(Token.lift[Id, Unit](())))
   )
 
   def declares(symbols: List[String]) =
     myModule.copy(
-      declareNames = symbols.filter(_.headOption.exists(_.isLower)).map(toName),
-      declareCustom = symbols.filter(_.headOption.exists(_.isUpper)).map(toAb)
+      declares = Some(ModuleExpr.Declares.Names(NonEmptyList.fromListUnsafe(symbols.map(toQName))))
     )
 
   def parseModuleExpr(expr: String): ModuleExpr[Id] =
