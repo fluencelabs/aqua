@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.5...aqua-v0.14.6) (2024-04-18)
+
+
+### Bug Fixes
+
+* Allow spaces after aqua header ([#1112](https://github.com/fluencelabs/aqua/issues/1112)) ([9dc9e55](https://github.com/fluencelabs/aqua/commit/9dc9e5597301d327c157780bbc2f58dda89a5e54))
+* **compiler:** Ordering in option inliner [LNG-351] ([#1114](https://github.com/fluencelabs/aqua/issues/1114)) ([49729ac](https://github.com/fluencelabs/aqua/commit/49729ac40aba56d303e42fc8023170ae8b5f7fd8))
+* **compiler:** Redeclare imports [LNG-344] ([#1109](https://github.com/fluencelabs/aqua/issues/1109)) ([8f06ac1](https://github.com/fluencelabs/aqua/commit/8f06ac1cba7f4ce8588c1df1befd6bb99d957f2a))
+* **compiler:** Refactor header semantics [LNG-352] ([#1113](https://github.com/fluencelabs/aqua/issues/1113)) ([f29e44e](https://github.com/fluencelabs/aqua/commit/f29e44e52acd3d6519cd36feadf22414b328a6f0))
+* **compiler:** Return error if SemanticError occures [LNG-356] ([#1126](https://github.com/fluencelabs/aqua/issues/1126)) ([e6c5d00](https://github.com/fluencelabs/aqua/commit/e6c5d0039f1556c9adafa1714ae048a25f252d29))
+* **deps:** update dependency @fluencelabs/fluence-network-environment to v1.2.0 ([#1110](https://github.com/fluencelabs/aqua/issues/1110)) ([1ef0daf](https://github.com/fluencelabs/aqua/commit/1ef0dafe2eae21313311317cd6571d200d4a7739))
+* **deps:** update dependency @fluencelabs/fluence-network-environment to v1.2.1 ([#1115](https://github.com/fluencelabs/aqua/issues/1115)) ([331d497](https://github.com/fluencelabs/aqua/commit/331d497eb5baee156a1aa09ea699e461d2d9b9c5))
+* **lsp:** Fix go-to-definition for abilities as arguments in functions [LNG-343] ([#1116](https://github.com/fluencelabs/aqua/issues/1116)) ([07bea1a](https://github.com/fluencelabs/aqua/commit/07bea1a909d9d66b6eb4a32cb99a990458c3f77e))
+
 ## [0.14.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.4...aqua-v0.14.5) (2024-03-28)
 
 
