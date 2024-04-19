@@ -521,6 +521,45 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkLocations("someString", 1, 3, firstImport, Some(main)) shouldBe true
   }
 
+  it should "return right tokens in 'use'd structures" in {
+    val main =
+      """aqua Job declares *
+        |
+        |use "declare.aqua"
+        |
+        |export timeout
+        |
+        |func timeout() -> string:
+        |  w <- AquaName.getWorker()
+        |  a = w.host_id
+        |  <- a
+        |""".stripMargin
+    val src = Map(
+      "index.aqua" -> main
+    )
+
+    val firstImport =
+      """aqua AquaName declares getWorker, Worker
+        |
+        |data Worker:
+        |  host_id: string
+        |
+        |func getWorker() -> Worker:
+        |  <- Worker(host_id = "")
+        |
+        |""".stripMargin
+
+    val imports = Map(
+      "declare.aqua" ->
+        firstImport
+    )
+
+    val res = compile(src, imports).toOption.get.values.head
+
+    res.errors shouldBe empty
+    res.checkLocations("host_id", 0, 0, firstImport, Some(main)) shouldBe true
+  }
+
   it should "return right tokens for multiple abilities" in {
     val main =
       """aqua Import declares *

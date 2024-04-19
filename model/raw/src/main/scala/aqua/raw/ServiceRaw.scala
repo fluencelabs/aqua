@@ -1,6 +1,6 @@
 package aqua.raw
 
-import aqua.types.ServiceType
+import aqua.types.{ServiceType, Type}
 import aqua.raw.value.ValueRaw
 
 case class ServiceRaw(
@@ -12,4 +12,5 @@ case class ServiceRaw(
 
   override def rename(s: String): RawPart = copy(name = s)
 
+  def addAbilityName(s: String): RawPart = copy(`type` = Type.addAbilityNameServiceType(s, `type`))
 }

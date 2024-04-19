@@ -546,6 +546,63 @@ object Type {
       t.toString
   }
 
+  def addAbilityNamePT(abName: String, t: ProductType): ProductType = {
+    t match {
+      case lct @ LabeledConsType(_, lt, tail) =>
+        lct.copy(`type` = addAbilityName(abName, lt), tail = addAbilityNamePT(abName, tail))
+      case uct @ UnlabeledConsType(ut, tail) =>
+        uct.copy(`type` = addAbilityName(abName, ut), tail = addAbilityNamePT(abName, tail))
+      case t => t
+    }
+  }
+
+  def addAbilityNameArrow(abName: String, t: ArrowType): ArrowType = {
+    t.copy(
+      domain = addAbilityNamePT(abName, t.domain),
+      codomain = addAbilityNamePT(abName, t.codomain)
+    )
+  }
+
+  def addAbilityNameData(abName: String, dt: DataType): DataType =
+    dt match {
+      case st @ StructType(name, fields) =>
+        st.copy(
+          name = AbilityType.fullName(abName, name),
+          fields = fields.map(Type.addAbilityName(abName, _))
+        )
+      case ot @ OptionType(el) => ot.copy(element = addAbilityNameData(abName, el))
+      case at @ ArrayType(el) => at.copy(element = addAbilityNameData(abName, el))
+      case t => t
+    }
+
+  def addAbilityNameServiceType(abName: String, t: ServiceType): ServiceType = {
+    t.copy(
+      name = AbilityType.fullName(abName, t.name),
+      fields = t.fields.map(Type.addAbilityNameArrow(abName, _))
+    )
+  }
+
+  def addAbilityName(abName: String, t: Type): Type = {
+    t match {
+      case at @ AbilityType(name, fields) =>
+        at.copy(
+          name = AbilityType.fullName(abName, name),
+          fields = fields.map(Type.addAbilityName(abName, _))
+        )
+      case st: ServiceType =>
+        addAbilityNameServiceType(abName, st)
+
+      case at: ArrowType =>
+        addAbilityNameArrow(abName, at)
+      case t: DataType => addAbilityNameData(abName, t)
+      case st @ StreamType(el) => st.copy(element = addAbilityNameData(abName, el))
+      case st @ CanonStreamType(el) => st.copy(element = addAbilityNameData(abName, el))
+      case smt @ StreamMapType(el) => smt.copy(element = addAbilityNameData(abName, el))
+      case pt: ProductType => addAbilityNamePT(abName, pt)
+      case t => t
+    }
+  }
+
   // pretty print for Type
   given Show[Type] = {
     case ArrayType(el) =>
