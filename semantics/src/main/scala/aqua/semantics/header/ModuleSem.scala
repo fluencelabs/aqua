@@ -23,7 +23,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
   def headerSem: Res[S, C] = {
     lazy val sem = HeaderSem(
       // Save module header info
-      Picker[C].blank.setModule(expr.name.value),
+      Picker[C].blank.setModule(expr.name.value.some),
       ctx =>
         expr.declares match {
           case None => ctx.validNec

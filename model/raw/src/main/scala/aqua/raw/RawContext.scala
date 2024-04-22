@@ -54,6 +54,9 @@ case class RawContext(
       }
       .map(prefixFirst(prefix, _))
 
+  lazy val allAbilities: Map[String, RawContext] =
+    all(_.abilities)
+
   lazy val services: Map[String, ServiceRaw] = collectPartsMap { case srv: ServiceRaw => srv }
 
   lazy val allServices: Map[String, ServiceRaw] =
@@ -131,7 +134,13 @@ object RawContext {
         x.declares ++ y.declares,
         x.exports ++ y.exports,
         x.parts ++ y.parts,
-        x.abilities ++ y.abilities
+        (x.abilities.keySet ++ y.abilities.keySet)
+          .map(k =>
+            k -> (
+              x.abilities.get(k) |+| y.abilities.get(k)
+            ).get // NOTE: This should never fail
+          )
+          .toMap
       )
   }
 }
