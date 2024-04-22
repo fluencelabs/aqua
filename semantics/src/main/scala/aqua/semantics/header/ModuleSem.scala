@@ -1,5 +1,6 @@
 package aqua.semantics.header
 
+import aqua.helpers.data.PName
 import aqua.parser.head.ModuleExpr
 import aqua.semantics.header.HeaderHandler.{Res, error}
 import aqua.semantics.header.Picker.*
@@ -27,16 +28,17 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
         expr.declares match {
           case None => ctx.validNec
           case Some(ModuleExpr.Declares.All(_)) =>
-            ctx.setDeclares(ctx.allNames).validNec
+            val names = ctx.allNames.map(PName.simpleUnsafe).toSet
+            ctx.setDeclares(names).validNec
           case Some(ModuleExpr.Declares.Names(declareNames)) =>
             val declares = declareNames.fproductLeft(_.value).toList
-            val names = declares.map { case (name, _) => name }.toSet
+            val names = declareNames.map(_.toPName).toList.toSet
             val res = ctx.setDeclares(names).addOccurences(declares)
 
             // summarize contexts to allow redeclaration of imports
             declares.map { case (n, t) =>
               res
-                .pick(n, None, ctx.module.nonEmpty)
+                .pick(t.toPName, ctx.module.nonEmpty)
                 .toValidNec(
                   error(
                     t,

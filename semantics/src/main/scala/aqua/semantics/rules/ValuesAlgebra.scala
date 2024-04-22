@@ -135,7 +135,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
         val callArrow = OptionT
           .fromOption(prop.toCallArrow)
-          .filterF(ca =>
+          .filterF(ca => 
             ca.ability.fold(false.pure)(
               A.isDefinedAbility
             )

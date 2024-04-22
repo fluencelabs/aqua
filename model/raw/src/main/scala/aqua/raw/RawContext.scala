@@ -1,5 +1,6 @@
 package aqua.raw
 
+import aqua.helpers.data.PName
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
 import aqua.types.{AbilityType, StructType, Type}
@@ -10,6 +11,8 @@ import cats.data.Chain
 import cats.data.NonEmptyMap
 import cats.syntax.monoid.*
 import cats.syntax.option.*
+import monocle.Lens
+import monocle.macros.GenLens
 import scala.collection.immutable.SortedMap
 
 /**
@@ -28,7 +31,7 @@ import scala.collection.immutable.SortedMap
  */
 case class RawContext(
   module: Option[String] = None,
-  declares: Set[String] = Set.empty,
+  declares: Set[PName] = Set.empty,
   exports: Map[String, Option[String]] = Map.empty,
   parts: Chain[(RawContext, RawPart)] = Chain.empty,
   abilities: Map[String, RawContext] = Map.empty
@@ -87,10 +90,11 @@ case class RawContext(
     all(_.definedAbilities)
 
   lazy val allNames: Set[String] =
+    // TODO: How about names in abilities?
     parts.map { case (_, p) => p.name }.toList.toSet
 
   lazy val declaredNames: Set[String] =
-    allNames.intersect(declares)
+    declares.map(_.value).toSet
 
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}
@@ -104,6 +108,18 @@ case class RawContext(
 
 object RawContext {
   val blank: RawContext = RawContext()
+
+  val partsLens: Lens[RawContext, Chain[(RawContext, RawPart)]] =
+    GenLens[RawContext](_.parts)
+
+  val abilitiesLens: Lens[RawContext, Map[String, RawContext]] =
+    GenLens[RawContext](_.abilities)
+
+  def fromParts(parts: Chain[(RawContext, RawPart)]): RawContext =
+    partsLens.set(parts)(blank)
+
+  def fromAbilities(abilities: Map[String, RawContext]): RawContext =
+    abilitiesLens.set(abilities)(blank)
 
   given Monoid[RawContext] with {
 

@@ -1,5 +1,6 @@
 package aqua.parser.lexer
 
+import aqua.helpers.data.PName
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
@@ -23,6 +24,8 @@ final case class QName[F[_]: Comonad](
 
   override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): QName[K] =
     copy(fk(name), parts.map(p => fk(p)))
+
+  def toPName: PName = PName(parts.map(_.extract))
 }
 
 object QName {

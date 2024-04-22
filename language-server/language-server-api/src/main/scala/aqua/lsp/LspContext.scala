@@ -1,5 +1,6 @@
 package aqua.lsp
 
+import aqua.helpers.data.PName
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
@@ -102,7 +103,7 @@ object LspContext {
 
     override def setDeclares(
       ctx: LspContext[S],
-      declares: Set[String]
+      declares: Set[PName]
     ): LspContext[S] =
       ctx.copy(raw = ctx.raw.setDeclares(declares))
 
@@ -144,6 +145,9 @@ object LspContext {
             variables = newVariables
           )
         )
+
+    override def pick(ctx: LspContext[S], name: PName, declared: Boolean): Option[LspContext[S]] =
+      ctx.raw.pick(name, declared).map(rc => ctx.copy(raw = rc))
 
     override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
 

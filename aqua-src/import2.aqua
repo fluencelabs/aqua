@@ -1,0 +1,4 @@
+aqua Import2 declares bar
+
+func bar() -> u32:
+  <- 24

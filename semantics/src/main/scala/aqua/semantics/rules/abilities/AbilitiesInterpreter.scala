@@ -13,8 +13,8 @@ import aqua.types.ArrowType
 import cats.data.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.functor.*
 import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
 import monocle.Lens
 import monocle.macros.GenLens

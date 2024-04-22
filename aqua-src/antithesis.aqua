@@ -1,29 +1,8 @@
-aqua Job declares *
+aqua Main
 
-export aaa, bbb
+use "import.aqua"
+ 
+export main
 
-data Peer:
-  id: string
-
-func aaa() -> Peer:
-  peer1 = Peer(id = "123")
-  peer2 = Peer(id = peer1.id)
-  <- peer2
-
-data BrokenStruct:
-  fff: UnknownType
-
-alias BrokenAlias: str3ng
-
-ability BrokenAbility:
-  fff: str4ng
-
-const BROKEN_CONST = UNKNOWN_CONST
-
-func bbb() -> string:
-  <- 323
-
-func ccc() -> Peer:
-  peer1 = Peer(id = "123")
-  peer2 = Peer(id = peer1.id)
-  <- peer2
+func main() -> u32:
+  <- Import.Lib.Import2.bar()
