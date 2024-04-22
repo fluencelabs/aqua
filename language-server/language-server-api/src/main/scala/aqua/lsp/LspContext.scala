@@ -95,10 +95,7 @@ object LspContext {
     ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
-    override def setModule(
-      ctx: LspContext[S],
-      name: String
-    ): LspContext[S] =
+    override def setModule(ctx: LspContext[S], name: Option[String]): LspContext[S] =
       ctx.copy(raw = ctx.raw.setModule(name))
 
     override def setDeclares(
