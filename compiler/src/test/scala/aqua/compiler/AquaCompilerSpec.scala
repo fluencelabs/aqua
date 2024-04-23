@@ -29,6 +29,7 @@ import cats.syntax.show.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scala.annotation.tailrec
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   import ModelBuilder.*
@@ -886,6 +887,95 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
           test(h)
         }
       }
+  }
+
+  it should "import redeclared functions" in {
+
+    final case class Imp(
+      idx: Int,
+      name: String,
+      declares: List[String],
+      use: Option[String] = None
+    ) {
+      lazy val path: String = s"import$idx.aqua"
+
+      lazy val code: String =
+        s"""|aqua $name declares ${declares.mkString(", ")}
+            |
+            |${use.fold("")("use \"" + _ + "\"")}
+            |
+            |func foo() -> i32:
+            |  <- $idx
+            |""".stripMargin
+    }
+
+    @tailrec
+    def build(
+      names: List[String],
+      idx: Int = 1,
+      results: List[Imp] = Nil
+    ): List[Imp] = names match {
+      case Nil => results
+      case name :: tail =>
+        val prev = results.headOption
+        val use = prev.map(_.path)
+        val declares = prev
+          .map(i => i.declares.map(n => s"${i.name}.$n"))
+          .getOrElse(Nil)
+          .prepended("foo")
+
+        build(tail, idx + 1, Imp(idx, name, declares, use) :: results)
+    }
+
+    def test(imps: List[String]) = {
+      (imps.length > 0) should be(true)
+
+      val hierarchy = build(imps)
+      val top = hierarchy.head
+
+      val (calls, vars) = top.declares.zipWithIndex.map { case (decl, idx) =>
+        val v = s"v$idx"
+        val call = s"$v <- ${top.name}.$decl()"
+        call -> v
+      }.unzip
+
+      val main =
+        s"""|aqua Main
+            |
+            |export main
+            |
+            |use "${top.path}"
+            |
+            |func main() -> i32:
+            |  ${calls.mkString("\n  ")}
+            |  <- ${vars.mkString(" + ")}
+            |""".stripMargin
+
+      val imports = hierarchy
+        .map(i => i.path -> i.code)
+        .toMap
+
+      val src = Map(
+        "main.aqua" -> main
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val l = imps.length
+        val res = LiteralModel.number(l * (l + 1) / 2)
+        val expected = XorRes.wrap(
+          respCall(transformCfg, res, initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test(List("A", "B", "C"))
   }
 
   it should "not generate error propagation in `if` with `noXor = true`" in {
