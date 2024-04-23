@@ -9,6 +9,7 @@ import cats.Monoid
 import cats.Semigroup
 import cats.data.Chain
 import cats.data.NonEmptyMap
+import cats.syntax.align.*
 import cats.syntax.monoid.*
 import cats.syntax.option.*
 import monocle.Lens
@@ -134,13 +135,7 @@ object RawContext {
         x.declares ++ y.declares,
         x.exports ++ y.exports,
         x.parts ++ y.parts,
-        (x.abilities.keySet ++ y.abilities.keySet)
-          .map(k =>
-            k -> (
-              x.abilities.get(k) |+| y.abilities.get(k)
-            ).get // NOTE: This should never fail
-          )
-          .toMap
+        x.abilities.alignCombine(y.abilities)
       )
   }
 }
