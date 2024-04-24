@@ -920,19 +920,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       lazy val access: String = rename.getOrElse(name)
     }
 
-    @tailrec
-    def build(
-      names: List[String],
-      idx: Int = 1,
-      results: List[Imp] = Nil
-    ): List[Imp] = names match {
-      case Nil => results
-      case name :: tail =>
-        val prev = results.headOption
-
-        build(tail, idx + 1, Imp(idx, name, None, prev) :: results)
-    }
-
     type NameRename = (String, Option[String])
 
     def test(imps: List[NameRename]) = {
