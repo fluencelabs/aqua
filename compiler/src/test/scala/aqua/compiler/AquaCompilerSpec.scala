@@ -894,19 +894,30 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     final case class Imp(
       idx: Int,
       name: String,
-      declares: List[String],
-      use: Option[String] = None
+      rename: Option[String] = None,
+      use: Option[Imp] = None
     ) {
+      def withUse(other: Imp): Imp = copy(use = Some(other))
+
       lazy val path: String = s"import$idx.aqua"
+
+      lazy val declares: List[String] = use
+        .map(u => u.declares.map(n => s"${u.access}.$n"))
+        .getOrElse(Nil)
+        .prepended("foo")
 
       lazy val code: String =
         s"""|aqua $name declares ${declares.mkString(", ")}
             |
-            |${use.fold("")("use \"" + _ + "\"")}
+            |${use.fold("")(_.usage)}
             |
             |func foo() -> i32:
             |  <- $idx
             |""".stripMargin
+
+      lazy val usage: String = s"use \"$path\"" + rename.fold("")(n => s" as $n")
+
+      lazy val access: String = rename.getOrElse(name)
     }
 
     @tailrec
@@ -918,24 +929,24 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       case Nil => results
       case name :: tail =>
         val prev = results.headOption
-        val use = prev.map(_.path)
-        val declares = prev
-          .map(i => i.declares.map(n => s"${i.name}.$n"))
-          .getOrElse(Nil)
-          .prepended("foo")
 
-        build(tail, idx + 1, Imp(idx, name, declares, use) :: results)
+        build(tail, idx + 1, Imp(idx, name, None, prev) :: results)
     }
 
-    def test(imps: List[String]) = {
+    type NameRename = (String, Option[String])
+
+    def test(imps: List[NameRename]) = {
       (imps.length > 0) should be(true)
 
-      val hierarchy = build(imps)
-      val top = hierarchy.head
+      val top = imps.zipWithIndex.map { case ((name, rename), idx) =>
+        Imp(idx + 1, name, rename)
+      }.reduceRight { case (cur, prev) =>
+        cur.withUse(prev)
+      }
 
       val (calls, vars) = top.declares.zipWithIndex.map { case (decl, idx) =>
         val v = s"v$idx"
-        val call = s"$v <- ${top.name}.$decl()"
+        val call = s"$v <- ${top.access}.$decl()"
         call -> v
       }.unzip
 
@@ -944,14 +955,17 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
             |
             |export main
             |
-            |use "${top.path}"
+            |${top.usage}
             |
             |func main() -> i32:
             |  ${calls.mkString("\n  ")}
             |  <- ${vars.mkString(" + ")}
             |""".stripMargin
 
-      val imports = hierarchy
+      val imports = List
+        .unfold(top.some)(
+          _.map(i => i -> i.use)
+        )
         .map(i => i.path -> i.code)
         .toMap
 
@@ -975,7 +989,77 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    test(List("A", "B", "C"))
+    // Simple
+    (1 to 10).foreach { i =>
+      val names = (1 to i).map(n => s"Imp$n").toList
+      withClue(s"Testing ${names.mkString(" -> ")}") {
+        test(names.map(_ -> none))
+      }
+    }
+
+    def namesFrom(parts: List[String]): List[String] =
+      parts.inits.toList.reverse
+        .dropWhile(_.isEmpty)
+        .map(_.mkString("."))
+
+    // With subpaths
+    (1 to 4).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          namesFrom(
+            List("Imp", "Sub", "Path")
+              .map(p => s"$p$idx")
+          )
+        )
+        .foldLeft(List.empty[List[String]]) { case (acc, next) =>
+          if (acc.isEmpty) next.map(List(_))
+          else
+            for {
+              elem <- next
+              prev <- acc
+            } yield elem +: prev
+        }
+        .foreach(names =>
+          withClue(s"Testing ${names.mkString(" -> ")}") {
+            test(names.map(_ -> none))
+          }
+        )
+    }
+
+    // With renames
+    (1 to 3).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          for {
+            name <- namesFrom(
+              List("Imp", "Sub", "Path")
+                .map(p => s"$p$idx")
+            )
+            rename <- None :: namesFrom(
+              List("Rename", "To", "Other")
+                .map(p => s"$p$idx")
+            ).map(_.some)
+          } yield name -> rename
+        )
+        .foldLeft(List.empty[List[NameRename]]) { case (acc, next) =>
+          if (acc.isEmpty) next.map(List(_))
+          else
+            for {
+              elem <- next
+              prev <- acc
+            } yield elem +: prev
+        }
+        .foreach(names =>
+          val message = names.map { case (n, r) =>
+            s"$n${r.fold("")(n => s" as $n")}"
+          }.mkString(" -> ")
+
+          withClue(s"Testing $message") {
+            test(names)
+          }
+        )
+    }
+
   }
 
   it should "not generate error propagation in `if` with `noXor = true`" in {
