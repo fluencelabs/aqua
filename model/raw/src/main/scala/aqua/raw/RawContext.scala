@@ -135,6 +135,7 @@ object RawContext {
         x.declares ++ y.declares,
         x.exports ++ y.exports,
         x.parts ++ y.parts,
+        // This combines abilities (which are RawContexts too) recursively
         x.abilities.alignCombine(y.abilities)
       )
   }

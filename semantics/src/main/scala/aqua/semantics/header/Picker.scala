@@ -162,6 +162,8 @@ object Picker {
         }
         .filter(_.nonEmpty)
         .map(
+          // Module and declares should not be lost when picking
+          // Because it affects later logic
           _.setModule(ctx.module).setDeclares(Set(PName.simpleUnsafe(name)))
         )
 
@@ -177,6 +179,8 @@ object Picker {
             inner <- pick(ability, field, declared)
           } yield RawContext
             .fromAbilities(Map(ab.value -> inner))
+            // Module and declares should not be lost when picking
+            // Because it affects later logic
             .setModule(ctx.module)
             .setDeclares(Set(name))
         }

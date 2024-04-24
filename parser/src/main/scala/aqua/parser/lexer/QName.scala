@@ -14,6 +14,13 @@ import cats.parse.{Parser => P}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 
+/**
+ * Qualified name. Name with parts separated by `.`
+ * e.g. `Some.Imported.Module.foo`
+ *
+ * @param name Name as a whole
+ * @param parts Parts of the name
+ */
 final case class QName[F[_]: Comonad](
   name: F[String],
   parts: NonEmptyList[F[String]]
