@@ -984,6 +984,18 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
+    extension [A](l: List[List[A]]) {
+      def rotate: List[List[A]] =
+        l.foldLeft(List.empty[List[A]]) { case (acc, next) =>
+          if (acc.isEmpty) next.map(List(_))
+          else
+            for {
+              elem <- next
+              prev <- acc
+            } yield elem +: prev
+        }
+    }
+
     // With subpaths
     (1 to 4).foreach { i =>
       (1 to i)
@@ -993,14 +1005,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
               .map(p => s"$p$idx")
           )
         )
-        .foldLeft(List.empty[List[String]]) { case (acc, next) =>
-          if (acc.isEmpty) next.map(List(_))
-          else
-            for {
-              elem <- next
-              prev <- acc
-            } yield elem +: prev
-        }
+        .toList
+        .rotate
         .foreach(names =>
           withClue(s"Testing ${names.mkString(" -> ")}") {
             test(names.map(_ -> none))
@@ -1023,14 +1029,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
             ).map(_.some)
           } yield name -> rename
         )
-        .foldLeft(List.empty[List[NameRename]]) { case (acc, next) =>
-          if (acc.isEmpty) next.map(List(_))
-          else
-            for {
-              elem <- next
-              prev <- acc
-            } yield elem +: prev
-        }
+        .toList
+        .rotate
         .foreach(names =>
           val message = names.map { case (n, r) =>
             s"$n${r.fold("")(n => s" as $n")}"
