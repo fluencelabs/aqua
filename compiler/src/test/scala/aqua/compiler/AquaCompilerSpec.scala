@@ -997,16 +997,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    def namesFrom(parts: List[String]): List[String] =
-      parts.inits.toList.reverse
-        .dropWhile(_.isEmpty)
-        .map(_.mkString("."))
-
     // With subpaths
     (1 to 4).foreach { i =>
       (1 to i)
         .map(idx =>
-          namesFrom(
+          paths(
             List("Imp", "Sub", "Path")
               .map(p => s"$p$idx")
           )
@@ -1031,11 +1026,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       (1 to i)
         .map(idx =>
           for {
-            name <- namesFrom(
+            name <- paths(
               List("Imp", "Sub", "Path")
                 .map(p => s"$p$idx")
             )
-            rename <- None :: namesFrom(
+            rename <- None :: paths(
               List("Rename", "To", "Other")
                 .map(p => s"$p$idx")
             ).map(_.some)
