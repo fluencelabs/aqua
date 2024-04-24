@@ -1,3 +1,19 @@
-aqua Import.Lib declares Import2.bar
+aqua Import declares someFunc
 
-use "import2.aqua" as Import2
+service GetStr("multiret-test"):
+    retStr(s: []string, a: []string)
+
+func someFunc() -> string:
+    <- "some func call"
+
+func foo_wrapper():
+    GetStr.retStr(nil, nil)
+
+func invalid_append() -> *string:
+    stream: *string
+    cream: *string
+    dream: *string
+    str: *string
+    asdasd: *string
+    GetStr.retStr(stream, nil)
+    <- stream
