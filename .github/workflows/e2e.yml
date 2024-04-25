@@ -38,7 +38,7 @@ jobs:
   fcli-snapshot:
     name: "fcli"
     needs: aqua
-    uses: fluencelabs/flox/.github/workflows/snapshot.yml@main
+    uses: fluencelabs/cli/.github/workflows/snapshot.yml@main
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
