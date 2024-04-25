@@ -28,7 +28,6 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   val emptyCall = Call(Nil, Nil)
 
-  implicit val fileLift: LiftParser[Span.S] = Span.spanLiftParser
   val parser = Parser.parse(Parser.spanParser)
 
   val semantics = new RawSemantics[Span.S]()

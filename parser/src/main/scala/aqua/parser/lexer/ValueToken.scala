@@ -6,7 +6,7 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import aqua.parser.lift.Span.{given, *}
 import aqua.types.LiteralType
 
 import cats.arrow.FunctionK

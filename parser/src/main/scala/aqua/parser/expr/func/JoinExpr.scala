@@ -4,11 +4,12 @@ import aqua.parser.Expr
 import aqua.parser.expr.*
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{PropertyToken, ValueToken}
+import aqua.parser.lift.Span.{given, *}
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
-import cats.parse.Parser
-import cats.{~>, Comonad}
+
 import cats.data.NonEmptyList
+import cats.parse.Parser
+import cats.{Comonad, ~>}
 
 case class JoinExpr[F[_]](values: NonEmptyList[ValueToken[F]])
     extends Expr[F](JoinExpr, values.head) {

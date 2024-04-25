@@ -6,7 +6,7 @@ import aqua.parser.lexer.Token.` \n+`
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 
 import cats.data.Chain
 import cats.free.Cofree

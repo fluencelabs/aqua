@@ -3,8 +3,9 @@ package aqua.parser.expr.func
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, NamedTypeToken, TypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 import aqua.parser.{ArrowReturnError, Ast, Expr, ParserError}
+
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>

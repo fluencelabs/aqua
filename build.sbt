@@ -26,6 +26,8 @@ val commons = Seq(
   scalaVersion := scalaV,
   libraryDependencies ++= Seq(
     "com.outr"          %%% "scribe"          % scribeV,
+    "dev.optics"        %%% "monocle-core"    % monocleV,
+    "dev.optics"        %%% "monocle-macro"   % monocleV,
     "org.scalatest"     %%% "scalatest"       % scalaTestV           % Test,
     "org.scalatestplus" %%% "scalacheck-1-17" % scalaTestScalaCheckV % Test
   ),
@@ -201,12 +203,6 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
-  .settings(
-    libraryDependencies ++= Seq(
-      "dev.optics" %%% "monocle-core"  % monocleV,
-      "dev.optics" %%% "monocle-macro" % monocleV
-    )
-  )
   .dependsOn(raw, parser, errors, mangler)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
@@ -287,6 +283,7 @@ lazy val helpers = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-free" % catsV
     )
   )
+  .dependsOn(errors)
 
 lazy val errors = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

@@ -23,8 +23,8 @@ case class HeaderSem[S[_], C](
 
 object HeaderSem {
 
-  def fromInit[S[_], C](init: C): HeaderSem[S, C] =
-    HeaderSem(init, c => c.validNec)
+  def fromInit[S[_], C: Monoid](init: C): HeaderSem[S, C] =
+    HeaderSem(init, _ => Monoid[C].empty.validNec)
 
   given [S[_]: Comonad, C](using
     rc: Monoid[C]

@@ -6,10 +6,11 @@ import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.`co`
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
-import cats.parse.Parser
-import cats.{~>, Comonad}
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
+
+import cats.parse.Parser
+import cats.{Comonad, ~>}
 
 case class CoExpr[F[_]](point: Token[F]) extends Expr[F](CoExpr, point) {
   def mapK[K[_]: Comonad](fk: F ~> K): CoExpr[K] = copy(point.mapK(fk))

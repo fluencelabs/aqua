@@ -4,7 +4,7 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, LiteralToken, Name, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 
 import cats.Comonad
 import cats.data.NonEmptyList
@@ -27,9 +27,8 @@ case class UseFromExpr[F[_]](
 object UseFromExpr extends HeaderExpr.Companion {
 
   override val p: Parser[UseFromExpr[Span.S]] =
-    (`use` *> FromExpr.importFrom.surroundedBy(
-      ` `
-    ) ~ ValueToken.string ~ (` as ` *> Ability.ab)).map { case ((imports, filename), asModule) =>
+    (`use` *> FromExpr.importFrom.surroundedBy(` `) ~
+      ValueToken.string ~ (` as ` *> Ability.dotted)).map { case ((imports, filename), asModule) =>
       UseFromExpr(imports, filename, asModule)
     }
 }

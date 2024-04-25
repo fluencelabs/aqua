@@ -29,6 +29,7 @@ import cats.syntax.show.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import scala.annotation.tailrec
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   import ModelBuilder.*
@@ -497,10 +498,14 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
-  val moduleNames = List("Test", "Imp", "Sub", "Path").inits
-    .takeWhile(_.nonEmpty)
-    .map(_.mkString("."))
-    .toList
+  def paths(parts: List[String]): List[String] =
+    parts.inits
+      .takeWhile(_.nonEmpty)
+      .map(_.mkString("."))
+      .toList
+
+  val moduleNames = paths(List("Test", "Imp", "Sub", "Path"))
+  val renames = paths(List("Renamed", "With", "New", "Name"))
 
   it should "import function with `use`" in {
     def test(name: String, rename: Option[String]) = {
@@ -536,13 +541,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
@@ -664,13 +671,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
@@ -733,13 +742,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
     moduleNames.foreach { name =>
-      val rename = "Imported"
 
       withClue(s"Testing $name") {
         test(name, None)
       }
-      withClue(s"Testing $name as $rename") {
-        test(name, rename.some)
+
+      renames.foreach { rename =>
+        withClue(s"Testing $name as $rename") {
+          test(name, rename.some)
+        }
       }
     }
   }
@@ -876,6 +887,161 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
           test(h)
         }
       }
+  }
+
+  it should "import redeclared functions" in {
+
+    final case class Imp(
+      idx: Int,
+      name: String,
+      rename: Option[String] = None,
+      use: Option[Imp] = None
+    ) {
+      def withUse(other: Imp): Imp = copy(use = Some(other))
+
+      lazy val path: String = s"import$idx.aqua"
+
+      lazy val declares: List[String] = use
+        .map(u => u.declares.map(n => s"${u.access}.$n"))
+        .getOrElse(Nil)
+        .prepended("foo")
+
+      lazy val code: String =
+        s"""|aqua $name declares ${declares.mkString(", ")}
+            |
+            |${use.fold("")(_.usage)}
+            |
+            |func foo() -> i32:
+            |  <- $idx
+            |""".stripMargin
+
+      lazy val usage: String = s"use \"$path\"" + rename.fold("")(n => s" as $n")
+
+      lazy val access: String = rename.getOrElse(name)
+    }
+
+    type NameRename = (String, Option[String])
+
+    def test(imps: List[NameRename]) = {
+      (imps.length > 0) should be(true)
+
+      val top = imps.zipWithIndex.map { case ((name, rename), idx) =>
+        Imp(idx + 1, name, rename)
+      }.reduceRight { case (cur, prev) =>
+        cur.withUse(prev)
+      }
+
+      val (calls, vars) = top.declares.zipWithIndex.map { case (decl, idx) =>
+        val v = s"v$idx"
+        val call = s"$v <- ${top.access}.$decl()"
+        call -> v
+      }.unzip
+
+      val main =
+        s"""|aqua Main
+            |
+            |export main
+            |
+            |${top.usage}
+            |
+            |func main() -> i32:
+            |  ${calls.mkString("\n  ")}
+            |  <- ${vars.mkString(" + ")}
+            |""".stripMargin
+
+      val imports = List
+        .unfold(top.some)(
+          _.map(i => i -> i.use)
+        )
+        .map(i => i.path -> i.code)
+        .toMap
+
+      val src = Map(
+        "main.aqua" -> main
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val l = imps.length
+        val res = LiteralModel.number(l * (l + 1) / 2)
+        val expected = XorRes.wrap(
+          respCall(transformCfg, res, initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    // Simple
+    (1 to 10).foreach { i =>
+      val names = (1 to i).map(n => s"Imp$n").toList
+      withClue(s"Testing ${names.mkString(" -> ")}") {
+        test(names.map(_ -> none))
+      }
+    }
+
+    extension [A](l: List[List[A]]) {
+      def rotate: List[List[A]] =
+        l.foldLeft(List.empty[List[A]]) { case (acc, next) =>
+          if (acc.isEmpty) next.map(List(_))
+          else
+            for {
+              elem <- next
+              prev <- acc
+            } yield elem +: prev
+        }
+    }
+
+    // With subpaths
+    (1 to 4).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          paths(
+            List("Imp", "Sub", "Path")
+              .map(p => s"$p$idx")
+          )
+        )
+        .toList
+        .rotate
+        .foreach(names =>
+          withClue(s"Testing ${names.mkString(" -> ")}") {
+            test(names.map(_ -> none))
+          }
+        )
+    }
+
+    // With renames
+    (1 to 3).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          for {
+            name <- paths(
+              List("Imp", "Sub", "Path")
+                .map(p => s"$p$idx")
+            )
+            rename <- None :: paths(
+              List("Rename", "To", "Other")
+                .map(p => s"$p$idx")
+            ).map(_.some)
+          } yield name -> rename
+        )
+        .toList
+        .rotate
+        .foreach(names =>
+          val message = names.map { case (n, r) =>
+            s"$n${r.fold("")(n => s" as $n")}"
+          }.mkString(" -> ")
+
+          withClue(s"Testing $message") {
+            test(names)
+          }
+        )
+    }
+
   }
 
   it should "not generate error propagation in `if` with `noXor = true`" in {

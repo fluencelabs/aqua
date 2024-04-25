@@ -6,11 +6,12 @@ import aqua.parser.lexer.Token.{`parseq`, *}
 import aqua.parser.lexer.{Name, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{given, *}
+
 import cats.parse.Parser as P
 import cats.syntax.comonad.*
-import cats.{~>, Comonad}
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.{Comonad, ~>}
 
 case class ParSeqExpr[F[_]](
   item: Name[F],

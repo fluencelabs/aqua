@@ -66,6 +66,6 @@ object AbilitiesState {
       rootServiceIds = context.allServices.flatMap { case (name, service) =>
         service.defaultId.map(name -> _)
       },
-      abilities = context.abilities // TODO is it the right way to collect abilities? Why?
+      abilities = context.allAbilities
     )
 }
