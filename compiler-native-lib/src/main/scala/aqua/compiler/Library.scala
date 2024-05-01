@@ -5,10 +5,8 @@ import org.graalvm.nativeimage.c.function.CEntryPoint
 import org.graalvm.nativeimage.c.`type`.{CCharPointer, CCharPointerPointer, CTypeConversion}
 
 import scala.annotation.static
-
 import cats.effect.unsafe.implicits.global
-
-import aqua.api.{APICompilation, AquaAPIConfig}
+import aqua.api.{APICompilation, AquaAPIConfig, Imports}
 import aqua.backend.api.APIBackend
 import aqua.logging.LogFormatter
 
@@ -32,7 +30,7 @@ object Library {
     val result = APICompilation
       .compileString(
         code,
-        imports = Nil,
+        imports = Imports(Map.empty),
         aquaConfig = AquaAPIConfig(),
         backend = APIBackend
       )

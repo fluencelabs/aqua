@@ -219,8 +219,7 @@ lazy val `compiler-native-lib` = project
   .settings(
     name := "libaqua",
     Compile / mainClass := Some("aqua.compiler.Library"),
-    nativeImageJvm := "graalvm-java20",
-    nativeImageVersion:="20.0.2",
+    nativeImageVersion:="22.3.1",
     nativeImageOptions ++= Seq(
       "--verbose",
       "--no-fallback",
@@ -228,8 +227,11 @@ lazy val `compiler-native-lib` = project
       "--initialize-at-run-time=aqua.logging.LogFormatter$",
       // Uncomment next lines to use llvm backend
       // and obtain bitcode files
-      //   "-H:CompilerBackend=llvm",
-      //   "-H:TempDirectory=temp", // Directory with bc files
+       //  "-H:CompilerBackend=llvm",
+       //  "-H:TempDirectory=temp", // Directory with bc files
+    ),
+    libraryDependencies ++= Seq(
+      "org.graalvm.sdk" % "graal-sdk" % "24.0.1"
     )
   )
   .dependsOn(`aqua-api`.jvm)
