@@ -19,12 +19,11 @@ case class Variables[S[_]](
     variables.values.flatMap(_.flatMap(_.allLocations)).toList
 
   def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): Variables[S] = {
-    copy(variables = newDefinitions.foldLeft(variables) { case (m, definition) =>
-      m.updatedWith(definition.name) {
-        case Some(v) => Some(VariableInfo(definition) +: v)
-        case None => Some(VariableInfo(definition) :: Nil)
-      }
-    })
+    copy(variables =  newDefinitions
+        .map(d => d.name -> List(VariableInfo(d)))
+        .toMap
+        .alignCombine(variables)
+    )
   }
 
   def updateFirst(
