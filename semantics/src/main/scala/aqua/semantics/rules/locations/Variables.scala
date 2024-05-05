@@ -10,7 +10,7 @@ case class Variables[S[_]](
   variables: Map[String, List[VariableInfo[S]]] = Map.empty[String, List[VariableInfo[S]]]
 ) {
 
-  def renameDefinitions(f: String => String): Variables[S] =
+  def renameDefinitions(f: PartialFunction[String, String]): Variables[S] =
     copy(variables = variables.map { case (k, v) =>
       val newName = f(k)
       newName -> v.map(vi => vi.copy(definition = vi.definition.copy(name = newName)))
@@ -31,7 +31,7 @@ case class Variables[S[_]](
     )
   }
 
-  def addLocation(
+  def addOccurence(
     name: String,
     token: Token[S]
   ): Variables[S] = {

@@ -122,10 +122,9 @@ object LspContext {
     ): Option[LspContext[S]] =
       // rename tokens from one context with prefix addition
       val newVariables = rename.map { renameStr =>
-        ctx.variables.renameDefinitions { defName =>
-          if (defName.startsWith(name))
+        ctx.variables.renameDefinitions {
+          case defName if defName.startsWith(name) =>
             defName.replaceFirst(name, renameStr)
-          else defName
         }
       }.getOrElse(ctx.variables)
 

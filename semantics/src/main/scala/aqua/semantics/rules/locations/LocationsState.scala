@@ -24,7 +24,7 @@ case class LocationsState[S[_]](
     name: String,
     token: Token[S]
   ): LocationsState[S] =
-    copy(variables = variables.addLocation(name, token))
+    copy(variables = variables.addOccurence(name, token))
 
   def addLocations(
     locations: List[(String, Token[S])]
