@@ -47,13 +47,6 @@ object Variables {
 
   given [S[_]]: Semigroup[Variables[S]] with {
 
-    override def combine(x: Variables[S], y: Variables[S]): Variables[S] = {
-      Variables(y.variables.foldLeft(x.variables) { case (m, (k, v)) =>
-        m.updatedWith(k) {
-          case None => Some(v)
-          case Some(vars) => Some((vars ++ v).distinct)
-        }
-      })
-    }
-  }
+    override def combine(x: Variables[S], y: Variables[S]): Variables[S] =
+        Variables(x.variables.alignCombine(y.variables).mapValues(_.distinct).toMap)
 }
