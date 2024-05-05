@@ -1,7 +1,6 @@
 package aqua.helpers.syntax
 
 import scala.annotation.tailrec
-import scala.collection.immutable.ListMap
 
 object list {
 
