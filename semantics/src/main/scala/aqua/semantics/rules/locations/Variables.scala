@@ -12,8 +12,11 @@ case class Variables[S[_]](
 
   def renameDefinitions(f: PartialFunction[String, String]): Variables[S] =
     copy(variables = variables.map { case (k, v) =>
-      val newName = f(k)
-      newName -> v.map(vi => vi.copy(definition = vi.definition.copy(name = newName)))
+      f.andThen { newName =>
+        newName -> v.map(vi => vi.copy(definition = vi.definition.copy(name = newName)))
+      }.orElse { _ =>
+        k -> v
+      }(k)
     })
 
   lazy val allLocations: List[TokenLocation[S]] =
