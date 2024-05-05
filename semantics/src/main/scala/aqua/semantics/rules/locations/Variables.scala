@@ -31,6 +31,9 @@ case class Variables[S[_]](
     )
   }
 
+  /**
+   * Add occurrance by name to the first (last added) definition.
+   */
   def addOccurence(
     name: String,
     token: Token[S]
