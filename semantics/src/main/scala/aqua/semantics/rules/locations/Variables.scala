@@ -19,6 +19,9 @@ case class Variables[S[_]](
   lazy val allLocations: List[TokenLocation[S]] =
     variables.values.flatMap(_.flatMap(_.allLocations)).toList
 
+  lazy val definitions: List[DefinitionInfo[S]] =
+    variables.values.flatMap(_.map(_.definition)).toList
+
   def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): Variables[S] = {
     copy(variables =
       newDefinitions
@@ -28,18 +31,20 @@ case class Variables[S[_]](
     )
   }
 
-  def updateFirst(
+  def addLocation(
     name: String,
     token: Token[S]
   ): Variables[S] = {
-    copy(variables = variables.updatedWith(name) (
+    copy(variables =
+      variables.updatedWith(name)(
         _.map(
           _.updateFirst(
             _.definition.name == name,
             v => v.copy(occurrences = token +: v.occurrences)
           )
         )
-      ))
+      )
+    )
   }
 }
 
@@ -48,5 +53,6 @@ object Variables {
   given [S[_]]: Semigroup[Variables[S]] with {
 
     override def combine(x: Variables[S], y: Variables[S]): Variables[S] =
-        Variables(x.variables.alignCombine(y.variables).mapValues(_.distinct).toMap)
+      Variables(x.variables.alignCombine(y.variables).view.mapValues(_.distinct).toMap)
+  }
 }
