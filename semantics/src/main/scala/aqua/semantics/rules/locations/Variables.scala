@@ -32,16 +32,14 @@ case class Variables[S[_]](
     name: String,
     token: Token[S]
   ): Variables[S] = {
-    copy(variables = variables.updatedWith(name) {
-      case Some(vars) =>
-        Some(
-          vars.updateFirst(
+    copy(variables = variables.updatedWith(name) (
+        _.map(
+          _.updateFirst(
             _.definition.name == name,
             v => v.copy(occurrences = token +: v.occurrences)
           )
         )
-      case None => None
-    })
+      ))
   }
 }
 
