@@ -4,6 +4,7 @@ import aqua.helpers.syntax.list.*
 import aqua.parser.lexer.Token
 
 import cats.kernel.{Monoid, Semigroup}
+import cats.syntax.align.*
 
 case class Variables[S[_]](
   variables: Map[String, List[VariableInfo[S]]] = Map.empty[String, List[VariableInfo[S]]]
@@ -19,7 +20,8 @@ case class Variables[S[_]](
     variables.values.flatMap(_.flatMap(_.allLocations)).toList
 
   def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): Variables[S] = {
-    copy(variables =  newDefinitions
+    copy(variables =
+      newDefinitions
         .map(d => d.name -> List(VariableInfo(d)))
         .toMap
         .alignCombine(variables)
