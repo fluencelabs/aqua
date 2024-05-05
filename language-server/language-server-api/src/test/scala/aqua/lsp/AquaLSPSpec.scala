@@ -43,7 +43,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       } yield {
         val (defStart, defEnd) = defPos
         val (useStart, useEnd) = usePos
-        c.variables.variables.iterator.flatMap(_._2).exists { case VariableInfo(defI, occs) =>
+        c.variables.variables.values.flatten.exists { case VariableInfo(defI, occs) =>
           val defSpan = defI.token.unit._1
           if (defSpan.startIndex == defStart && defSpan.endIndex == defEnd) {
             occs.exists { useT =>
