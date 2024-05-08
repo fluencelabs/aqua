@@ -40,13 +40,16 @@ case class AquaContext(
     }
   ).map(_.leftMap(prefix + _)).toMap
 
+  lazy val allServices: Map[String, ServiceModel] =
+    all(_.services)
+
   lazy val allValues: Map[String, ValueModel] =
     all(_.values) ++
       /**
        * Add values from services that have default ID
        * So that they will be available in functions.
        */
-      services.flatMap { case (srvName, srv) =>
+      allServices.flatMap { case (srvName, srv) =>
         srv.defaultId.toList.flatMap(_ =>
           srv.`type`.arrows.map { case (arrowName, arrowType) =>
             val fullName = AbilityType.fullName(srvName, arrowName)
@@ -71,7 +74,7 @@ case class AquaContext(
        * Add functions from services that have default ID
        * So that they will be available in functions.
        */
-      services.flatMap { case (srvName, srv) =>
+      allServices.flatMap { case (srvName, srv) =>
         srv.defaultId.toList.flatMap(id =>
           srv.`type`.arrows.map { case (arrowName, arrowType) =>
             val fullName = AbilityType.fullName(srvName, arrowName)
@@ -109,6 +112,15 @@ case class AquaContext(
       pickOne(name, newName, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
       pickOne(name, newName, services, (ctx, el) => ctx.copy(services = el))
   }
+
+  override def toString(): String =
+    s"AquaContext(" +
+      s"module=$module, " +
+      s"funcs=${funcs.keys}, " +
+      s"types=${types.keys}, " +
+      s"values=${values.keys}, " +
+      s"abilities=${abilities.keys}, " +
+      s"services=${services.keys})"
 }
 
 object AquaContext extends Logging {

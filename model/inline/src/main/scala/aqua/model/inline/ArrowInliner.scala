@@ -552,8 +552,9 @@ object ArrowInliner extends Logging {
         for {
           // Process renamings, prepare environment
           fnCanon <- ArrowInliner.prelude(arrow, call, exports, arrows)
-          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
-        } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
+          (fn, canons) = fnCanon
+          inlineResult <- ArrowInliner.inline(fn, call, streams)
+        } yield inlineResult.copy(tree = SeqModel.wrap(canons, inlineResult.tree))
       )
     )
 
