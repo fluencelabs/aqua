@@ -8,9 +8,9 @@ import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
 import aqua.types.{AbilityType, StructType, Type}
 
 import cats.Monoid
-import cats.data.Chain
-import cats.data.NonEmptyMap
+import cats.data.{Chain, NonEmptyMap, State}
 import cats.kernel.Semigroup
+import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
@@ -113,6 +113,24 @@ case class AquaContext(
       pickOne(name, newName, services, (ctx, el) => ctx.copy(services = el))
   }
 
+  def withModule(newModule: Option[String]): AquaContext =
+    copy(module = newModule)
+
+  def withAbilities(newAbilities: Map[String, AquaContext]): AquaContext =
+    copy(abilities = newAbilities)
+
+  def withServices(newServices: Map[String, ServiceModel]): AquaContext =
+    copy(services = newServices)
+
+  def withValues(newValues: Map[String, ValueModel]): AquaContext =
+    copy(values = newValues)
+
+  def withFuncs(newFuncs: Map[String, FuncArrow]): AquaContext =
+    copy(funcs = newFuncs)
+
+  def withTypes(newTypes: Map[String, Type]): AquaContext =
+    copy(types = newTypes)
+
   override def toString(): String =
     s"AquaContext(" +
       s"module=$module, " +
@@ -125,13 +143,38 @@ case class AquaContext(
 
 object AquaContext extends Logging {
 
-  case class Cache(private val data: Chain[(RawContext, AquaContext)] = Chain.empty) {
+  case class Cache private (
+    private val data: Map[Cache.RefKey[RawContext], AquaContext]
+  ) {
     lazy val size: Long = data.size
 
-    def get(ctx: RawContext): Option[AquaContext] =
-      data.collectFirst { case (rawCtx, aquaCtx) if rawCtx eq ctx => aquaCtx }
+    private def get(ctx: RawContext): Option[AquaContext] =
+      data.get(Cache.RefKey(ctx))
 
-    def updated(ctx: RawContext, aCtx: AquaContext): Cache = copy(data :+ (ctx -> aCtx))
+    private def updated(ctx: RawContext, aCtx: AquaContext): Cache =
+      copy(data = data.updated(Cache.RefKey(ctx), aCtx))
+  }
+
+  type Cached[A] = State[Cache, A]
+
+  object Cache {
+
+    val empty: Cache = Cache(Map.empty)
+
+    def get(ctx: RawContext): Cached[Option[AquaContext]] =
+      State.inspect(_.get(ctx))
+
+    def updated(ctx: RawContext, aCtx: AquaContext): Cached[Unit] =
+      State.modify(_.updated(ctx, aCtx))
+
+    private class RefKey[T <: AnyRef](val ref: T) extends AnyVal {
+
+      override def equals(other: Any): Boolean = other match {
+        case that: RefKey[_] => that.ref eq ref
+      }
+
+      override def hashCode(): Int = System.identityHashCode(ref)
+    }
   }
 
   val blank: AquaContext =
@@ -153,9 +196,9 @@ object AquaContext extends Logging {
       )
 
   def fromService(sm: ServiceRaw, serviceId: ValueRaw): AquaContext =
-    blank.copy(
-      module = Some(sm.name),
-      funcs = sm.`type`.arrows.map { case (fnName, arrowType) =>
+    blank
+      .withModule(Some(sm.name))
+      .withFuncs(sm.`type`.arrows.map { case (fnName, arrowType) =>
         fnName -> FuncArrow.fromServiceMethod(
           fnName,
           sm.name,
@@ -163,108 +206,77 @@ object AquaContext extends Logging {
           arrowType,
           serviceId
         )
-      }
-    )
+      })
 
   // Convert RawContext into AquaContext, with exports handled
-  def exportsFromRaw(rawContext: RawContext, cache: Cache): (AquaContext, Cache) = {
-    logger.trace(s"ExportsFromRaw ${rawContext.module}")
-    val (ctx, newCache) = fromRawContext(rawContext, cache)
-    logger.trace("raw: " + rawContext)
-    logger.trace("ctx: " + ctx)
-
-    rawContext.exports
-      .foldLeft(
-        // Module name is what persists
-        blank.copy(
-          module = ctx.module
-        )
-      ) { case (acc, (k, v)) =>
-        // Pick exported things, accumulate
-        acc |+| ctx.pick(k, v)
-      } -> newCache
-  }
+  def exportsFromRaw(raw: RawContext): Cached[AquaContext] = for {
+    ctx <- fromRawContext(raw)
+    handled = raw.exports.toList
+      .foldMap(ctx.pick.tupled)
+      .withModule(ctx.module)
+  } yield handled
 
   // Convert RawContext into AquaContext, with no exports handled
-  private def fromRawContext(rawContext: RawContext, cache: Cache): (AquaContext, Cache) =
-    cache
-      .get(rawContext)
-      .fold {
-        logger.trace(s"Compiling ${rawContext.module}, cache has ${cache.size} entries")
+  private def fromRawContext(raw: RawContext): Cached[AquaContext] =
+    Cache.get(raw).flatMap {
+      case Some(aCtx) => aCtx.pure
+      case None =>
+        for {
+          init <- raw.abilities.toList.traverse { case (name, ab) =>
+            fromRawContext(ab).map(name -> _)
+          }.map(abs => blank.withAbilities(abs.toMap))
+          parts <- raw.parts.foldMapM(handlePart.tupled)
+        } yield init |+| parts
+    }
 
-        val (newCtx, newCache) = rawContext.parts
-          .foldLeft[(AquaContext, Cache)] {
-            // Laziness unefficiency happens here
-            logger.trace(s"raw: ${rawContext.module}")
+  private def handlePart(raw: RawContext, part: RawPart): Cached[AquaContext] =
+    part match {
+      case c: ConstantRaw =>
+        // Just saving a constant
+        // Actually this should have no effect, as constants are resolved by semantics
+        fromRawContext(raw).map(pctx =>
+          blank.withValues(
+            if (c.allowOverrides && pctx.values.contains(c.name)) Map.empty
+            else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(pctx.allValues))
+          )
+        )
 
-            val (abs, absCache) =
-              rawContext.abilities.foldLeft[(Map[String, AquaContext], Cache)]((Map.empty, cache)) {
-                case ((acc, cAcc), (k, v)) =>
-                  val (abCtx, abCache) = fromRawContext(v, cAcc)
-                  (acc + (k -> abCtx), abCache)
-              }
+      case func: FuncRaw =>
+        fromRawContext(raw).map(pctx =>
+          blank.withFuncs(
+            Map(
+              func.name -> FuncArrow.fromRaw(
+                raw = func,
+                arrows = pctx.allFuncs,
+                constants = pctx.allValues,
+                topology = None
+              )
+            )
+          )
+        )
 
-            blank.copy(abilities = abs) -> absCache
-          } {
-            case ((ctx, ctxCache), (partContext, c: ConstantRaw)) =>
-              logger.trace("Adding constant " + c.name)
-              // Just saving a constant
-              // Actually this should have no effect, as constants are resolved by semantics
-              val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + c.name + " from raw")
-              val add =
-                blank
-                  .copy(values =
-                    if (c.allowOverrides && pctx.values.contains(c.name)) Map.empty
-                    else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(pctx.allValues))
-                  )
+      case t: TypeRaw =>
+        // Just remember the type (why? it's can't be exported, so seems useless)
+        blank.withTypes(Map(t.name -> t.`type`)).pure
 
-              (ctx |+| add, pcache)
+      case m: ServiceRaw =>
+        // To add a service, we need to resolve its ID, if any
+        fromRawContext(raw).map { pctx =>
+          val id = m.defaultId
+            .map(ValueModel.fromRaw)
+            .map(_.resolveWith(pctx.allValues))
+          val srv = ServiceModel(m.name, m.`type`, id)
 
-            case ((ctx, ctxCache), (partContext, func: FuncRaw)) =>
-              // To add a function, we have to know its scope
-              logger.trace("Adding func " + func.name)
+          blank
+            .withAbilities(
+              m.defaultId
+                .map(id => Map(m.name -> fromService(m, id)))
+                .orEmpty
+            )
+            .withServices(Map(m.name -> srv))
+        }
 
-              val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + func.name + " from raw")
-              val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues, None)
-              logger.trace("Captured recursively for " + func.name)
-              val add = blank.copy(funcs = Map(func.name -> fr))
-
-              (ctx |+| add, pcache)
-
-            case ((ctx, ctxCache), (_, t: TypeRaw)) =>
-              // Just remember the type (why? it's can't be exported, so seems useless)
-              val add = blank.copy(types = Map(t.name -> t.`type`))
-              (ctx |+| add, ctxCache)
-
-            case ((ctx, ctxCache), (partContext, m: ServiceRaw)) =>
-              // To add a service, we need to resolve its ID, if any
-              logger.trace("Adding service " + m.name)
-              val (pctx, pcache) = fromRawContext(partContext, ctxCache)
-              logger.trace("Got " + m.name + " from raw")
-              val id = m.defaultId
-                .map(ValueModel.fromRaw)
-                .map(_.resolveWith(pctx.allValues))
-              val srv = ServiceModel(m.name, m.`type`, id)
-              val add =
-                blank
-                  .copy(
-                    abilities = m.defaultId
-                      .map(id => Map(m.name -> fromService(m, id)))
-                      .orEmpty,
-                    services = Map(m.name -> srv)
-                  )
-
-              (ctx |+| add, pcache)
-            case (ctxAndCache, _) => ctxAndCache
-          }
-
-        (newCtx, newCache.updated(rawContext, newCtx))
-
-      } { ac =>
-        logger.trace("Got from cache")
-        ac -> cache
-      }
+      case _ => blank.pure
+    }
 
 }

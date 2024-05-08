@@ -27,15 +27,11 @@ object CompilerAPI extends Logging {
     filesWithContext.toList
       // Process all contexts maintaining Cache
       .traverse { case (i, rawContext) =>
-        for {
-          cache <- State.get[AquaContext.Cache]
-          _ = logger.trace(s"Going to prepare exports for $i...")
-          (exp, expCache) = AquaContext.exportsFromRaw(rawContext, cache)
-          _ = logger.trace(s"AquaProcessed prepared for $i")
-          _ <- State.set(expCache)
-        } yield AquaProcessed(i, exp)
+        AquaContext
+          .exportsFromRaw(rawContext)
+          .map(exp => AquaProcessed(i, exp))
       }
-      .runA(AquaContext.Cache())
+      .runA(AquaContext.Cache.empty)
       // Convert result List to Chain
       .map(Chain.fromSeq)
       .value
