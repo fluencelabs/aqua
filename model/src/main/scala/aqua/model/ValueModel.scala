@@ -123,6 +123,18 @@ object LiteralModel {
       }
   }
 
+  /*
+   * Used to match string literals in pattern matching
+   */
+  object String {
+
+    def unapply(lm: LiteralModel): Option[String] =
+      lm match {
+        case LiteralModel(value, ScalarType.string | LiteralType.string) => value.some
+        case _ => none
+      }
+  }
+
   // AquaVM will return 0 for
   // :error:.$.error_code if there is no :error:
   val emptyErrorCode = number(0)

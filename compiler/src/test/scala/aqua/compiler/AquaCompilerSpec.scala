@@ -20,10 +20,13 @@ import aqua.res.ResBuilder
 import aqua.semantics.FileId
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 
+import cats.Eval
 import cats.Id
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
+import cats.free.Cofree
 import cats.instances.string.*
 import cats.syntax.either.*
+import cats.syntax.flatMap.*
 import cats.syntax.option.*
 import cats.syntax.show.*
 import org.scalatest.Inside
@@ -902,6 +905,64 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
   }
 
+  type NameRename = (String, Option[String])
+
+  def testImportsHierarchy(test: List[NameRename] => Any) = {
+    // Simple
+    (1 to 10).foreach { i =>
+      val names = (1 to i).map(n => s"Imp$n").toList
+      withClue(s"Testing ${names.mkString(" -> ")}") {
+        test(names.map(_ -> none))
+      }
+    }
+
+    // // With subpaths
+    (1 to 4).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          paths(
+            List("Imp", "Sub", "Path")
+              .map(p => s"$p$idx")
+          )
+        )
+        .toList
+        .rotate
+        .foreach(names =>
+          withClue(s"Testing ${names.mkString(" -> ")}") {
+            test(names.map(_ -> none))
+          }
+        )
+    }
+
+    // // With renames
+    (1 to 3).foreach { i =>
+      (1 to i)
+        .map(idx =>
+          for {
+            name <- paths(
+              List("Imp", "Sub", "Path")
+                .map(p => s"$p$idx")
+            )
+            rename <- None :: paths(
+              List("Rename", "To", "Other")
+                .map(p => s"$p$idx")
+            ).map(_.some)
+          } yield name -> rename
+        )
+        .toList
+        .rotate
+        .foreach(names =>
+          val message = names.map { case (n, r) =>
+            s"$n${r.fold("")(n => s" as $n")}"
+          }.mkString(" -> ")
+
+          withClue(s"Testing $message:") {
+            test(names)
+          }
+        )
+    }
+  }
+
   it should "import redeclared functions" in {
 
     final case class Imp(
@@ -932,8 +993,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
       lazy val access: String = rename.getOrElse(name)
     }
-
-    type NameRename = (String, Option[String])
 
     def test(imps: List[NameRename]) = {
       (imps.length > 0) should be(true)
@@ -989,60 +1048,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    // Simple
-    (1 to 10).foreach { i =>
-      val names = (1 to i).map(n => s"Imp$n").toList
-      withClue(s"Testing ${names.mkString(" -> ")}") {
-        test(names.map(_ -> none))
-      }
-    }
-
-    // With subpaths
-    (1 to 4).foreach { i =>
-      (1 to i)
-        .map(idx =>
-          paths(
-            List("Imp", "Sub", "Path")
-              .map(p => s"$p$idx")
-          )
-        )
-        .toList
-        .rotate
-        .foreach(names =>
-          withClue(s"Testing ${names.mkString(" -> ")}") {
-            test(names.map(_ -> none))
-          }
-        )
-    }
-
-    // With renames
-    (1 to 3).foreach { i =>
-      (1 to i)
-        .map(idx =>
-          for {
-            name <- paths(
-              List("Imp", "Sub", "Path")
-                .map(p => s"$p$idx")
-            )
-            rename <- None :: paths(
-              List("Rename", "To", "Other")
-                .map(p => s"$p$idx")
-            ).map(_.some)
-          } yield name -> rename
-        )
-        .toList
-        .rotate
-        .foreach(names =>
-          val message = names.map { case (n, r) =>
-            s"$n${r.fold("")(n => s" as $n")}"
-          }.mkString(" -> ")
-
-          withClue(s"Testing $message") {
-            test(names)
-          }
-        )
-    }
-
+    testImportsHierarchy(test)
   }
 
   it should "import redeclared services" in {
@@ -1075,8 +1081,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
       lazy val access: String = rename.getOrElse(name)
     }
-
-    type NameRename = (String, Option[String])
 
     def test(imps: List[NameRename]) = {
       (imps.length > 0) should be(true)
@@ -1162,60 +1166,133 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
 
-    // Simple
-    (1 to 5).foreach { i =>
-      val names = (1 to i).map(n => s"Imp$n").toList
-      withClue(s"Testing ${names.mkString(" -> ")}") {
-        test(names.map(_ -> none))
+    testImportsHierarchy(test)
+  }
+
+  it should "import redeclared abilities" in {
+
+    final case class Imp(
+      idx: Int,
+      name: String,
+      rename: Option[String] = None,
+      use: Option[Imp] = None
+    ) {
+      def withUse(other: Imp): Imp = copy(use = Some(other))
+
+      lazy val path: String = s"import$idx.aqua"
+
+      lazy val declares: List[String] = use
+        .map(u => u.declares.map(n => s"${u.access}.$n"))
+        .getOrElse(Nil)
+        .prepended(s"TestAb$idx")
+
+      lazy val code: String =
+        s"""|aqua $name declares ${declares.mkString(", ")}
+            |
+            |${use.fold("")(_.usage)}
+            |
+            |ability TestAb$idx:
+            |  call(x: i32) -> i32
+            |  value: i32
+            |""".stripMargin
+
+      lazy val usage: String = s"use \"$path\"" + rename.fold("")(n => s" as $n")
+
+      lazy val access: String = rename.getOrElse(name)
+    }
+
+    def test(imps: List[NameRename]) = {
+      (imps.length > 0) should be(true)
+
+      val top = imps.zipWithIndex.map { case ((name, rename), idx) =>
+        Imp(idx, name, rename)
+      }.reduceRight { case (cur, prev) =>
+        cur.withUse(prev)
+      }
+
+      val mainAb = top.declares.zipWithIndex.map { case (decl, idx) =>
+        s"ab$idx: ${top.access}.$decl"
+      }.prepended("ability MainAb:").mkString("\n  ")
+
+      val funcs = top.declares.zipWithIndex.map { case (decl, idx) =>
+        val full = s"${top.access}.$decl"
+        s"""|func f$idx{$full}() -> i32:
+            |  call = $full.call
+            |  val = $full.value
+            |  <- call(val) + $full.call($full.value)
+            |""".stripMargin
+      }.mkString("\n")
+
+      val (abs, definitions) = top.declares.zipWithIndex.map { case (decl, idx) =>
+        val ab = s"ab$idx"
+        val definition = s"$ab = ${top.access}.$decl(call, value)"
+        ab -> definition
+      }.unzip
+
+      val (results, calls) = top.declares.indices.map { idx =>
+        val result = s"v$idx"
+        val call = s"$result <- f$idx{ab$idx}()"
+        result -> call
+      }.unzip
+
+      val mainDef = s"mainAb = MainAb(${abs.mkString(", ")})"
+      val (mainResults, mainCalls) = abs.zipWithIndex.map { case (ab, idx) =>
+        val result = s"vM$idx"
+        val call = s"$result <- mainAb.$ab.call(mainAb.$ab.value)"
+        result -> call
+      }.unzip
+
+      val main =
+        s"""|aqua Main
+            |
+            |export main
+            |
+            |${top.usage}
+            |
+            |$mainAb
+            |
+            |$funcs
+            |
+            |func main(value: i32) -> i32:
+            |  call = (x: i32) -> i32:
+            |    <- x + 1
+            |  ${definitions.mkString("\n  ")}
+            |  ${calls.mkString("\n  ")}
+            |  $mainDef
+            |  ${mainCalls.mkString("\n  ")}
+            |  <- ${(results ++ mainResults).mkString(" + ")}
+            |""".stripMargin
+
+      val allImps = List.unfold(top.some)(_.map(i => i -> i.use))
+
+      val imports = allImps.map(i => i.path -> i.code).toMap
+      val src = Map("main.aqua" -> main)
+
+      val transformCfg = TransformConfig(relayVarName = None, noEmptyResponse = true)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val adds = Cofree
+          .cata(main.body) { (parent, children: Chain[Chain[CallServiceRes]]) =>
+            parent match {
+              case p @ CallServiceRes(LiteralModel.String("\"math\""), "add", _, _) =>
+                Eval.now(p +: children.flatten)
+              case _ => Eval.now(children.flatten)
+            }
+          }
+          .value
+
+        /**
+         * 3 * n for calls to `func`s
+         * n for for calls through `mainAb`
+         * 2 * n - 1 for final sum
+         */
+        adds.size should be(abs.length * 6 - 1)
       }
     }
 
-    // With subpaths
-    (1 to 4).foreach { i =>
-      (1 to i)
-        .map(idx =>
-          paths(
-            List("Imp", "Sub", "Path")
-              .map(p => s"$p$idx")
-          )
-        )
-        .toList
-        .rotate
-        .foreach(names =>
-          withClue(s"Testing ${names.mkString(" -> ")}") {
-            test(names.map(_ -> none))
-          }
-        )
-    }
-
-    // With renames
-    (1 to 3).foreach { i =>
-      (1 to i)
-        .map(idx =>
-          for {
-            name <- paths(
-              List("Imp", "Sub", "Path")
-                .map(p => s"$p$idx")
-            )
-            rename <- None :: paths(
-              List("Rename", "To", "Other")
-                .map(p => s"$p$idx")
-            ).map(_.some)
-          } yield name -> rename
-        )
-        .toList
-        .rotate
-        .foreach(names =>
-          val message = names.map { case (n, r) =>
-            s"$n${r.fold("")(n => s" as $n")}"
-          }.mkString(" -> ")
-
-          withClue(s"Testing $message") {
-            test(names)
-          }
-        )
-    }
-
+    testImportsHierarchy(test)
   }
 
   it should "not generate error propagation in `if` with `noXor = true`" in {
