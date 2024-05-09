@@ -12,7 +12,7 @@ import cats.parse.Parser
 import cats.~>
 
 case class ImportFromExpr[F[_]](
-  imports: NonEmptyList[FromExpr.NameOrAbAs[F]],
+  imports: FromExpr.Imports[F],
   filename: LiteralToken[F]
 ) extends FilenameExpr[F] with FromExpr[F] {
 
@@ -24,8 +24,10 @@ case class ImportFromExpr[F[_]](
 
 object ImportFromExpr extends HeaderExpr.Companion {
 
-  override val p: Parser[HeaderExpr[Span.S]] =
-    (`import` *> FromExpr.importFrom.surroundedBy(` `) ~ ValueToken.string).map {
-      case (imports, filename) => ImportFromExpr(imports, filename)
-    }
+  override val p: Parser[HeaderExpr[Span.S]] = (
+    `import` ~ ` ` *> FromExpr.importsP ~
+      (` from ` *> ValueToken.string)
+  ).map { case (imports, filename) =>
+    ImportFromExpr(imports, filename)
+  }
 }

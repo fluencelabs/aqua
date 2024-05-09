@@ -1,7 +1,8 @@
 package aqua.parser.head
 
+import aqua.parser.lexer.QName
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Ability, LiteralToken, ValueToken}
+import aqua.parser.lexer.{LiteralToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{given, *}
@@ -12,7 +13,7 @@ import cats.~>
 
 case class UseExpr[F[_]](
   filename: LiteralToken[F],
-  asModule: Option[Ability[F]]
+  asModule: Option[QName[F]]
 ) extends FilenameExpr[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): UseExpr[K] =
@@ -24,9 +25,10 @@ case class UseExpr[F[_]](
 
 object UseExpr extends HeaderExpr.Companion {
 
-  override val p: Parser[HeaderExpr[Span.S]] =
-    (`use` *> ` ` *> ValueToken.string ~ (` as ` *> Ability.dotted).?).map {
-      case (filename, asModule) =>
-        UseExpr(filename, asModule)
-    }
+  override val p: Parser[HeaderExpr[Span.S]] = (
+    `use` *> ` ` *> ValueToken.string ~
+      (` as `.backtrack *> QName.p).?
+  ).map { case (filename, asModule) =>
+    UseExpr(filename, asModule)
+  }
 }

@@ -29,7 +29,6 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
   val handler = new HeaderHandler[Id, RawContext]()
 
   def exportHeader(funcName: String): Ast.Head[Id] = {
-    val exp: FromExpr.NameOrAbAs[Id] = Left((Name(funcName), None))
 
     /**
      * aqua TestModule
@@ -43,7 +42,15 @@ class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
           name = QName("TestModule", NonEmptyList.one("TestModule")),
           declares = None
         ),
-        ExportExpr(NonEmptyList.of(exp))
+        ExportExpr(
+          Token.lift(()),
+          NonEmptyList.of(
+            QName.As(
+              QName[Id](funcName, NonEmptyList.one(funcName)),
+              None
+            )
+          )
+        )
       )
     )
   }

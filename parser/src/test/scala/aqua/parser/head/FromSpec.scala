@@ -16,42 +16,15 @@ class FromSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   "from constants" should "be parsed" in {
-    parseNameOrAbs("SOME_CONSTANT") shouldBe Right(
-      (toAb("SOME_CONSTANT"), None)
-    )
-
-    parseNameOrAbs("SOME_CONSTANT as SC") shouldBe Right(
-      (toAb("SOME_CONSTANT"), Some(toAb("SC")))
-    )
+    parseQNameAs("SOME_CONSTANT") shouldBe toQNameAs("SOME_CONSTANT", None)
+    parseQNameAs("SOME_CONSTANT as SC") shouldBe toQNameAs("SOME_CONSTANT", Some("SC"))
   }
 
   "from expression" should "be parsed" in {
-    parseNameOrAbs("Ability") should be(Right(toAb("Ability") -> None))
-    parseNameOrAbs("Ability as Ab") should be(
-      Right(toAb("Ability") -> Some(toAb("Ab")))
-    )
-    parseNameOrAbs("function") should be(
-      Left(toName("function") -> None)
-    )
-    parseNameOrAbs("function as fn") should be(
-      Left(toName("function") -> Some(toName("fn")))
-    )
-  }
-
-  "from list" should "be parsed" in {
-    fromExprToId(Token.comma(FromExpr.nameOrAbAs).parseAll("Ability").value.head) should be(
-      Right(toAb("Ability") -> None)
-    )
-    fromExprToId(Token.comma(FromExpr.nameOrAbAs).parseAll("Ability as Ab").value.head) should be(
-      Right(toAb("Ability") -> Some(toAb("Ab")))
-    )
-
-    fromExprToId(FromExpr.importFrom.parseAll("Ability as Ab from").value.head) should be(
-      Right(toAb("Ability") -> Some(toAb("Ab")))
-    )
-    fromExprToId(FromExpr.importFrom.parseAll("Ability from").value.head) should be(
-      Right(toAb("Ability") -> None)
-    )
+    parseQNameAs("Ability") shouldBe toQNameAs("Ability", None)
+    parseQNameAs("Ability as Ab") shouldBe toQNameAs("Ability", Some("Ab"))
+    parseQNameAs("function") shouldBe toQNameAs("function", None)
+    parseQNameAs("function as fn") shouldBe toQNameAs("function", Some("fn"))
   }
 
 }

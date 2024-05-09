@@ -1,7 +1,9 @@
 package aqua.semantics.header
 
+import aqua.helpers.data.PName
 import aqua.parser.Ast
 import aqua.parser.head.*
+import aqua.parser.lexer.QName
 import aqua.parser.lexer.{Ability, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsAlgebra
@@ -39,32 +41,25 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
-      ctx.pickHeader.validNec |+| f.imports
-        .map(
-          _.bimap(
-            _.bimap(n => (n, n.value), n => (n, n.map(_.value))),
-            _.bimap(n => (n, n.value), n => (n, n.map(_.value)))
-          ).merge match {
-            case ((token, name), (renameToken, rename)) =>
-              ctx
-                .pick(name, rename, ctx.module.nonEmpty)
-                .map { ctx =>
-                  val defName = rename.getOrElse(name)
-                  val occs = renameToken.map(defName -> _).toList :+ (defName, token)
-                  ctx.addOccurences(occs)
-                }
-                .toValidNec(
-                  error(
-                    token,
-                    s"Imported file `declares ${ctx.declaredNames.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
-                  )
-                )
+      ctx.pickHeader.validNec |+| f.imports.map { case QName.As(name, rename) =>
+        ctx
+          .pick(name.value, rename.map(_.value), ctx.module.nonEmpty)
+          .map { ctx =>
+            val defName = rename.getOrElse(name).value
+            val occs = rename.map(defName -> _).toList :+ (defName, name)
+            ctx.addOccurences(occs)
           }
-        )
-        .combineAll
+          .toValidNec(
+            error(
+              name,
+              s"Imported file `declares ${ctx.declaredNames.mkString(", ")}`, " +
+                s"no ${name.value} declared. Try adding `declares ${name.value}` to that file."
+            )
+          )
+      }.combineAll
 
     // Convert an imported context into a module (ability)
-    def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S, C] =
+    def toModule(ctx: C, tkn: Token[S], rename: Option[PName]): ResAC[S, C] =
       rename
         .map(_.value)
         .orElse(ctx.module)
@@ -98,14 +93,26 @@ class HeaderHandler[S[_]: Comonad, C](using
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
         resolve(f)
-          .andThen(toModule(_, f.token, asModule))
+          .andThen(ctx =>
+            toModule(
+              ctx = ctx,
+              tkn = f.token,
+              rename = asModule.map(_.toPName)
+            )
+          )
           .map(HeaderSem.fromInit)
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
-          .andThen(toModule(_, f.token, Some(asModule)))
+          .andThen(ctx =>
+            toModule(
+              ctx = ctx,
+              tkn = f.token,
+              rename = asModule.map(_.toPName)
+            )
+          )
           .map(HeaderSem.fromInit)
 
       case ee: ExportExpr[S] =>

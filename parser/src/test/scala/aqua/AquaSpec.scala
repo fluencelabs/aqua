@@ -3,7 +3,6 @@ package aqua
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
-import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.Op.*
@@ -44,6 +43,9 @@ object AquaSpec {
     str,
     NonEmptyList.fromListUnsafe(str.split("\\.").toList)
   )
+
+  def toQNameAs(name: String, rename: Option[String]): QName.As[Id] =
+    QName.As[Id](toQName(name), rename.map(toQName))
 
   def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
 
@@ -113,14 +115,8 @@ object AquaSpec {
 
 trait AquaSpec extends EitherValues {
 
-  def fromExprToId(fromExpr: NameOrAbAs[Span.S]): NameOrAbAs[Id] =
-    fromExpr.bimap(
-      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId))),
-      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId)))
-    )
-
-  def parseNameOrAbs(str: String): NameOrAbAs[Id] =
-    fromExprToId(FromExpr.nameOrAbAs.parseAll(str).value)
+  def parseQNameAs(str: String): QName.As[Id] =
+    QName.as.parseAll(str).value.mapK(spanToId)
 
   def parseExpr(str: String): CallArrowExpr[Id] =
     CallArrowExpr.p.parseAll(str).value.mapK(spanToId)

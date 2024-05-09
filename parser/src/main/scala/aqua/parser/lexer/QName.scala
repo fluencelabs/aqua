@@ -13,6 +13,7 @@ import cats.data.NonEmptyList
 import cats.parse.{Parser => P}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
+import cats.~>
 
 /**
  * Qualified name. Name with parts separated by `.`
@@ -37,11 +38,6 @@ final case class QName[F[_]: Comonad](
 
 object QName {
 
-  final case class As[F[_]: Comonad](
-    name: QName[F],
-    rename: Option[QName[F]]
-  )
-
   val p: P[QName[Span.S]] =
     anyName.lift
       .repSep(`.`)
@@ -52,4 +48,16 @@ object QName {
         val parts = span.fmap { case (parts, _) => parts }.extract
         QName(name, parts)
       })
+
+  final case class As[F[_]: Comonad](
+    name: QName[F],
+    rename: Option[QName[F]]
+  ) {
+
+    def mapK[K[_]: Comonad](fk: F ~> K): As[K] =
+      copy(name = name.mapK(fk), rename = rename.map(_.mapK(fk)))
+  }
+
+  val as: P[As[Span.S]] =
+    asOpt(p).map(As.apply)
 }

@@ -15,11 +15,12 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   "import from" should "be parsed" in {
-    FromExpr.nameOrAbAs.parseAll("")
-
-    ImportFromExpr.p.parseAll("import MyModule from \"file.aqua\"").value.mapK(spanToId) should be(
+    ImportFromExpr.p
+      .parseAll("import MyModule from \"file.aqua\"")
+      .value
+      .mapK(spanToId) should be(
       ImportFromExpr(
-        NonEmptyList.one(Right(toAb("MyModule") -> None)),
+        NonEmptyList.one(toQNameAs("MyModule", None)),
         toStr("file.aqua")
       )
     )
@@ -29,8 +30,9 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .value
       .mapK(spanToId) should be(
       ImportFromExpr(
-        NonEmptyList.fromListUnsafe(
-          Right(toAb("MyModule") -> None) :: Left(toName("func") -> Some(toName("fn"))) :: Nil
+        NonEmptyList.of(
+          toQNameAs("MyModule", None),
+          toQNameAs("func", Some("fn"))
         ),
         toStr("file.aqua")
       )

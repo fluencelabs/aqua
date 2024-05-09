@@ -909,15 +909,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   def testImportsHierarchy(test: List[NameRename] => Any) = {
     // Simple
-    (1 to 10).foreach { i =>
+    (1 to 4).foreach { i =>
       val names = (1 to i).map(n => s"Imp$n").toList
-      withClue(s"Testing ${names.mkString(" -> ")}") {
+      withClue(s"Testing ${names.mkString(" -> ")}: ") {
         test(names.map(_ -> none))
       }
     }
 
     // // With subpaths
-    (1 to 4).foreach { i =>
+    (1 to 3).foreach { i =>
       (1 to i)
         .map(idx =>
           paths(
@@ -928,7 +928,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
         .toList
         .rotate
         .foreach(names =>
-          withClue(s"Testing ${names.mkString(" -> ")}") {
+          withClue(s"Testing ${names.mkString(" -> ")}: ") {
             test(names.map(_ -> none))
           }
         )

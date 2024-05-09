@@ -1,5 +1,6 @@
 package aqua.parser.head
 
+import aqua.parser.lexer.QName
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Name}
 import aqua.parser.lift.LiftParser
@@ -13,36 +14,20 @@ import cats.syntax.bifunctor.*
 import cats.~>
 
 trait FromExpr[F[_]] {
-  def imports: NonEmptyList[FromExpr.NameOrAbAs[F]]
+  def imports: FromExpr.Imports[F]
 }
 
 object FromExpr {
 
-  def mapK[F[_], K[_]: Comonad](
-    imports: NonEmptyList[FromExpr.NameOrAbAs[F]]
-  )(fk: F ~> K): NonEmptyList[FromExpr.NameOrAbAs[K]] =
-    imports.map {
-      case Left((n, nOp)) => Left((n.mapK(fk), nOp.map(_.mapK(fk))))
-      case Right(a, aOp) => Right((a.mapK(fk), aOp.map(_.mapK(fk))))
-    }
+  type Imports[F[_]] = NonEmptyList[QName.As[F]]
 
-  type NameOrAbAs[F[_]] = Either[Name.As[F], Ability.As[F]]
+  def mapK[F[_], K[_]: Comonad](imports: Imports[F])(fk: F ~> K): Imports[K] =
+    imports.map(_.mapK(fk))
 
-  val nameOrAbAs: P[NameOrAbAs[Span.S]] =
-    Name.nameAs.map(Left(_)) | Ability.abAs.map(Right(_))
+  val importsP: P[Imports[Span.S]] = comma(QName.as)
 
-  val importFrom: P[NonEmptyList[NameOrAbAs[Span.S]]] =
-    comma(nameOrAbAs) <* ` ` <* `from`
-
-  def show[F[_]](ne: NonEmptyList[NameOrAbAs[F]]): String =
-    ne.toList
-      .map(
-        _.bimap(
-          _.bimap(_.value, _.map(_.value)),
-          _.bimap(_.value, _.map(_.value))
-        ).map { case (name, rename) =>
-          s"$name${rename.fold("")(" as " + _)}"
-        }
-      )
-      .mkString(", ")
+  def show[F[_]](imports: Imports[F]): String =
+    imports.toList.map { case QName.As(name, rename) =>
+      s"${name.value}${rename.fold("")(" as " + _.value)}"
+    }.mkString(", ")
 }
