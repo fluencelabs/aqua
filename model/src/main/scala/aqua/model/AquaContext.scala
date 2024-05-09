@@ -181,7 +181,7 @@ object AquaContext extends Logging {
   val blank: AquaContext =
     AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
-  given Monoid[AquaContext] with
+  given Monoid[AquaContext] with {
 
     val empty: AquaContext =
       blank
@@ -195,19 +195,7 @@ object AquaContext extends Logging {
         x.abilities ++ y.abilities,
         x.services ++ y.services
       )
-
-  def fromService(sm: ServiceRaw, serviceId: ValueRaw): AquaContext =
-    blank
-      .withModule(Some(sm.name))
-      .withFuncs(sm.`type`.arrows.map { case (fnName, arrowType) =>
-        fnName -> FuncArrow.fromServiceMethod(
-          fnName,
-          sm.name,
-          fnName,
-          arrowType,
-          serviceId
-        )
-      })
+  }
 
   // Convert RawContext into AquaContext, with exports handled
   def exportsFromRaw(raw: RawContext): Cached[AquaContext] = for {
@@ -282,5 +270,18 @@ object AquaContext extends Logging {
 
       case _ => blank.pure
     }
+
+  private def fromService(sm: ServiceRaw, serviceId: ValueRaw): AquaContext =
+    blank
+      .withModule(Some(sm.name))
+      .withFuncs(sm.`type`.arrows.map { case (fnName, arrowType) =>
+        fnName -> FuncArrow.fromServiceMethod(
+          fnName,
+          sm.name,
+          fnName,
+          arrowType,
+          serviceId
+        )
+      })
 
 }
