@@ -12,6 +12,7 @@ import cats.data.{Chain, NonEmptyMap, State}
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
+import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
@@ -218,16 +219,19 @@ object AquaContext extends Logging {
 
   // Convert RawContext into AquaContext, with no exports handled
   private def fromRawContext(raw: RawContext): Cached[AquaContext] =
-    Cache.get(raw).flatMap {
-      case Some(aCtx) => aCtx.pure
-      case None =>
-        for {
-          init <- raw.abilities.toList.traverse { case (name, ab) =>
-            fromRawContext(ab).map(name -> _)
-          }.map(abs => blank.withAbilities(abs.toMap))
-          parts <- raw.parts.foldMapM(handlePart.tupled)
-        } yield init |+| parts
-    }
+    Cache
+      .get(raw)
+      .flatMap {
+        case Some(aCtx) => aCtx.pure
+        case None =>
+          for {
+            init <- raw.abilities.toList.traverse { case (name, ab) =>
+              fromRawContext(ab).map(name -> _)
+            }.map(abs => blank.withAbilities(abs.toMap))
+            parts <- raw.parts.foldMapM(handlePart.tupled)
+          } yield init |+| parts
+      }
+      .flatTap(aCtx => Cache.updated(raw, aCtx))
 
   private def handlePart(raw: RawContext, part: RawPart): Cached[AquaContext] =
     part match {
