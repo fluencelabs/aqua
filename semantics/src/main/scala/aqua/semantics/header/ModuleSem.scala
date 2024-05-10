@@ -38,7 +38,7 @@ class ModuleSem[S[_]: Comonad, C: Picker](expr: ModuleExpr[S])(using
             // summarize contexts to allow redeclaration of imports
             declares.map { case (n, t) =>
               res
-                .pick(t.toPName, ctx.module.nonEmpty)
+                .pick(t.toPName, rename = None, ctx.module.nonEmpty)
                 .toValidNec(
                   error(
                     t,

@@ -116,35 +116,32 @@ object LspContext {
 
     override def pick(
       ctx: LspContext[S],
-      name: String,
-      rename: Option[String],
+      name: PName,
+      rename: Option[PName],
       declared: Boolean
-    ): Option[LspContext[S]] =
-      // rename tokens from one context with prefix addition
-      val newVariables = rename.map { renameStr =>
+    ): Option[LspContext[S]] = {
+      val newVariables = rename.map { newName =>
         ctx.variables.renameDefinitions {
-          case defName if defName.startsWith(name) =>
-            defName.replaceFirst(name, renameStr)
+          case defName if defName.startsWith(name.value) =>
+            defName.replaceFirst(name.value, newName.value)
         }
       }.getOrElse(ctx.variables)
+
+      def pickFrom[T](map: Map[String, T]): Map[String, T] =
+        map.get(name.value).map(t => Map(rename.getOrElse(name).value -> t)).getOrElse(Map.empty)
 
       ctx.raw
         .pick(name, rename, declared)
         .map(rc =>
           ctx.copy(
             raw = rc,
-            abDefinitions =
-              ctx.abDefinitions.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            rootArrows =
-              ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            constants =
-              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
+            abDefinitions = pickFrom(ctx.abDefinitions),
+            rootArrows = pickFrom(ctx.rootArrows),
+            constants = pickFrom(ctx.constants),
             variables = newVariables
           )
         )
-
-    override def pick(ctx: LspContext[S], name: PName, declared: Boolean): Option[LspContext[S]] =
-      ctx.raw.pick(name, declared).map(rc => ctx.copy(raw = rc))
+    }
 
     override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
 

@@ -66,7 +66,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
     expr.pubs.map { case QName.As(name, rename) =>
       resCtx
         // TODO: Refactor to PName
-        .pick(name.value, rename.map(_.value), declared = false)
+        .pick(name.toPName, rename.map(_.toPName), declared = false)
         .as(Map(name.value -> rename.map(_.value)))
         .toValid(
           error(

@@ -13,8 +13,7 @@ trait Picker[A] {
   def funcNames(ctx: A): Set[String]
   def definedAbilityNames(ctx: A): Set[String]
   def blank: A
-  def pick(ctx: A, name: String, rename: Option[String], declared: Boolean): Option[A]
-  def pick(ctx: A, name: PName, declared: Boolean): Option[A]
+  def pick(ctx: A, name: PName, rename: Option[PName], declared: Boolean): Option[A]
   def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
@@ -41,11 +40,8 @@ object Picker {
     def funcNames: Set[String] = Picker[A].funcNames(p)
     def definedAbilityNames: Set[String] = Picker[A].definedAbilityNames(p)
 
-    def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
+    def pick(name: PName, rename: Option[PName], declared: Boolean): Option[A] =
       Picker[A].pick(p, name, rename, declared)
-
-    def pick(name: PName, declared: Boolean): Option[A] =
-      Picker[A].pick(p, name, declared)
 
     def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
@@ -147,36 +143,15 @@ object Picker {
 
     override def pick(
       ctx: RawContext,
-      name: String,
-      rename: Option[String],
-      declared: Boolean
-    ): Option[RawContext] =
-      Option
-        .when(!declared || ctx.declaredNames(name)) {
-          RawContext.fromParts(
-            ctx.parts.collect {
-              case (partContext, part) if part.name == name =>
-                (partContext, rename.fold(part)(part.rename))
-            }
-          )
-        }
-        .filter(_.nonEmpty)
-        .map(
-          // Module and declares should not be lost when picking
-          // Because it affects later logic
-          _.setModule(ctx.module).setDeclares(Set(PName.simpleUnsafe(name)))
-        )
-
-    override def pick(
-      ctx: RawContext,
       name: PName,
+      rename: Option[PName],
       declared: Boolean
     ): Option[RawContext] =
       name.simple.fold(
         name.splits.collectFirstSome { case (ab, field) =>
           for {
             ability <- ctx.abilities.get(ab.value)
-            inner <- pick(ability, field, declared)
+            inner <- pick(ability, field, rename, declared)
           } yield RawContext
             .fromAbilities(Map(ab.value -> inner))
             // Module and declares should not be lost when picking
@@ -184,7 +159,23 @@ object Picker {
             .setModule(ctx.module)
             .setDeclares(Set(name))
         }
-      )(pick(ctx, _, None, declared))
+      )(simple =>
+        Option
+          .when(!declared || ctx.declaredNames(simple)) {
+            RawContext.fromParts(
+              ctx.parts.collect {
+                case (partContext, part) if part.name == simple =>
+                  (partContext, rename.fold(part)(r => part.rename(r.value)))
+              }
+            )
+          }
+          .filter(_.nonEmpty)
+          .map(
+            // Module and declares should not be lost when picking
+            // Because it affects later logic
+            _.setModule(ctx.module).setDeclares(Set(name))
+          )
+      )
 
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
@@ -193,7 +184,7 @@ object Picker {
       if (ctx.module.isEmpty) ctx
       else
         ctx.declares.toList
-          .flatMap(n => pick(ctx, n, ctx.module.nonEmpty))
+          .flatMap(n => pick(ctx, n, rename = None, ctx.module.nonEmpty))
           .foldLeft(pickHeader(ctx))(_ |+| _)
   }
 

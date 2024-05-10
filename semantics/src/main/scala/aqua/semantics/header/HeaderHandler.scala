@@ -43,7 +43,7 @@ class HeaderHandler[S[_]: Comonad, C](using
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
       ctx.pickHeader.validNec |+| f.imports.map { case QName.As(name, rename) =>
         ctx
-          .pick(name.value, rename.map(_.value), ctx.module.nonEmpty)
+          .pick(name.toPName, rename.map(_.toPName), ctx.module.nonEmpty)
           .map { ctx =>
             val defName = rename.getOrElse(name).value
             val occs = rename.map(defName -> _).toList :+ (defName, name)
