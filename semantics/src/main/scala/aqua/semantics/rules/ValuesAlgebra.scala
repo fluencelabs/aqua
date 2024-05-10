@@ -143,7 +143,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .widen[ValueToken[S]]
 
         val ability = OptionT(
-          prop.toAbility.findM { case (ab, _) =>
+          prop.toAbility.reverse.findM { case (ab, _) =>
             // Test if name is an import
             A.isDefinedAbility(ab)
           }
