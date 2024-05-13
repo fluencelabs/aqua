@@ -1,7 +1,8 @@
 package aqua.parser.lexer
 
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 import aqua.types.LiteralType
+
 import cats.Id
 import cats.data.{NonEmptyList, NonEmptyMap}
 import org.scalatest.EitherValues

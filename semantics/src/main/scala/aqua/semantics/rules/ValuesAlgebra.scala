@@ -143,7 +143,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .widen[ValueToken[S]]
 
         val ability = OptionT(
-          prop.toAbility.findM { case (ab, _) =>
+          prop.toAbility.reverse.findM { case (ab, _) =>
             // Test if name is an import
             A.isDefinedAbility(ab)
           }
@@ -154,7 +154,12 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           .filterF(nv => T.resolveType(nv.typeName, mustBeDefined = false).map(_.isDefined))
           .widen[ValueToken[S]]
 
-        callArrow.orElse(ability).orElse(namedValue).foldF(default)(valueToRaw)
+        callArrow
+          .orElse(ability)
+          .orElse(namedValue)
+          .foldF(default)(
+            valueToRaw
+          )
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {

@@ -11,9 +11,9 @@ import aqua.parser.lexer.InfixToken.Op as InfixOp
 import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.lexer.PrefixToken.Op as PrefixOp
 import aqua.parser.lexer.Token.LiftToken
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{given, *}
 import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
 import aqua.types.{LiteralType, ScalarType}
 
@@ -39,6 +39,11 @@ object AquaSpec {
   def toNameOp(str: Option[String]): Option[Name[Id]] = str.map(s => toName(s))
 
   def toAb(str: String): Ability[Id] = Ability[Id](str)
+
+  def toQName(str: String): QName[Id] = QName[Id](
+    str,
+    NonEmptyList.fromListUnsafe(str.split("\\.").toList)
+  )
 
   def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
 

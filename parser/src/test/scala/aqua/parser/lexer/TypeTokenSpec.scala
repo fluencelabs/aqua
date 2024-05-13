@@ -1,6 +1,6 @@
 package aqua.parser.lexer
 
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.given
 import aqua.types.ScalarType
 
 import cats.Id

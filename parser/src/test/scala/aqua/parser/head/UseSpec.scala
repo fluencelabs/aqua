@@ -3,8 +3,9 @@ package aqua.parser.head
 import aqua.AquaSpec
 import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.parser.lift.LiftParser.Implicits.*
+import aqua.parser.lift.LiftParser.given
 import aqua.types.LiteralType
+
 import cats.Id
 import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec

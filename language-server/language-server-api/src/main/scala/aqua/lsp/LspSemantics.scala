@@ -8,9 +8,9 @@ import aqua.semantics.*
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsState
 
-import cats.data.{EitherT, NonEmptyChain, Writer}
-import cats.syntax.functor.*
+import cats.data.EitherT
 import cats.syntax.applicative.*
+import cats.syntax.semigroup.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -41,7 +41,7 @@ class LspSemantics[S[_]](
 
     val initState = rawState.copy(
       locations = rawState.locations.copy(
-        variables = rawState.locations.variables ++ withConstants.variables
+        variables = rawState.locations.variables |+| withConstants.variables
       )
     )
 

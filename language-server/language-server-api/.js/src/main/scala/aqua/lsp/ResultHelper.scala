@@ -130,9 +130,9 @@ object ResultHelper extends Logging {
     CompilationResult(
       errors.toJSArray,
       warnings.toJSArray,
-      locationsToJs(lsp.variables.flatMap(v => v.allLocations)),
+      locationsToJs(lsp.variables.allLocations),
       importTokens,
-      tokensToJs(lsp.variables.map(_.definition))
+      tokensToJs(lsp.variables.definitions)
     )
   }
 }
