@@ -31,7 +31,7 @@ final case class PName private (
 
   lazy val isSimple: Boolean = simple.isDefined
 
-  lazy val value: String = parts.toList.mkString(".")
+  lazy val value: String = parts.toList.map(_.name).mkString(".")
 
   lazy val splits: List[(PName, PName)] = {
     val partsList = parts.toList
