@@ -213,8 +213,8 @@ object AquaContext extends Logging {
         case Some(aCtx) => aCtx.pure
         case None =>
           for {
-            init <- raw.abilities.toList.traverse { case (name, ab) =>
-              fromRawContext(ab).map(name -> _)
+            init <- raw.abilities.toList.traverse { case (sname, ab) =>
+              fromRawContext(ab).map(sname.name -> _)
             }.map(abs => blank.withAbilities(abs.toMap))
             parts <- raw.parts.foldMapM(handlePart.tupled)
           } yield init |+| parts
@@ -283,5 +283,4 @@ object AquaContext extends Logging {
           serviceId
         )
       })
-
 }

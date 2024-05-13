@@ -33,7 +33,7 @@ final case class QName[F[_]: Comonad](
   override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): QName[K] =
     copy(fk(name), parts.map(p => fk(p)))
 
-  def toPName: PName = PName(parts.map(_.extract))
+  def toPName: PName = PName.partsUnsafe(parts.map(_.extract))
 }
 
 object QName {

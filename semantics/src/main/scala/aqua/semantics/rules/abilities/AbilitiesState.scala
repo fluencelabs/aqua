@@ -62,10 +62,12 @@ object AbilitiesState {
 
   def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(
-      services = context.allServices.keySet,
+      services = context.allServices.keySet.map(_.value),
       rootServiceIds = context.allServices.flatMap { case (name, service) =>
-        service.defaultId.map(name -> _)
+        service.defaultId.map(name.value -> _)
       },
-      abilities = context.allAbilities
+      abilities = context.allAbilities.map { case (name, ability) =>
+        name.value -> ability
+      }
     )
 }

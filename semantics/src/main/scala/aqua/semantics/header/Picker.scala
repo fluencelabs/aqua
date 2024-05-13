@@ -1,6 +1,7 @@
 package aqua.semantics.header
 
 import aqua.helpers.data.PName
+import aqua.helpers.data.SName
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.{AbilityType, ArrowType, Type}
 
@@ -25,7 +26,7 @@ trait Picker[A] {
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def setAbility(ctx: A, name: String, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
-  def setModule(ctx: A, name: Option[String]): A
+  def setModule(ctx: A, name: Option[SName]): A
   def setDeclares(ctx: A, declares: Set[PName]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
   def addPart(ctx: A, part: (A, RawPart)): A
@@ -67,7 +68,7 @@ object Picker {
     def addFreeParts(parts: List[RawPart]): A =
       parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
 
-    def setModule(name: Option[String]): A =
+    def setModule(name: Option[SName]): A =
       Picker[A].setModule(p, name)
 
     def setDeclares(declares: Set[PName]): A =
@@ -104,35 +105,38 @@ object Picker {
     override def exports(ctx: RawContext): Map[String, Option[String]] = ctx.exports
 
     override def isAbility(ctx: RawContext, name: String): Boolean =
-      ctx.types.get(name).exists(isAbilityType)
+      ctx.types.get(SName.nameUnsafe(name)).exists(isAbilityType)
 
     override def funcReturnAbilityOrArrow(ctx: RawContext, name: String): Boolean =
-      ctx.funcs.get(name).map(_.arrow.`type`).exists(returnsAbilityOrArrow)
+      ctx.funcs.get(SName.nameUnsafe(name)).map(_.arrow.`type`).exists(returnsAbilityOrArrow)
 
     override def funcAcceptAbility(ctx: RawContext, name: String): Boolean =
-      ctx.funcs.get(name).map(_.arrow.`type`).exists(acceptsAbility)
+      ctx.funcs.get(SName.nameUnsafe(name)).map(_.arrow.`type`).exists(acceptsAbility)
 
-    override def funcNames(ctx: RawContext): Set[String] = ctx.funcs.keySet
+    override def funcNames(ctx: RawContext): Set[String] =
+      ctx.funcs.keySet.map(_.name)
 
-    override def definedAbilityNames(ctx: RawContext): Set[String] = ctx.definedAbilities.keySet
+    override def definedAbilityNames(ctx: RawContext): Set[String] =
+      ctx.definedAbilities.keySet.map(_.name)
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
 
-    override def module(ctx: RawContext): Option[String] = ctx.module
+    override def module(ctx: RawContext): Option[String] =
+      ctx.module.map(_.name)
 
     override def declaredNames(ctx: RawContext): Set[String] = ctx.declaredNames
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
-      ctx.copy(abilities = Map(name -> ctxAb))
+      ctx.copy(abilities = Map(SName.nameUnsafe(name) -> ctxAb))
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
 
-    override def setModule(ctx: RawContext, name: Option[String]): RawContext =
+    override def setModule(ctx: RawContext, name: Option[SName]): RawContext =
       ctx.copy(module = name)
 
     override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
@@ -141,41 +145,59 @@ object Picker {
     override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
       ctx.copy(exports = exports)
 
+    private def search(
+      ctx: RawContext,
+      name: PName
+    ): Option[RawContext | RawContext.Parts] =
+      name.uncons match {
+        case (sname, Some(path)) =>
+          ctx.abilities
+            .get(sname)
+            .flatMap { ab =>
+              search(ab, path)
+            }
+        case (sname, None) =>
+          ctx.abilities.get(sname) orElse {
+            val parts = ctx.parts.filter { case (partContext, part) =>
+              part.name == sname.name
+            }
+
+            Option.when(parts.nonEmpty)(parts)
+          }
+      }
+
     override def pick(
       ctx: RawContext,
       name: PName,
       rename: Option[PName],
       declared: Boolean
     ): Option[RawContext] =
-      name.simple.fold(
-        name.splits.collectFirstSome { case (ab, field) =>
-          for {
-            ability <- ctx.abilities.get(ab.value)
-            inner <- pick(ability, field, rename, declared)
-          } yield RawContext
-            .fromAbilities(Map(ab.value -> inner))
-            // Module and declares should not be lost when picking
-            // Because it affects later logic
-            .setModule(ctx.module)
-            .setDeclares(Set(name))
-        }
-      )(simple =>
-        Option
-          .when(!declared || ctx.declaredNames(simple)) {
-            RawContext.fromParts(
-              ctx.parts.collect {
-                case (partContext, part) if part.name == simple =>
-                  (partContext, rename.fold(part)(r => part.rename(r.value)))
-              }
-            )
+      if (declared && !ctx.declares(name)) None
+      else
+        search(ctx, name).map { result =>
+          val (path, innerName) = rename.getOrElse(name).unconsR
+          val inner = result match {
+            case ability: RawContext =>
+              RawContext.fromAbilities(
+                Map(innerName -> ability.setModule(Some(innerName)))
+              )
+            case parts: RawContext.Parts =>
+              RawContext.fromParts(
+                parts.map { case (partContext, part) =>
+                  (partContext, part.rename(innerName.name))
+                }
+              )
           }
-          .filter(_.nonEmpty)
-          .map(
-            // Module and declares should not be lost when picking
-            // Because it affects later logic
-            _.setModule(ctx.module).setDeclares(Set(name))
+          val linearized = path.fold(inner)(subPath =>
+            RawContext.fromAbilities(
+              Map(subPath.head -> inner.linearize(subPath))
+            )
           )
-      )
+
+          linearized
+            .setModule(ctx.module)
+            .setDeclares(ctx.declares.filter(_ == name))
+        }
 
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)

@@ -1,5 +1,6 @@
 package aqua.semantics
 
+import aqua.helpers.data.SName
 import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
@@ -57,7 +58,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       inside(
         func.fold(
           ctx.funcs.headOption.map { case (_, raw) => raw }
-        )(ctx.funcs.get)
+        )(name => ctx.funcs.get(SName.nameUnsafe(name)))
       ) { case Some(func) => test(func.arrow.body) }
     }
 

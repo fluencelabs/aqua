@@ -72,7 +72,7 @@ class AbilitiesInterpreter[S[_], X](using
     getAbility(name.value).flatMap {
       case Some(abCtx) =>
         abCtx.funcs
-          .get(arrow.value)
+          .get(arrow.simpleName)
           .fold(
             report
               .error(
@@ -80,7 +80,7 @@ class AbilitiesInterpreter[S[_], X](using
                 Levenshtein.genMessage(
                   s"Ability is found, but arrow '${arrow.value}' isn't found in scope",
                   arrow.value,
-                  abCtx.funcs.keys.toList
+                  abCtx.funcs.keys.toList.map(_.name)
                 )
               )
               .as(none)

@@ -1,5 +1,6 @@
 package aqua.parser.lexer
 
+import aqua.helpers.data.SName
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
@@ -22,6 +23,8 @@ case class Name[F[_]: Comonad](name: F[String]) extends Token[F] {
   def rename(newName: String): Name[F] = copy(name.as(newName))
 
   def value: String = name.extract
+
+  def simpleName: SName = SName.nameUnsafe(name.extract)
 
   override def toString() = value
 }

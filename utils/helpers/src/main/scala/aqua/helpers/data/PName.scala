@@ -8,11 +8,25 @@ import cats.syntax.option.*
 /**
  * Short for PathName. Represents name with parts separated by `.`
  */
-final case class PName(
-  parts: NonEmptyList[String]
+final case class PName private (
+  parts: NonEmptyList[SName]
 ) {
 
-  lazy val simple: Option[String] =
+  def head: SName = parts.head
+
+  def uncons: (SName, Option[PName]) =
+    parts.head -> NonEmptyList.fromList(parts.tail).map(PName.apply)
+
+  def unconsR: (Option[PName], SName) =
+    NonEmptyList.fromList(parts.init).map(PName.apply) -> parts.last
+
+  def prefixed(prefix: SName): PName =
+    PName(parts.prepend(prefix))
+
+  def prepended(prepend: PName): PName =
+    PName(prepend.parts.concatNel(parts))
+
+  lazy val simple: Option[SName] =
     Option.when(parts.length == 1)(parts.head)
 
   lazy val isSimple: Boolean = simple.isDefined
@@ -32,8 +46,12 @@ final case class PName(
 
 object PName {
 
+  def fromSName(name: SName): PName =
+    PName(NonEmptyList.one(name))
+
+  def partsUnsafe(parts: NonEmptyList[String]): PName =
+    PName(parts.map(SName.nameUnsafe))
+
   def simpleUnsafe(name: String): PName =
-    if (name.isEmpty || name.contains("."))
-      internalError(s"Invalid PName: $name")
-    else PName(NonEmptyList.one(name))
+    PName(NonEmptyList.one(SName.nameUnsafe(name)))
 }

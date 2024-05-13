@@ -92,14 +92,14 @@ class HeaderHandler[S[_]: Comonad, C](using
 
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
-        resolve(f)
-          .andThen(ctx =>
-            toModule(
-              ctx = ctx,
-              tkn = f.token,
-              rename = asModule.map(_.toPName)
-            )
+        resolve(f).andThen { ctx =>
+          println(s"resolved $f -> $ctx")
+          toModule(
+            ctx = ctx,
+            tkn = f.token,
+            rename = asModule.map(_.toPName)
           )
+        }
           .map(HeaderSem.fromInit)
 
       case f @ UseFromExpr(_, _, asModule) =>

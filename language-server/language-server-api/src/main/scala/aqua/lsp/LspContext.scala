@@ -1,6 +1,7 @@
 package aqua.lsp
 
 import aqua.helpers.data.PName
+import aqua.helpers.data.SName
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
@@ -75,7 +76,8 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
+    override def module(ctx: LspContext[S]): Option[String] =
+      ctx.raw.module.map(_.name)
 
     override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
 
@@ -99,7 +101,7 @@ object LspContext {
     ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
-    override def setModule(ctx: LspContext[S], name: Option[String]): LspContext[S] =
+    override def setModule(ctx: LspContext[S], name: Option[SName]): LspContext[S] =
       ctx.copy(raw = ctx.raw.setModule(name))
 
     override def setDeclares(
