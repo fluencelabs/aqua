@@ -76,22 +76,22 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def module(ctx: LspContext[S]): Option[String] =
-      ctx.raw.module.map(_.name)
+    override def module(ctx: LspContext[S]): Option[PName] =
+      ctx.raw.module
 
-    override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
+    override def declares(ctx: LspContext[S]): Set[PName] = ctx.raw.declares
 
     override def allNames(ctx: LspContext[S]): Set[String] = ctx.raw.allNames
 
     override def setAbility(
       ctx: LspContext[S],
-      name: String,
+      path: PName,
       ctxAb: LspContext[S]
     ): LspContext[S] =
       ctx.copy(
-        raw = ctx.raw.setAbility(name, ctxAb.raw),
+        raw = ctx.raw.setAbility(path, ctxAb.raw),
         variables = ctx.variables |+| ctxAb.variables.renameDefinitions(defName =>
-          AbilityType.fullName(name, defName)
+          AbilityType.fullName(path.value, defName)
         )
       )
 
@@ -101,8 +101,11 @@ object LspContext {
     ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
-    override def setModule(ctx: LspContext[S], name: Option[SName]): LspContext[S] =
+    override def setModule(ctx: LspContext[S], name: Option[PName]): LspContext[S] =
       ctx.copy(raw = ctx.raw.setModule(name))
+
+    override def linearize(ctx: LspContext[S], path: PName): LspContext[S] =
+      ctx.copy(raw = ctx.raw.linearize(path))
 
     override def setDeclares(
       ctx: LspContext[S],

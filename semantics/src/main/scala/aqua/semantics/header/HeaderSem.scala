@@ -26,6 +26,9 @@ object HeaderSem {
   def fromInit[S[_], C: Monoid](init: C): HeaderSem[S, C] =
     HeaderSem(init, _ => Monoid[C].empty.validNec)
 
+  def fromFin[S[_], C: Monoid](fin: C => ValidatedNec[SemanticError[S], C]): HeaderSem[S, C] =
+    HeaderSem(Monoid[C].empty, fin)
+
   given [S[_]: Comonad, C](using
     rc: Monoid[C]
   ): Monoid[HeaderSem[S, C]] with {

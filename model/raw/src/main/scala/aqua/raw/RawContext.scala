@@ -34,7 +34,7 @@ import scala.collection.immutable.SortedMap
  * Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
-  module: Option[SName] = None,
+  module: Option[PName] = None,
   declares: Set[PName] = Set.empty,
   exports: Map[String, Option[String]] = Map.empty,
   parts: RawContext.Parts = Chain.empty,
@@ -106,27 +106,44 @@ case class RawContext(
     parts.map { case (_, p) => p.name }.toList.toSet
 
   def linearize(path: PName): RawContext = {
-    val (topName, subPath) = path.uncons
+    val (_, subPath) = path.uncons
+    val moduleCleared = copy(
+      module = None,
+      declares = Set.empty
+    )
 
     subPath
       .map(_.parts.toList)
       .orEmpty
-      .foldRight(this) { case (name, ctx) =>
+      .foldRight(moduleCleared) { case (name, ctx) =>
         RawContext.fromAbilities(
-          Map(name -> ctx.copy(module = Some(name)))
+          Map(name -> ctx)
         )
       }
-      .copy(module = Some(topName))
   }
 
   override def toString: String =
-    s"""|module: ${module.getOrElse("unnamed")}
-        |declares: ${declares.mkString(", ")}
+    s"""|module: ${module.map(_.value).getOrElse("unnamed")}
+        |declares: ${declares.map(_.value).mkString(", ")}
         |exports: ${exports.map { case (name, rename) =>
       rename.fold(name)(name + " as " + _)
     }.mkString(", ")}
         |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
-        |abilities: ${abilities.keys.mkString(", ")}""".stripMargin
+        |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin
+
+  def debug: String = {
+    val abStrs = abilities.map { case (name, ab) =>
+      s"${name.name}: ${ab.debug}"
+    }
+
+    s"""|module: ${module.map(_.value).getOrElse("unnamed")}
+        |declares: ${declares.map(_.value).mkString(", ")}
+        |exports: ${exports.map { case (name, rename) =>
+      rename.fold(name)(name + " as " + _)
+    }.mkString(", ")}
+        |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
+        |abilities: ${abStrs.mkString(", ")}""".stripMargin
+  }
 }
 
 object RawContext {

@@ -14,6 +14,8 @@ final case class PName private (
 
   def head: SName = parts.head
 
+  def tail: Option[PName] = NonEmptyList.fromList(parts.tail).map(PName.apply)
+
   def uncons: (SName, Option[PName]) =
     parts.head -> NonEmptyList.fromList(parts.tail).map(PName.apply)
 

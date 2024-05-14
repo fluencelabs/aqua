@@ -17,16 +17,17 @@ trait Picker[A] {
   def pick(ctx: A, name: PName, rename: Option[PName], declared: Boolean): Option[A]
   def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
-  def module(ctx: A): Option[String]
+  def module(ctx: A): Option[PName]
   def allNames(ctx: A): Set[String]
-  def declaredNames(ctx: A): Set[String]
+  def declares(ctx: A): Set[PName]
   def exports(ctx: A): Map[String, Option[String]]
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
-  def setAbility(ctx: A, name: String, ctxAb: A): A
+  def setAbility(ctx: A, path: PName, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
-  def setModule(ctx: A, name: Option[SName]): A
+  def setModule(ctx: A, name: Option[PName]): A
+  def linearize(ctx: A, path: PName): A
   def setDeclares(ctx: A, declares: Set[PName]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
   def addPart(ctx: A, part: (A, RawPart)): A
@@ -46,8 +47,8 @@ object Picker {
 
     def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
-    def module: Option[String] = Picker[A].module(p)
-    def declaredNames: Set[String] = Picker[A].declaredNames(p)
+    def module: Option[PName] = Picker[A].module(p)
+    def declares: Set[PName] = Picker[A].declares(p)
     def allNames: Set[String] = Picker[A].allNames(p)
     def exports: Map[String, Option[String]] = Picker[A].exports(p)
 
@@ -55,11 +56,16 @@ object Picker {
 
     def funcReturnAbilityOrArrow(name: String): Boolean =
       Picker[A].funcReturnAbilityOrArrow(p, name)
-    def funcAcceptAbility(name: String): Boolean = Picker[A].funcAcceptAbility(p, name)
-    def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
+
+    def funcAcceptAbility(name: String): Boolean =
+      Picker[A].funcAcceptAbility(p, name)
+
+    def setAbility(path: PName, ctx: A): A =
+      Picker[A].setAbility(p, path, ctx)
 
     def setImportPaths(importPaths: Map[String, String]): A =
       Picker[A].setImportPaths(p, importPaths)
+
     def addPart(part: (A, RawPart)): A = Picker[A].addPart(p, part)
 
     def addParts(parts: List[RawPart]): A =
@@ -68,8 +74,11 @@ object Picker {
     def addFreeParts(parts: List[RawPart]): A =
       parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
 
-    def setModule(name: Option[SName]): A =
+    def setModule(name: Option[PName]): A =
       Picker[A].setModule(p, name)
+
+    def linearize(path: PName): A =
+      Picker[A].linearize(p, path)
 
     def setDeclares(declares: Set[PName]): A =
       Picker[A].setDeclares(p, declares)
@@ -122,22 +131,27 @@ object Picker {
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
 
-    override def module(ctx: RawContext): Option[String] =
-      ctx.module.map(_.name)
+    override def module(ctx: RawContext): Option[PName] =
+      ctx.module
 
-    override def declaredNames(ctx: RawContext): Set[String] = ctx.declaredNames
+    override def declares(ctx: RawContext): Set[PName] = ctx.declares
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
-    override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
-      ctx.copy(abilities = Map(SName.nameUnsafe(name) -> ctxAb))
+    override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext =
+      RawContext.abilitiesLens.modify(
+        _.updated(path.head, ctxAb.linearize(path))
+      )(ctx)
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
 
-    override def setModule(ctx: RawContext, name: Option[SName]): RawContext =
+    override def setModule(ctx: RawContext, name: Option[PName]): RawContext =
       ctx.copy(module = name)
+
+    override def linearize(ctx: RawContext, path: PName): RawContext =
+      ctx.linearize(path)
 
     override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
       ctx.copy(declares = declares)
@@ -175,11 +189,12 @@ object Picker {
       if (declared && !ctx.declares(name)) None
       else
         search(ctx, name).map { result =>
-          val (path, innerName) = rename.getOrElse(name).unconsR
+          val newName = rename.getOrElse(name)
+          val (path, innerName) = newName.unconsR
           val inner = result match {
             case ability: RawContext =>
               RawContext.fromAbilities(
-                Map(innerName -> ability.setModule(Some(innerName)))
+                Map(innerName -> ability)
               )
             case parts: RawContext.Parts =>
               RawContext.fromParts(
@@ -188,15 +203,8 @@ object Picker {
                 }
               )
           }
-          val linearized = path.fold(inner)(subPath =>
-            RawContext.fromAbilities(
-              Map(subPath.head -> inner.linearize(subPath))
-            )
-          )
 
-          linearized
-            .setModule(ctx.module)
-            .setDeclares(ctx.declares.filter(_ == name))
+          path.fold(inner)(subPath => blank.setAbility(subPath, inner))
         }
 
     override def pickHeader(ctx: RawContext): RawContext =
