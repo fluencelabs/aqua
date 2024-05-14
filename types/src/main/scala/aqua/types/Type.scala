@@ -582,6 +582,7 @@ object Type {
     )
   }
 
+  // Add ability name to type names
   def addAbilityName(abName: String, t: Type): Type = {
     t match {
       case at @ AbilityType(name, fields) =>
