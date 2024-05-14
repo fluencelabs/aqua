@@ -57,6 +57,8 @@ sealed trait ProductType extends Type {
 
   def length: Int
 
+  def map(f: Type => Type): ProductType
+
   def uncons: Option[(Type, ProductType)] = this match {
     case ConsType(t, pt) => Some(t -> pt)
     case _ => None
@@ -149,14 +151,20 @@ object ConsType {
 }
 
 case class LabeledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
+  def map(f: Type => Type): ProductType = copy(`type` = f(`type`), tail = tail.map(f))
+
   override def toString: String = s"($label: " + `type` + s") :: $tail"
 }
 
 case class UnlabeledConsType(`type`: Type, tail: ProductType) extends ConsType {
+  def map(f: Type => Type): ProductType = copy(`type` = f(`type`), tail = tail.map(f))
+
   override def toString: String = `type`.toString + s" :: $tail"
 }
 
 object NilType extends ProductType {
+  def map(f: Type => Type): ProductType = this
+
   override def toString: String = "∅"
 
   override def isInhabited: Boolean = false
@@ -546,20 +554,13 @@ object Type {
       t.toString
   }
 
-  def addAbilityNamePT(abName: String, t: ProductType): ProductType = {
-    t match {
-      case lct @ LabeledConsType(_, lt, tail) =>
-        lct.copy(`type` = addAbilityName(abName, lt), tail = addAbilityNamePT(abName, tail))
-      case uct @ UnlabeledConsType(ut, tail) =>
-        uct.copy(`type` = addAbilityName(abName, ut), tail = addAbilityNamePT(abName, tail))
-      case t => t
-    }
-  }
+  def addAbilityNameProduct(abName: String, t: ProductType): ProductType =
+    t.map(t => addAbilityName(abName, t))
 
   def addAbilityNameArrow(abName: String, t: ArrowType): ArrowType = {
     t.copy(
-      domain = addAbilityNamePT(abName, t.domain),
-      codomain = addAbilityNamePT(abName, t.codomain)
+      domain = addAbilityNameProduct(abName, t.domain),
+      codomain = addAbilityNameProduct(abName, t.codomain)
     )
   }
 
@@ -575,7 +576,7 @@ object Type {
       case t => t
     }
 
-  def addAbilityNameServiceType(abName: String, t: ServiceType): ServiceType = {
+  def addAbilityNameService(abName: String, t: ServiceType): ServiceType = {
     t.copy(
       name = AbilityType.fullName(abName, t.name),
       fields = t.fields.map(Type.addAbilityNameArrow(abName, _))
@@ -591,16 +592,15 @@ object Type {
           fields = fields.map(Type.addAbilityName(abName, _))
         )
       case st: ServiceType =>
-        addAbilityNameServiceType(abName, st)
+        addAbilityNameService(abName, st)
 
       case at: ArrowType =>
         addAbilityNameArrow(abName, at)
-      case t: DataType => addAbilityNameData(abName, t)
-      case st @ StreamType(el) => st.copy(element = addAbilityNameData(abName, el))
       case st @ CanonStreamType(el) => st.copy(element = addAbilityNameData(abName, el))
+      case st @ StreamType(el) => st.copy(element = addAbilityNameData(abName, el))
       case smt @ StreamMapType(el) => smt.copy(element = addAbilityNameData(abName, el))
-      case pt: ProductType => addAbilityNamePT(abName, pt)
-      case t => t
+      case pt: ProductType => addAbilityNameProduct(abName, pt)
+      case t: DataType => addAbilityNameData(abName, t)
     }
   }
 

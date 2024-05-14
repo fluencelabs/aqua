@@ -41,13 +41,13 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     ): Boolean = {
       (for {
         defPos <- getByPosition(defCode, name, defPosition).tapNone(
-          println(s"Didn't find definition of '$name'")
+          fail(s"Didn't find definition of '$name'")
         )
         usePos <- getByPosition(
           useCode.getOrElse(defCode),
           fieldOrSynonym.getOrElse(name),
           usePosition
-        ).tapNone(println(s"Didn't find usage of '$name'"))
+        ).tapNone(fail(s"Didn't find usage of '$name'"))
       } yield {
         val (defStart, defEnd) = defPos
         val (useStart, useEnd) = usePos

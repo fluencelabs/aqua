@@ -12,5 +12,5 @@ case class ServiceRaw(
 
   override def rename(s: String): RawPart = copy(name = s)
 
-  def addAbilityName(s: String): RawPart = copy(`type` = Type.addAbilityNameServiceType(s, `type`))
+  def addAbilityName(s: String): RawPart = copy(`type` = Type.addAbilityNameService(s, `type`))
 }
