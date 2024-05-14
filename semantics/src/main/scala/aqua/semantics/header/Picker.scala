@@ -138,10 +138,15 @@ object Picker {
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
-    override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext =
-      RawContext.abilitiesLens.modify(
+    override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext = {
+      val res = RawContext.abilitiesLens.modify(
         _.updated(path.head, ctxAb.linearize(path))
       )(ctx)
+
+      // println(s"setAbility: ${path.value} -> ${ctxAb.debug} -> ${res.debug}")
+
+      res
+    }
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =

@@ -71,16 +71,23 @@ class HeaderHandler[S[_]: Comonad, C](using
         )
         .map { modName =>
           val (_, subPath) = modName.uncons
+          val newName = rename.getOrElse(modName)
 
-          subPath.fold(
-            picker.blank.setAbility(rename.getOrElse(modName), ctx)
+          val res = subPath.fold(
+            picker.blank.setAbility(newName, ctx)
           )(path =>
             ctx
-              .pick(path, rename, declared = false)
+              .pick(path, newName.some, declared = false)
               .getOrElse(
-                internalError(s"Module $modName does not contain itself")
+                internalError(s"Module ${modName.value} does not contain itself")
               )
           )
+
+          // println(
+          //   s"toModule: $modName, ${ctx.asInstanceOf[RawContext].debug} -> ${res.asInstanceOf[RawContext].debug}"
+          // )
+
+          res
         }
 
     val handleModule: ModuleExpr[S] => Res[S, C] = { me =>
