@@ -9,6 +9,8 @@ case class FuncRaw(
 ) extends RawPart {
   override def rename(s: String): RawPart = copy(name = s)
 
+  def addAbilityName(s: String): RawPart = copy(arrow = arrow.copy(`type` = Type.addAbilityNameArrow(s, arrow.`type`)))
+
   override def rawPartType: Type = arrow.`type`
 
   // vars that we capture from external space (outer functions, etc)

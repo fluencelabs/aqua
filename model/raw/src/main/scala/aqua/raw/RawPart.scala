@@ -11,6 +11,8 @@ trait RawPart extends Raw {
   def rawPartType: Type
 
   def rename(s: String): RawPart
+
+  def addAbilityName(s: String): RawPart
 }
 
 object RawPart {

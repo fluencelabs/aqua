@@ -130,7 +130,10 @@ object Picker {
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, name: String, ctxAb: RawContext): RawContext =
-      ctx.copy(abilities = Map(name -> ctxAb))
+      ctx.copy(abilities = Map(name -> ctxAb.copy(parts = ctxAb.parts.map {
+        case (partContext, part) =>
+          (partContext, part.addAbilityName(name))
+      })))
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =

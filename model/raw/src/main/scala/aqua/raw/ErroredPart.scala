@@ -7,4 +7,6 @@ case class ErroredPart(name: String) extends RawPart {
   override def rawPartType: Type = BottomType
 
   override def rename(s: String): RawPart = copy(name = s)
+
+  def addAbilityName(s: String): RawPart = this
 }

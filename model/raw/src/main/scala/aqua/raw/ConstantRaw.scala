@@ -7,6 +7,8 @@ case class ConstantRaw(name: String, value: ValueRaw, allowOverrides: Boolean) e
   override def rename(s: String): RawPart = copy(name = s)
 
   override def rawPartType: Type = value.`type`
+
+  def addAbilityName(s: String): RawPart = this
 }
 
 object ConstantRaw {
