@@ -122,8 +122,7 @@ object LspContext {
     override def pick(
       ctx: LspContext[S],
       name: PName,
-      rename: Option[PName],
-      declared: Boolean
+      rename: Option[PName]
     ): Option[LspContext[S]] = {
       val newVariables = rename.map { newName =>
         ctx.variables.renameDefinitions {
@@ -136,7 +135,7 @@ object LspContext {
         map.get(name.value).map(t => Map(rename.getOrElse(name).value -> t)).getOrElse(Map.empty)
 
       ctx.raw
-        .pick(name, rename, declared)
+        .pick(name, rename)
         .map(rc =>
           ctx.copy(
             raw = rc,

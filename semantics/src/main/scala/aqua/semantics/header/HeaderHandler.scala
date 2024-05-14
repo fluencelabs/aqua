@@ -45,7 +45,7 @@ class HeaderHandler[S[_]: Comonad, C](using
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
       ctx.pickHeader.validNec |+| f.imports.map { case QName.As(name, rename) =>
         ctx
-          .pick(name.toPName, rename.map(_.toPName), ctx.module.nonEmpty)
+          .pick(name.toPName, rename.map(_.toPName))
           .map { ctx =>
             val defName = rename.getOrElse(name).value
             val occs = rename.map(defName -> _).toList :+ (defName, name)
@@ -77,7 +77,7 @@ class HeaderHandler[S[_]: Comonad, C](using
             picker.blank.setAbility(newName, ctx)
           )(path =>
             ctx
-              .pick(path, newName.some, declared = false)
+              .pick(path, newName.some)
               .getOrElse(
                 internalError(s"Module ${modName.value} does not contain itself")
               )

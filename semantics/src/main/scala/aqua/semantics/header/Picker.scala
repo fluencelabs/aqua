@@ -14,7 +14,7 @@ trait Picker[A] {
   def funcNames(ctx: A): Set[String]
   def definedAbilityNames(ctx: A): Set[String]
   def blank: A
-  def pick(ctx: A, name: PName, rename: Option[PName], declared: Boolean): Option[A]
+  def pick(ctx: A, name: PName, rename: Option[PName]): Option[A]
   def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[PName]
@@ -42,8 +42,8 @@ object Picker {
     def funcNames: Set[String] = Picker[A].funcNames(p)
     def definedAbilityNames: Set[String] = Picker[A].definedAbilityNames(p)
 
-    def pick(name: PName, rename: Option[PName], declared: Boolean): Option[A] =
-      Picker[A].pick(p, name, rename, declared)
+    def pick(name: PName, rename: Option[PName]): Option[A] =
+      Picker[A].pick(p, name, rename)
 
     def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
@@ -183,29 +183,26 @@ object Picker {
     override def pick(
       ctx: RawContext,
       name: PName,
-      rename: Option[PName],
-      declared: Boolean
+      rename: Option[PName]
     ): Option[RawContext] =
-      if (declared && !ctx.declares(name)) None
-      else
-        search(ctx, name).map { result =>
-          val newName = rename.getOrElse(name)
-          val (path, innerName) = newName.unconsR
-          val inner = result match {
-            case ability: RawContext =>
-              RawContext.fromAbilities(
-                Map(innerName -> ability)
-              )
-            case parts: RawContext.Parts =>
-              RawContext.fromParts(
-                parts.map { case (partContext, part) =>
-                  (partContext, part.rename(innerName.name))
-                }
-              )
-          }
-
-          path.fold(inner)(subPath => blank.setAbility(subPath, inner))
+      search(ctx, name).map { result =>
+        val newName = rename.getOrElse(name)
+        val (path, innerName) = newName.unconsR
+        val inner = result match {
+          case ability: RawContext =>
+            RawContext.fromAbilities(
+              Map(innerName -> ability)
+            )
+          case parts: RawContext.Parts =>
+            RawContext.fromParts(
+              parts.map { case (partContext, part) =>
+                (partContext, part.rename(innerName.name))
+              }
+            )
         }
+
+        path.fold(inner)(subPath => blank.setAbility(subPath, inner))
+      }
 
     override def pickHeader(ctx: RawContext): RawContext =
       RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
@@ -214,7 +211,7 @@ object Picker {
       if (ctx.module.isEmpty) ctx
       else
         ctx.declares.toList
-          .flatMap(n => pick(ctx, n, rename = None, ctx.module.nonEmpty))
+          .flatMap(n => pick(ctx, n, rename = None))
           .foldLeft(pickHeader(ctx))(_ |+| _)
   }
 
