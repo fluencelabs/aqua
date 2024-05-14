@@ -47,14 +47,12 @@ class ModuleSem[S[_]: Comonad, C: Monoid: Picker](expr: ModuleExpr[S])(using
           // TODO: Should not it be possible to make `.combineAll` the final result?
           // Seems like `.pick` does not return much information
           }.combineAll.as(res)
-      }).map { ctx =>
+      }).map(ctx =>
         ctx
-          .linearize(pname)
+          .scoped(pname)
           .setModule(Some(pname))
-          .setDeclares(
-            pname.tail.fold(ctx.declares)(subpath => ctx.declares.map(_.prepended(subpath)))
-          )
-      }
+          .setDeclares(ctx.declares.map(_.prepended(pname)))
+      )
     })
 
     expr.word.value.fold(

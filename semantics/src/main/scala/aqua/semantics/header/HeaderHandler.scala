@@ -43,17 +43,23 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
-      ctx.pickHeader.validNec |+| f.imports.map { case QName.As(name, rename) =>
+      ctx.pickHeader.validNec |+| f.imports.map { case QName.As(importName, importRename) =>
+        val piName = importName.toPName
+        val piRename = importRename.map(_.toPName)
+        val name = ctx.module.fold(piName)(piName.prepended)
+        val rename = piRename.map(r => ctx.module.fold(r)(r.prepended))
+
         ctx
-          .pick(name.toPName, rename.map(_.toPName))
+          .pick(name, rename)
           .map { ctx =>
-            val defName = rename.getOrElse(name).value
-            val occs = rename.map(defName -> _).toList :+ (defName, name)
+            val defName = importRename.getOrElse(importName).value
+            val occs = importRename.map(defName -> _).toList :+ (defName, importName)
+
             ctx.addOccurences(occs)
           }
           .toValidNec(
             error(
-              name,
+              importName,
               s"Imported file `declares ${ctx.declares.map(_.value).mkString(", ")}`, " +
                 s"no ${name.value} declared. Try adding `declares ${name.value}` to that file."
             )
@@ -70,18 +76,35 @@ class HeaderHandler[S[_]: Comonad, C](using
           )
         )
         .map { modName =>
-          val (_, subPath) = modName.uncons
-          val newName = rename.getOrElse(modName)
+          rename
+            .filter(_ != modName)
+            .fold(
+              ctx
+                .setModule(None)
+                .setDeclares(Set.empty)
+            )(newName =>
+              ctx
+                .pick(modName, newName.some)
+                .getOrElse(
+                  internalError(s"Module ${modName.value} does not contain itself")
+                )
+            )
+        }
 
-          subPath.fold(
-            picker.blank.setAbility(newName, ctx)
-          )(path =>
-            ctx
-              .pick(path, newName.some)
-              .getOrElse(
-                internalError(s"Module ${modName.value} does not contain itself")
-              )
+    def unscope(ctx: C, tkn: Token[S]): ResAC[S, C] =
+      ctx.module
+        .toValidNec(
+          error(
+            tkn,
+            s"Used module has no `aqua` header. Please add `aqua` header or `use ... as ModuleName`, or switch to import"
           )
+        )
+        .map { modName =>
+          ctx
+            .unscoped(modName)
+            .getOrElse(
+              internalError(s"Module ${modName.value} does not contain itself")
+            )
         }
 
     val handleModule: ModuleExpr[S] => Res[S, C] = { me =>
@@ -95,12 +118,15 @@ class HeaderHandler[S[_]: Comonad, C](using
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(HeaderSem.fromInit)
+        resolve(f)
+          .andThen(unscope(_, f.token))
+          .map(HeaderSem.fromInit)
 
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
+          .andThen(unscope(_, f.token))
           .map(HeaderSem.fromInit)
 
       case f @ UseExpr(_, asModule) =>
@@ -113,9 +139,7 @@ class HeaderHandler[S[_]: Comonad, C](using
               rename = asModule.map(_.toPName)
             )
           )
-          .map { ctx =>
-            HeaderSem.fromInit(ctx)
-          }
+          .map(HeaderSem.fromInit)
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope

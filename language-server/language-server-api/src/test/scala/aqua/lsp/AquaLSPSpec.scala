@@ -76,12 +76,13 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     ): Boolean = {
 
       getByPosition(code, checkName, position).exists { case (start, end) =>
-        val res = c.variables.variables.iterator.flatMap(_._2).exists { case VariableInfo(definition, _) =>
-          val span = definition.token.unit._1
-          definition.name == fullName.getOrElse(
-            checkName
-          ) && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
-        }
+        val res =
+          c.variables.variables.iterator.flatMap(_._2).exists { case VariableInfo(definition, _) =>
+            val span = definition.token.unit._1
+            definition.name == fullName.getOrElse(
+              checkName
+            ) && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
+          }
 
         if (printFiltered)
           println(

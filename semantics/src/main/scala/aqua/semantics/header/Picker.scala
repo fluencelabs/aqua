@@ -27,7 +27,8 @@ trait Picker[A] {
   def setAbility(ctx: A, path: PName, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
   def setModule(ctx: A, name: Option[PName]): A
-  def linearize(ctx: A, path: PName): A
+  def scoped(ctx: A, path: PName): A
+  def unscoped(ctx: A, path: PName): Option[A]
   def setDeclares(ctx: A, declares: Set[PName]): A
   def setExports(ctx: A, exports: Map[String, Option[String]]): A
   def addPart(ctx: A, part: (A, RawPart)): A
@@ -77,8 +78,11 @@ object Picker {
     def setModule(name: Option[PName]): A =
       Picker[A].setModule(p, name)
 
-    def linearize(path: PName): A =
-      Picker[A].linearize(p, path)
+    def scoped(path: PName): A =
+      Picker[A].scoped(p, path)
+
+    def unscoped(path: PName): Option[A] =
+      Picker[A].unscoped(p, path)
 
     def setDeclares(declares: Set[PName]): A =
       Picker[A].setDeclares(p, declares)
@@ -139,9 +143,7 @@ object Picker {
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext =
-      RawContext.abilitiesLens.modify(
-        _.updated(path.head, ctxAb.linearize(path))
-      )(ctx)
+      ctx |+| ctxAb.scoped(path)
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
@@ -150,35 +152,17 @@ object Picker {
     override def setModule(ctx: RawContext, name: Option[PName]): RawContext =
       ctx.copy(module = name)
 
-    override def linearize(ctx: RawContext, path: PName): RawContext =
-      ctx.linearize(path)
+    override def scoped(ctx: RawContext, path: PName): RawContext =
+      ctx.scoped(path)
+
+    override def unscoped(ctx: RawContext, path: PName): Option[RawContext] =
+      search(ctx, path).collect { case ctx: RawContext => ctx }
 
     override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
       ctx.copy(declares = declares)
 
     override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
       ctx.copy(exports = exports)
-
-    private def search(
-      ctx: RawContext,
-      name: PName
-    ): Option[RawContext | RawContext.Parts] =
-      name.uncons match {
-        case (sname, Some(path)) =>
-          ctx.abilities
-            .get(sname)
-            .flatMap { ab =>
-              search(ab, path)
-            }
-        case (sname, None) =>
-          ctx.abilities.get(sname) orElse {
-            val parts = ctx.parts.filter { case (partContext, part) =>
-              part.name == sname.name
-            }
-
-            Option.when(parts.nonEmpty)(parts)
-          }
-      }
 
     override def pick(
       ctx: RawContext,
@@ -213,6 +197,27 @@ object Picker {
         ctx.declares.toList
           .flatMap(n => pick(ctx, n, rename = None))
           .foldLeft(pickHeader(ctx))(_ |+| _)
+
+    private def search(
+      ctx: RawContext,
+      name: PName
+    ): Option[RawContext | RawContext.Parts] =
+      name.uncons match {
+        case (sname, Some(path)) =>
+          ctx.abilities
+            .get(sname)
+            .flatMap { ab =>
+              search(ab, path)
+            }
+        case (sname, None) =>
+          ctx.abilities.get(sname) orElse {
+            val parts = ctx.parts.filter { case (partContext, part) =>
+              part.name == sname.name
+            }
+
+            Option.when(parts.nonEmpty)(parts)
+          }
+      }
   }
 
 }

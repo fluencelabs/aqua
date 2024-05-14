@@ -105,21 +105,17 @@ case class RawContext(
     // TODO: How about names in abilities?
     parts.map { case (_, p) => p.name }.toList.toSet
 
-  def linearize(path: PName): RawContext = {
-    val (_, subPath) = path.uncons
+  def scoped(scope: PName): RawContext = {
     val moduleCleared = copy(
       module = None,
       declares = Set.empty
     )
 
-    subPath
-      .map(_.parts.toList)
-      .orEmpty
-      .foldRight(moduleCleared) { case (name, ctx) =>
-        RawContext.fromAbilities(
-          Map(name -> ctx)
-        )
-      }
+    scope.parts.toList.foldRight(moduleCleared) { case (name, ctx) =>
+      RawContext.fromAbilities(
+        Map(name -> ctx)
+      )
+    }
   }
 
   override def toString: String =

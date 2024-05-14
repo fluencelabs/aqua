@@ -104,8 +104,11 @@ object LspContext {
     override def setModule(ctx: LspContext[S], name: Option[PName]): LspContext[S] =
       ctx.copy(raw = ctx.raw.setModule(name))
 
-    override def linearize(ctx: LspContext[S], path: PName): LspContext[S] =
-      ctx.copy(raw = ctx.raw.linearize(path))
+    override def scoped(ctx: LspContext[S], path: PName): LspContext[S] =
+      ctx.copy(raw = ctx.raw.scoped(path))
+
+    override def unscoped(ctx: LspContext[S], path: PName): Option[LspContext[S]] =
+      ctx.raw.unscoped(path).map(rc => ctx.copy(raw = rc))
 
     override def setDeclares(
       ctx: LspContext[S],
