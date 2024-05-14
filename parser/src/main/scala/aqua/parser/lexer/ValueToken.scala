@@ -133,6 +133,7 @@ case class PropertyToken[F[_]: Comonad](
           case IntoField(name) => name.extract.some
           case _ => none
         }.map { props =>
+          // TODO: this loses the correct token location
           val typeName = name
             .rename(
               (name.value +: props).mkString(".")

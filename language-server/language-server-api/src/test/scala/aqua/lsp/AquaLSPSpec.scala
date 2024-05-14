@@ -23,6 +23,12 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     str.r.findAllMatchIn(code).toList.lift(position).map(r => (r.start, r.end))
   }
 
+  extension [T](o: Option[T]) {
+
+    def tapNone(f: => Unit): Option[T] =
+      o.orElse { f; None }
+  }
+
   extension (c: LspContext[Span.S]) {
 
     def checkLocations(
@@ -34,12 +40,14 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       fieldOrSynonym: Option[String] = None
     ): Boolean = {
       (for {
-        defPos <- getByPosition(defCode, name, defPosition)
+        defPos <- getByPosition(defCode, name, defPosition).tapNone(
+          println(s"Didn't find definition of '$name'")
+        )
         usePos <- getByPosition(
           useCode.getOrElse(defCode),
           fieldOrSynonym.getOrElse(name),
           usePosition
-        )
+        ).tapNone(println(s"Didn't find usage of '$name'"))
       } yield {
         val (defStart, defEnd) = defPos
         val (useStart, useEnd) = usePos
@@ -531,6 +539,9 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |func timeout() -> string:
         |  w <- AquaName.getWorker()
         |  a = w.host_id
+        |  ab = AquaName.SomeAbility(getWrk = AquaName.getWorker, someField = "123")
+        |  c = ab.getWrk()
+        |  d = ab.someField
         |  <- a
         |""".stripMargin
     val src = Map(
@@ -538,10 +549,14 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val firstImport =
-      """aqua AquaName declares getWorker, Worker
+      """aqua AquaName declares getWorker, Worker, SomeAbility
         |
         |data Worker:
         |  host_id: string
+        |
+        |ability SomeAbility:
+        |  getWrk() -> Worker
+        |  someField: string
         |
         |func getWorker() -> Worker:
         |  <- Worker(host_id = "")
@@ -557,6 +572,10 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
     res.errors shouldBe empty
     res.checkLocations("host_id", 0, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("getWorker", 1, 0, firstImport, Some(main)) shouldBe true
+    res.checkLocations("getWorker", 1, 0, firstImport) shouldBe true
+    res.checkLocations("getWrk", 0, 1, firstImport, Some(main)) shouldBe true
+    res.checkLocations("someField", 0, 1, firstImport, Some(main)) shouldBe true
   }
 
   it should "return right tokens for multiple abilities" in {
