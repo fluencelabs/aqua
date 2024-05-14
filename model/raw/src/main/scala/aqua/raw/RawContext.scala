@@ -130,20 +130,6 @@ case class RawContext(
     }.mkString(", ")}
         |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
         |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin
-
-  def debug: String = {
-    val abStrs = abilities.map { case (name, ab) =>
-      s"${name.name}: ${ab.debug}"
-    }
-
-    s"""|module: ${module.map(_.value).getOrElse("unnamed")}
-        |declares: ${declares.map(_.value).mkString(", ")}
-        |exports: ${exports.map { case (name, rename) =>
-      rename.fold(name)(name + " as " + _)
-    }.mkString(", ")}
-        |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
-        |abilities: ${abStrs.mkString(", ")}""".stripMargin
-  }
 }
 
 object RawContext {
