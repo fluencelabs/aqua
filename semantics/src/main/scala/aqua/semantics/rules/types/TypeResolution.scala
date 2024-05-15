@@ -56,6 +56,8 @@ object TypeResolution {
         resolveCollection(dtt, "Array", ArrayType.apply)(state)
       case StreamTypeToken(_, dtt) =>
         resolveCollection(dtt, "Stream", StreamType.apply)(state)
+      case StreamMapTypeToken(_, dtt) =>
+        resolveCollection(dtt, "StreamMap", StreamMapType.apply)(state)
       case OptionTypeToken(_, dtt) =>
         resolveCollection(dtt, "Option", OptionType.apply)(state)
       case ntt: NamedTypeToken[S] =>

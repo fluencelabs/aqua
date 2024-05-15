@@ -1,13 +1,12 @@
 aqua Job declares *
 
-use "declare.aqua"
+export outer
 
-export timeout
+func test():
+  streamMap: %string
+  streamA: *string
 
-data Worker:
-  field: string
-
-func timeout() -> Worker:
-  w <- AquaName.getWorker()
-  a = w.host_id
-  <- w
+func outer() -> u32:
+  a = 1
+  test()
+  <- a

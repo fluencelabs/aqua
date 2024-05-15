@@ -7,13 +7,12 @@ import aqua.model.inline.state.*
 import aqua.model.inline.tag.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{CanonStreamType, CollectionType, StreamType}
+import aqua.types.{CanonStreamType, MutableStreamType, StreamType}
 
 import cats.data.{Chain, State, StateT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.traverse.*
@@ -32,7 +31,7 @@ object TagInliner extends Logging {
 
   import aqua.model.inline.Inline.parDesugarPrefix
 
-  import RawValueInliner.{valueListToModel, valueToModel}
+  import RawValueInliner.valueToModel
 
   /**
    * Result of [[RawTag]] inlining
@@ -339,7 +338,7 @@ object TagInliner extends Logging {
 
       case DeclareStreamTag(value) =>
         value match
-          case VarRaw(name, t: StreamType) =>
+          case VarRaw(name, t: MutableStreamType) =>
             for {
               _ <- Exports[S].resolved(name, VarModel(name, t))
             } yield TagInlined.Empty()

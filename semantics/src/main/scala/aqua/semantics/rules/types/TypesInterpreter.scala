@@ -53,10 +53,10 @@ class TypesInterpreter[S[_], X](using
       case _ => none.pure
     }
 
-  override def resolveStreamType(token: TypeToken[S]): State[X, Option[StreamType]] =
+  override def resolveStreamType(token: TypeToken[S]): State[X, Option[MutableStreamType]] =
     OptionT(resolveType(token)).flatMapF {
-      case st: StreamType => st.some.pure[ST]
-      case t => report.error(token, s"Expected stream type, got $t").as(none)
+      case st: MutableStreamType => st.some.pure[ST]
+      case t => report.error(token, s"Expected stream or stream map type, got $t").as(none)
     }.value
 
   def resolveNamedType(token: TypeToken[S]): State[X, Option[AbilityType | StructType]] =

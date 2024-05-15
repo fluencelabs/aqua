@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.ValueModel.{Ability, Stream}
+import aqua.model.ValueModel.{Ability, MutableType}
 import aqua.raw.ops.Call
 import aqua.raw.value.VarRaw
 import aqua.types.*
@@ -65,7 +65,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    * definition does not matter.
    */
   lazy val streamArgs: Map[String, VarModel] =
-    zipped.collect { case ((name, _: MutableStreamType), Stream(vr, _)) =>
+    zipped.collect { case ((name, _: MutableStreamType), MutableType(vr, _)) =>
       name -> vr
     }.toMap
 
@@ -82,13 +82,13 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    */
   lazy val streamToImmutableArgs: Map[String, VarModel] =
     zipped.collect {
-      case ((name, _: ImmutableCollectionType), vr @ VarModel(_, StreamType(_), _)) =>
+      case ((name, _: ImmutableCollectionType), vr @ VarModel(_, MutableType(_), _)) =>
         name -> vr
     }.toMap
 
-  lazy val streamToImmutableArgsWithTypes: Map[String, (VarModel, StreamType)] =
+  lazy val streamToImmutableArgsWithTypes: Map[String, (VarModel, MutableStreamType)] =
     zipped.collect {
-      case ((name, _: ImmutableCollectionType), vr@Stream(_, t)) =>
+      case ((name, _: ImmutableCollectionType), vr@MutableType(_, t)) =>
         name -> (vr, t)
     }.toMap
 

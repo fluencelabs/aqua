@@ -13,7 +13,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S], mustBeDefined: Boolean = true): Alg[Option[Type]]
 
-  def resolveStreamType(token: TypeToken[S]): Alg[Option[StreamType]]
+  def resolveStreamType(token: TypeToken[S]): Alg[Option[MutableStreamType]]
 
   def resolveNamedType(token: TypeToken[S]): Alg[Option[AbilityType | StructType]]
 
