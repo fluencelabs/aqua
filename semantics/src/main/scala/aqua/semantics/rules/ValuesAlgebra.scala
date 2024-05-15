@@ -18,7 +18,6 @@ import cats.data.{NonEmptyList, OptionT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.bifunctor.*
 import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.7](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.6...aqua-v0.14.7) (2024-05-14)
+
+
+### Features
+
+* **compiler:** Allow redeclaring functions [LNG-357] ([#1127](https://github.com/fluencelabs/aqua/issues/1127)) ([9c23a9d](https://github.com/fluencelabs/aqua/commit/9c23a9d4efea1b9467057645b6d31b7a0e3df95e))
+* **compiler:** Allow redeclaring services (and abilities) [LNG-360] ([#1135](https://github.com/fluencelabs/aqua/issues/1135)) ([faf5b80](https://github.com/fluencelabs/aqua/commit/faf5b8071fc3e272e64355130a99cee9f2cc0f8d))
+
+
+### Bug Fixes
+
+* **lsp:** Go-to-definition for used types (LNG-345) ([#1128](https://github.com/fluencelabs/aqua/issues/1128)) ([35db82c](https://github.com/fluencelabs/aqua/commit/35db82c7676bbe2ff2b48d08dc604cfe7dd14b7f))
+* **lsp:** Plugin throws OOM on big projects ([#1134](https://github.com/fluencelabs/aqua/issues/1134)) ([6cc068a](https://github.com/fluencelabs/aqua/commit/6cc068ac36a6af2a96a793278c8f721c8165b67d))
+
 ## [0.14.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.5...aqua-v0.14.6) (2024-04-18)
 
 

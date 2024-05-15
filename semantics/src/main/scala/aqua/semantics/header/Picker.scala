@@ -143,7 +143,13 @@ object Picker {
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
     override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext =
-      ctx |+| ctxAb.scoped(path)
+      ctx |+| RawContext.partsLens
+        .modify(
+          _.map { case (partContext, part) =>
+            (partContext, part.addAbilityName(path.value))
+          }
+        )(ctxAb)
+        .scoped(path)
 
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =

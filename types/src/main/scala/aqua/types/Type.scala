@@ -57,6 +57,8 @@ sealed trait ProductType extends Type {
 
   def length: Int
 
+  def map(f: Type => Type): ProductType
+
   def uncons: Option[(Type, ProductType)] = this match {
     case ConsType(t, pt) => Some(t -> pt)
     case _ => None
@@ -149,14 +151,20 @@ object ConsType {
 }
 
 case class LabeledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
+  def map(f: Type => Type): ProductType = copy(`type` = f(`type`), tail = tail.map(f))
+
   override def toString: String = s"($label: " + `type` + s") :: $tail"
 }
 
 case class UnlabeledConsType(`type`: Type, tail: ProductType) extends ConsType {
+  def map(f: Type => Type): ProductType = copy(`type` = f(`type`), tail = tail.map(f))
+
   override def toString: String = `type`.toString + s" :: $tail"
 }
 
 object NilType extends ProductType {
+  def map(f: Type => Type): ProductType = this
+
   override def toString: String = "∅"
 
   override def isInhabited: Boolean = false
@@ -544,6 +552,56 @@ object Type {
       "bool"
     case t =>
       t.toString
+  }
+
+  def addAbilityNameProduct(abName: String, t: ProductType): ProductType =
+    t.map(t => addAbilityName(abName, t))
+
+  def addAbilityNameArrow(abName: String, t: ArrowType): ArrowType = {
+    t.copy(
+      domain = addAbilityNameProduct(abName, t.domain),
+      codomain = addAbilityNameProduct(abName, t.codomain)
+    )
+  }
+
+  def addAbilityNameData(abName: String, dt: DataType): DataType =
+    dt match {
+      case st @ StructType(name, fields) =>
+        st.copy(
+          name = AbilityType.fullName(abName, name),
+          fields = fields.map(Type.addAbilityName(abName, _))
+        )
+      case ot @ OptionType(el) => ot.copy(element = addAbilityNameData(abName, el))
+      case at @ ArrayType(el) => at.copy(element = addAbilityNameData(abName, el))
+      case t => t
+    }
+
+  def addAbilityNameService(abName: String, t: ServiceType): ServiceType = {
+    t.copy(
+      name = AbilityType.fullName(abName, t.name),
+      fields = t.fields.map(Type.addAbilityNameArrow(abName, _))
+    )
+  }
+
+  // Add ability name to type names
+  def addAbilityName(abName: String, t: Type): Type = {
+    t match {
+      case at @ AbilityType(name, fields) =>
+        at.copy(
+          name = AbilityType.fullName(abName, name),
+          fields = fields.map(Type.addAbilityName(abName, _))
+        )
+      case st: ServiceType =>
+        addAbilityNameService(abName, st)
+
+      case at: ArrowType =>
+        addAbilityNameArrow(abName, at)
+      case st @ CanonStreamType(el) => st.copy(element = addAbilityNameData(abName, el))
+      case st @ StreamType(el) => st.copy(element = addAbilityNameData(abName, el))
+      case smt @ StreamMapType(el) => smt.copy(element = addAbilityNameData(abName, el))
+      case pt: ProductType => addAbilityNameProduct(abName, pt)
+      case t: DataType => addAbilityNameData(abName, t)
+    }
   }
 
   // pretty print for Type
