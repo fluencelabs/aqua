@@ -29,7 +29,7 @@ class ModuleSem[S[_]: Comonad, C: Monoid: Picker](expr: ModuleExpr[S])(using
           val names = ctx.allNames.map(PName.simpleUnsafe).toSet
           ctx.setDeclares(names).validNec
         case Some(ModuleExpr.Declares.Names(declareNames)) =>
-          val declares = declareNames.fproductLeft(_.value).toList
+          val declares = declareNames.fproductLeft(_.toPName).toList
           val names = declareNames.map(_.toPName).toList.toSet
           val res = ctx.setDeclares(names).addOccurences(declares)
 

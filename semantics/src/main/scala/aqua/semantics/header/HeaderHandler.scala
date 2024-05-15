@@ -52,7 +52,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         ctx
           .pick(name, rename)
           .map { ctx =>
-            val defName = importRename.getOrElse(importName).value
+            val defName = importRename.getOrElse(importName).toPName
             val occs = importRename.map(defName -> _).toList :+ (defName, importName)
 
             ctx.addOccurences(occs)

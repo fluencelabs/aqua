@@ -29,7 +29,7 @@ case class LspContext[S[_]](
   warnings: List[SemanticWarning[S]] = Nil,
   importPaths: Map[String, String] = Map.empty
 ) {
-  lazy val allLocations: List[TokenLocation[S]] = variables.allLocations
+  lazy val allLocations: List[TokenLocation[S]] = variables.locations
 }
 
 object LspContext {
@@ -87,13 +87,11 @@ object LspContext {
       ctx: LspContext[S],
       path: PName,
       ctxAb: LspContext[S]
-    ): LspContext[S] =
-      ctx.copy(
-        raw = ctx.raw.setAbility(path, ctxAb.raw),
-        variables = ctx.variables |+| ctxAb.variables.renameDefinitions(defName =>
-          AbilityType.fullName(path.value, defName)
-        )
-      )
+    ): LspContext[S] = ctx.copy(
+      raw = ctx.raw.setAbility(path, ctxAb.raw),
+      variables = ctx.variables |+| ctxAb.variables
+        .renameDefinitions(defName => defName.prepended(path))
+    )
 
     override def setImportPaths(
       ctx: LspContext[S],
@@ -129,8 +127,8 @@ object LspContext {
     ): Option[LspContext[S]] = {
       val newVariables = rename.map { newName =>
         ctx.variables.renameDefinitions {
-          case defName if defName.startsWith(name.value) =>
-            defName.replaceFirst(name.value, newName.value)
+          case defName if defName.startsWith(name) =>
+            defName.replacePrefix(name, newName)
         }
       }.getOrElse(ctx.variables)
 

@@ -58,7 +58,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
 
   private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
     val tokens = expr.pubs.toList.flatMap { case QName.As(name, rename) =>
-      rename.map(name.value -> _).toList :+ (name.value, name)
+      rename.map(name.toPName -> _).toList :+ (name.toPName, name)
     }
 
     val resCtx = ctx.addOccurences(tokens)

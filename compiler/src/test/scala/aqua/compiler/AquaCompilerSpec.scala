@@ -622,6 +622,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       withClue(s"Testing $name") {
         test(name, None)
       }
+
       withClue(s"Testing $name as $rename") {
         test(name, rename.some)
       }

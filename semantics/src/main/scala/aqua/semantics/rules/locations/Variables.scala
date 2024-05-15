@@ -1,5 +1,6 @@
 package aqua.semantics.rules.locations
 
+import aqua.helpers.data.PName
 import aqua.helpers.syntax.list.*
 import aqua.parser.lexer.Token
 
@@ -7,20 +8,19 @@ import cats.kernel.{Monoid, Semigroup}
 import cats.syntax.align.*
 
 case class Variables[S[_]](
-  variables: Map[String, List[VariableInfo[S]]] = Map.empty[String, List[VariableInfo[S]]]
+  variables: Map[PName, List[VariableInfo[S]]] = Map.empty[PName, List[VariableInfo[S]]]
 ) {
 
-  def renameDefinitions(f: PartialFunction[String, String]): Variables[S] =
+  def renameDefinitions(f: PartialFunction[PName, PName]): Variables[S] =
     copy(variables = variables.map { case (k, v) =>
       f.andThen { newName =>
-        newName -> v.map(vi => vi.copy(definition = vi.definition.copy(name = newName)))
-      }.orElse { _ =>
-        k -> v
-      }(k)
+        // Should we rename ALL variables? Why not only the first?
+        newName -> v.map(_.rename(newName))
+      }.lift(k).getOrElse(k -> v)
     })
 
-  lazy val allLocations: List[TokenLocation[S]] =
-    variables.values.flatMap(_.flatMap(_.allLocations)).toList
+  lazy val locations: List[TokenLocation[S]] =
+    variables.values.flatMap(_.flatMap(_.locations)).toList
 
   lazy val definitions: List[DefinitionInfo[S]] =
     variables.values.flatMap(_.map(_.definition)).toList
@@ -38,15 +38,15 @@ case class Variables[S[_]](
    * Add occurrance by name to the first (last added) definition.
    */
   def addOccurence(
-    name: String,
+    name: PName,
     token: Token[S]
   ): Variables[S] = {
     copy(variables =
       variables.updatedWith(name)(
         _.map(
           _.updateFirst(
-            _.definition.name == name,
-            v => v.copy(occurrences = token +: v.occurrences)
+            _.isFor(name),
+            _.addOccurence(token)
           )
         )
       )

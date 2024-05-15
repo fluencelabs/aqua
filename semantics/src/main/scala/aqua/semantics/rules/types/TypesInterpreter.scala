@@ -1,6 +1,8 @@
 package aqua.semantics.rules.types
 
 import aqua.errors.Errors.internalError
+import aqua.helpers.data.PName
+import aqua.helpers.data.SName
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.Levenshtein
@@ -41,7 +43,10 @@ class TypesInterpreter[S[_], X](using
 
   type ST[A] = State[X, A]
 
-  override def resolveType(token: TypeToken[S], mustBeDefined: Boolean = true): State[X, Option[Type]] =
+  override def resolveType(
+    token: TypeToken[S],
+    mustBeDefined: Boolean = true
+  ): State[X, Option[Type]] =
     getState.map(TypeResolution.resolveTypeToken(token)).flatMap {
       case Valid(TypeResolution(typ, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n -> t }
@@ -145,11 +150,10 @@ class TypesInterpreter[S[_], X](using
     name: NamedTypeToken[S],
     t: NamedType,
     fields: Map[String, (Name[S], Type)]
-  ) =
-    locations.addDefinitionWithFields(
-      DefinitionInfo[S](name.value, name, t),
-      fields.map { case (n, (t, ty)) => DefinitionInfo[S](n, t, ty) }.toList
-    )
+  ) = locations.addDefinitionWithFields(
+    DefinitionInfo[S](name.pathName, name, t),
+    fields.map { case (n, (t, ty)) => DefinitionInfo[S](PName.simpleUnsafe(n), t, ty) }.toList
+  )
 
   override def defineStructType(
     name: NamedTypeToken[S],
@@ -186,7 +190,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target)))
+          .productL(locations.addDefinition(DefinitionInfo(name.pathName, name, target)))
           .as(true)
     }
 
@@ -199,7 +203,12 @@ class TypesInterpreter[S[_], X](using
         nt.fields(op.value) match {
           case Some(t) =>
             locations
-              .pointFieldLocation(nt.name, op.value, op)
+              .pointFieldLocation(
+                // TODO: Refactor so that `nt.name` is PName
+                PName.stringUnsafe(nt.name),
+                op.simpleName,
+                op
+              )
               .as(Some(IntoFieldRes.Field(t)))
           case None =>
             val fields = nt.fields.keys.map(k => s"`$k`").toList.mkString(", ")
@@ -270,7 +279,7 @@ class TypesInterpreter[S[_], X](using
                   ensureTypeMatches(arg, expectedType, argType)
                 }
 
-            locations.pointFieldLocation(ab.name, opName, op) *>
+            locations.pointFieldLocation(PName.stringUnsafe(ab.name), op.simpleName, op) *>
               reportNotEnoughArguments *>
               reportTooManyArguments *>
               checkArgumentTypes.map(typesMatch =>

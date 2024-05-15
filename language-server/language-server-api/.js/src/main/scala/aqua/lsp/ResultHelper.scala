@@ -107,7 +107,10 @@ object ResultHelper extends Logging {
       link.toList
     }.toJSArray
 
-  private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]], importPaths: Map[String, String]): js.Array[TokenImport] =
+  private def importsToTokenImport(
+    imports: List[LiteralToken[FileSpan.F]],
+    importPaths: Map[String, String]
+  ): js.Array[TokenImport] =
     imports.flatMap { lt =>
       val (span, str) = lt.valueToken
       val unquoted = str.substring(1, str.length - 1)
@@ -130,7 +133,7 @@ object ResultHelper extends Logging {
     CompilationResult(
       errors.toJSArray,
       warnings.toJSArray,
-      locationsToJs(lsp.variables.allLocations),
+      locationsToJs(lsp.variables.locations),
       importTokens,
       tokensToJs(lsp.variables.definitions)
     )
