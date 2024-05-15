@@ -105,19 +105,6 @@ case class RawContext(
     // TODO: How about names in abilities?
     parts.map { case (_, p) => p.name }.toList.toSet
 
-  def scoped(scope: PName): RawContext = {
-    val moduleCleared = copy(
-      module = None,
-      declares = Set.empty
-    )
-
-    scope.parts.toList.foldRight(moduleCleared) { case (name, ctx) =>
-      RawContext.fromAbilities(
-        Map(name -> ctx)
-      )
-    }
-  }
-
   override def toString: String =
     s"""|module: ${module.map(_.value).getOrElse("unnamed")}
         |declares: ${declares.map(_.value).mkString(", ")}

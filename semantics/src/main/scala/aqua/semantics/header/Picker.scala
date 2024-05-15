@@ -152,8 +152,18 @@ object Picker {
     override def setModule(ctx: RawContext, name: Option[PName]): RawContext =
       ctx.copy(module = name)
 
-    override def scoped(ctx: RawContext, path: PName): RawContext =
-      ctx.scoped(path)
+    override def scoped(ctx: RawContext, path: PName): RawContext = {
+      val moduleCleared = ctx.copy(
+        module = None,
+        declares = Set.empty
+      )
+
+      path.parts.toList.foldRight(moduleCleared) { case (name, ctx) =>
+        RawContext.fromAbilities(
+          Map(name -> ctx)
+        )
+      }
+    }
 
     override def unscoped(ctx: RawContext, path: PName): Option[RawContext] =
       search(ctx, path).collect { case ctx: RawContext => ctx }
