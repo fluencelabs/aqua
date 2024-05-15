@@ -7,6 +7,7 @@ import aqua.types.{AbilityType, ArrowType, Type}
 
 import cats.Semigroup
 import cats.syntax.foldable.*
+import cats.syntax.option.*
 import cats.syntax.semigroup.*
 
 // Able to pick info from different contexts
@@ -205,7 +206,13 @@ object Picker {
       }
 
     override def pickHeader(ctx: RawContext): RawContext =
-      RawContext.blank.copy(module = ctx.module, declares = ctx.declares, exports = ctx.exports)
+      RawContext.blank.copy(
+        module = ctx.module,
+        declares = ctx.declares,
+        exports = ctx.exports
+      ) |+| ctx.module
+        .flatMap(ctx.pick(_, rename = None))
+        .orEmpty
 
     override def pickDeclared(ctx: RawContext): RawContext =
       if (ctx.module.isEmpty) ctx
