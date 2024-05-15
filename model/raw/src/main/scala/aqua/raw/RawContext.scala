@@ -36,7 +36,7 @@ import scala.collection.immutable.SortedMap
 case class RawContext(
   module: Option[PName] = None,
   declares: Set[PName] = Set.empty,
-  exports: Map[String, Option[String]] = Map.empty,
+  exports: Map[PName, Option[PName]] = Map.empty,
   parts: RawContext.Parts = Chain.empty,
   abilities: Map[SName, RawContext] = Map.empty
 ) {
@@ -109,7 +109,7 @@ case class RawContext(
     s"""|module: ${module.map(_.value).getOrElse("unnamed")}
         |declares: ${declares.map(_.value).mkString(", ")}
         |exports: ${exports.map { case (name, rename) =>
-      rename.fold(name)(name + " as " + _)
+      rename.fold(name.value)(name.value + " as " + _.value)
     }.mkString(", ")}
         |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
         |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin

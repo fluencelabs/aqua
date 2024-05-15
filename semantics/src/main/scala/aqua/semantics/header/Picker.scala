@@ -21,7 +21,7 @@ trait Picker[A] {
   def module(ctx: A): Option[PName]
   def allNames(ctx: A): Set[String]
   def declares(ctx: A): Set[PName]
-  def exports(ctx: A): Map[String, Option[String]]
+  def exports(ctx: A): Map[PName, Option[PName]]
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
@@ -31,7 +31,7 @@ trait Picker[A] {
   def scoped(ctx: A, path: PName): A
   def unscoped(ctx: A, path: PName): Option[A]
   def setDeclares(ctx: A, declares: Set[PName]): A
-  def setExports(ctx: A, exports: Map[String, Option[String]]): A
+  def setExports(ctx: A, exports: Map[PName, Option[PName]]): A
   def addPart(ctx: A, part: (A, RawPart)): A
 }
 
@@ -51,8 +51,8 @@ object Picker {
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[PName] = Picker[A].module(p)
     def declares: Set[PName] = Picker[A].declares(p)
+    def exports: Map[PName, Option[PName]] = Picker[A].exports(p)
     def allNames: Set[String] = Picker[A].allNames(p)
-    def exports: Map[String, Option[String]] = Picker[A].exports(p)
 
     def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
 
@@ -88,7 +88,7 @@ object Picker {
     def setDeclares(declares: Set[PName]): A =
       Picker[A].setDeclares(p, declares)
 
-    def setExports(exports: Map[String, Option[String]]): A =
+    def setExports(exports: Map[PName, Option[PName]]): A =
       Picker[A].setExports(p, exports)
   }
 
@@ -116,7 +116,6 @@ object Picker {
   given Picker[RawContext] with {
 
     override def blank: RawContext = RawContext.blank
-    override def exports(ctx: RawContext): Map[String, Option[String]] = ctx.exports
 
     override def isAbility(ctx: RawContext, name: String): Boolean =
       ctx.types.get(SName.nameUnsafe(name)).exists(isAbilityType)
@@ -140,6 +139,8 @@ object Picker {
       ctx.module
 
     override def declares(ctx: RawContext): Set[PName] = ctx.declares
+
+    override def exports(ctx: RawContext): Map[PName, Option[PName]] = ctx.exports
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
@@ -178,7 +179,7 @@ object Picker {
     override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
       ctx.copy(declares = declares)
 
-    override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
+    override def setExports(ctx: RawContext, exports: Map[PName, Option[PName]]): RawContext =
       ctx.copy(exports = exports)
 
     override def pick(

@@ -7,6 +7,7 @@ import aqua.parser.lexer.Token
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
+import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
 import aqua.semantics.{RulesViolated, SemanticError}
 import aqua.types.*
@@ -235,8 +236,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "third.aqua" ->
         thirdImport
     )
-
-    val res = compile(src, imports).toOption.get.values.head
+    val ctx = compile(src, imports).toOption.get.values.head
+    val res = ctx.unscoped(ctx.module.get).get
 
     val serviceType = ServiceType(
       "OneMore",
@@ -411,7 +412,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "index.aqua" -> main
     )
 
-    val res = compile(src, Map.empty).toOption.get.values.head
+    val ctx = compile(src, Map.empty).toOption.get.values.head
+    val res = ctx.unscoped(ctx.module.get).get
 
     val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
     val someStr =
@@ -517,7 +519,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         firstImport
     )
 
-    val res = compile(src, imports).toOption.get.values.head
+    val ctx = compile(src, imports).toOption.get.values.head
+    val res = ctx.unscoped(ctx.module.get).get
 
     res.errors shouldBe empty
     res.checkLocations("timeout", 1, 0, firstImport, Some(main)) shouldBe true

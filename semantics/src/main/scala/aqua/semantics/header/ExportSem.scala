@@ -21,7 +21,7 @@ import cats.syntax.semigroup.*
 import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
-class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
+class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
   picker: Picker[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
@@ -47,14 +47,11 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
       )
     )
 
-  def headerSem: Res[S, C] = {
+  def headerSem: Res[S, C] =
     // Save exports, finally handle them
-    HeaderSem(
-      // Nothing there
-      picker.blank,
-      finSem
-    ).validNec
-  }
+    HeaderSem
+      .fromFin(finSem)
+      .validNec
 
   private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
     val tokens = expr.pubs.toList.flatMap { case QName.As(name, rename) =>
@@ -66,7 +63,7 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
     expr.pubs.map { case QName.As(name, rename) =>
       resCtx
         .pick(name.toPName, rename.map(_.toPName))
-        .as(Map(name.value -> rename.map(_.value)))
+        .as(List(name.toPName -> rename.map(_.toPName)))
         .toValid(
           error(
             name,
@@ -81,9 +78,6 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
           )
         )(_ => !resCtx.isAbility(name.value))
         .toValidatedNec <* exportFuncChecks(resCtx, name, name.value)
-    }
-      .prepend(validNec(resCtx.exports))
-      .combineAll
-      .map(resCtx.setExports)
+    }.combineAll.map(exps => resCtx.setExports(resCtx.exports ++ exps))
   }
 }
