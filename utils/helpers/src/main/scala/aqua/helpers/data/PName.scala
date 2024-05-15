@@ -39,6 +39,11 @@ final case class PName private (
     if (!startsWith(prefix)) internalError(s"Cannot replace $prefix in $this")
     else PName(replace.parts.appendList(parts.toList.drop(prefix.parts.length)))
 
+  def removePrefix(prefix: PName): PName =
+    if (!startsWith(prefix) || prefix.parts.length >= parts.length)
+      internalError(s"Cannot remove $prefix from $this")
+    else PName(NonEmptyList.fromListUnsafe(parts.toList.drop(prefix.parts.length)))
+
   lazy val simple: Option[SName] =
     Option.when(parts.length == 1)(parts.head)
 

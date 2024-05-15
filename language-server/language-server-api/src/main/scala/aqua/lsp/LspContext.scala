@@ -103,10 +103,23 @@ object LspContext {
       ctx.copy(raw = ctx.raw.setModule(name))
 
     override def scoped(ctx: LspContext[S], path: PName): LspContext[S] =
-      ctx.copy(raw = ctx.raw.scoped(path))
+      ctx.copy(
+        raw = ctx.raw.scoped(path),
+        variables = ctx.variables.renameDefinitions(defName => defName.prepended(path))
+      )
 
     override def unscoped(ctx: LspContext[S], path: PName): Option[LspContext[S]] =
-      ctx.raw.unscoped(path).map(rc => ctx.copy(raw = rc))
+      ctx.raw
+        .unscoped(path)
+        .map(rc =>
+          ctx.copy(
+            raw = rc,
+            variables = ctx.variables.renameDefinitions {
+              case defName if defName.startsWith(path) =>
+                defName.removePrefix(path)
+            }
+          )
+        )
 
     override def setDeclares(
       ctx: LspContext[S],
@@ -148,7 +161,8 @@ object LspContext {
         )
     }
 
-    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
+    override def pickHeader(ctx: LspContext[S]): LspContext[S] =
+      ctx.copy(raw = ctx.raw.pickHeader)
 
     override def pickDeclared(ctx: LspContext[S]): LspContext[S] =
       ctx.copy(raw = ctx.raw.pickDeclared)

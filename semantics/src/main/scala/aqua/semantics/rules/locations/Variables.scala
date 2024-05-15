@@ -41,7 +41,11 @@ case class Variables[S[_]](
     name: PName,
     token: Token[S]
   ): Variables[S] = {
-    copy(variables =
+    copy(variables = {
+      if (!variables.contains(name)) {
+        println(s"WARNING: no $name found")
+      }
+
       variables.updatedWith(name)(
         _.map(
           _.updateFirst(
@@ -50,8 +54,17 @@ case class Variables[S[_]](
           )
         )
       )
-    )
+    })
   }
+
+  def debug: String =
+    variables.flatMap { case (k, vis) =>
+      s"$k:" :: vis.flatMap { vi =>
+        s"-> ${vi.definition}:" :: vi.occurrences.map { oc =>
+          s"--| $oc"
+        }
+      }
+    }.mkString("\n")
 }
 
 object Variables {
