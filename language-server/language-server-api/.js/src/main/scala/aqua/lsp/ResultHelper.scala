@@ -108,12 +108,10 @@ object ResultHelper extends Logging {
       link.toList
     }.toJSArray
 
-  private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]], importPaths: Map[String, String]): js.Array[TokenImport] =
-    imports.flatMap { lt =>
-      val (span, str) = lt.valueToken
-      val unquoted = Extension.add(str.substring(1, str.length - 1))
-      val path = importPaths.getOrElse(unquoted, unquoted)
-      TokenLocation.fromSpan(span).map(l => TokenImport(l, path))
+  private def importsToTokenImport(paths: List[TokenImportPath[FileSpan.F]]): js.Array[TokenImport] =
+    paths.flatMap { path =>
+      val (span, str) = path.token.valueToken
+      TokenLocation.fromSpan(span).map(l => TokenImport(l, path.path))
     }.toJSArray
 
   def lspToCompilationResult(lsp: LspContext[FileSpan.F]): CompilationResult = {
@@ -126,7 +124,7 @@ object ResultHelper extends Logging {
       case errs =>
         logger.debug("Errors: " + errs.mkString("\n"))
 
-    val importTokens = importsToTokenImport(lsp.importTokens, lsp.importPaths)
+    val importTokens = importsToTokenImport(lsp.tokenPaths)
 
     CompilationResult(
       errors.toJSArray,
