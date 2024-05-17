@@ -39,7 +39,12 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
       } yield {
         c.tokenPaths.exists { tip =>
           val (fileSpan, str) = tip.token.valueToken
-          fileSpan.span.startIndex == pos._1 && fileSpan.span.endIndex == pos._2 && str == name && tip.path == targetFile
+
+          fileSpan.span.startIndex == pos._1 &&
+            fileSpan.span.endIndex == pos._2 &&
+            str == name &&
+            tip.path == targetFile &&
+            fileSpan.name == targetFile
         }
       }).getOrElse(false)
     }
