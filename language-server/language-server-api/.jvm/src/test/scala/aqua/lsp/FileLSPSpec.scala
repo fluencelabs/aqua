@@ -84,10 +84,6 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
         SpanParser.parser,
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
-      .leftMap { ee =>
-        println(ee)
-        ee
-      }
   }
 
   it should "return right tokens from 'import' and 'use' paths" in {
