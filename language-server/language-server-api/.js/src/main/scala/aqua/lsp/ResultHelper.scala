@@ -110,7 +110,7 @@ object ResultHelper extends Logging {
 
   private def importsToTokenImport(paths: List[TokenImportPath[FileSpan.F]]): js.Array[TokenImport] =
     paths.flatMap { path =>
-      val (span, str) = path.token.valueToken
+      val (span, _) = path.token.valueToken
       TokenLocation.fromSpan(span).map(l => TokenImport(l, path.path))
     }.toJSArray
 
