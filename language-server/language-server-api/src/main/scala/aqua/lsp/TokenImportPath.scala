@@ -4,6 +4,7 @@ import aqua.helpers.ext.Extension
 import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
 
+// String literal from 'import' or 'use' with full path to imported file
 case class TokenImportPath[S[_]](token: LiteralToken[S], path: String)
 
 object TokenImportPath {
