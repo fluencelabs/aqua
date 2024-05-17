@@ -1,11 +1,14 @@
 package aqua.lsp
 
+import aqua.SpanParser
 import aqua.compiler.FileIdString.given_FileId_String
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
+import aqua.files.FileModuleId
+import aqua.lsp.Utils.*
 import aqua.parser.Parser
 import aqua.parser.lexer.Token
-import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
+import aqua.parser.lift.{FileSpan, Span}
 import aqua.raw.ConstantRaw
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
 import aqua.semantics.{RulesViolated, SemanticError}
@@ -13,21 +16,13 @@ import aqua.types.*
 
 import cats.Id
 import cats.data.*
+import fs2.io.file.Path
+import java.nio.file.Path as JPath
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
-
-  private def getByPosition(code: String, str: String, position: Int): Option[(Int, Int)] = {
-    str.r.findAllMatchIn(code).toList.lift(position).map(r => (r.start, r.end))
-  }
-
-  extension [T](o: Option[T]) {
-
-    def tapNone(f: => Unit): Option[T] =
-      o.orElse { f; None }
-  }
 
   extension (c: LspContext[Span.S]) {
 
@@ -84,12 +79,13 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     ): Boolean = {
 
       getByPosition(code, checkName, position).exists { case (start, end) =>
-        val res = c.variables.variables.iterator.flatMap(_._2).exists { case VariableInfo(definition, _) =>
-          val span = definition.token.unit._1
-          definition.name == fullName.getOrElse(
-            checkName
-          ) && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
-        }
+        val res =
+          c.variables.variables.iterator.flatMap(_._2).exists { case VariableInfo(definition, _) =>
+            val span = definition.token.unit._1
+            definition.name == fullName.getOrElse(
+              checkName
+            ) && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
+          }
 
         if (printFiltered)
           println(
