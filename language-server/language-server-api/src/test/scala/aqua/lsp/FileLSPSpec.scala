@@ -3,7 +3,6 @@ package aqua.lsp
 import aqua.SpanParser
 import aqua.compiler.FileIdString.given
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
-import aqua.files.FileModuleId
 import aqua.lsp.Utils.*
 import aqua.parser.lexer.Token
 import aqua.parser.lift.Span.S
