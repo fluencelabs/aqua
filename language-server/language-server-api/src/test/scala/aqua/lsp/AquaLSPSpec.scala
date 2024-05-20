@@ -16,8 +16,6 @@ import aqua.types.*
 
 import cats.Id
 import cats.data.*
-import fs2.io.file.Path
-import java.nio.file.Path as JPath
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
