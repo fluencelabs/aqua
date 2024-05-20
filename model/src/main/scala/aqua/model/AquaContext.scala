@@ -1,5 +1,7 @@
 package aqua.model
 
+import aqua.helpers.data.PName
+import aqua.helpers.data.SName
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.CallArrowRawTag
 import aqua.raw.value.CallArrowRaw
@@ -26,20 +28,23 @@ case class AquaContext(
   funcs: Map[String, FuncArrow],
   types: Map[String, Type],
   values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
+  abilities: Map[SName, AquaContext],
   // TODO: merge this with abilities, when have ability resolution variance
   services: Map[String, ServiceModel]
 ) {
 
   // TODO: it's a duplicate
   private def all[T](
-    what: AquaContext => Map[String, T],
-    prefix: String = ""
-  ): Map[String, T] = (
-    what(this) ++ abilities.toList.foldMap { case (k, v) =>
-      v.all(what, k + ".").toList
-    }
-  ).map(_.leftMap(prefix + _)).toMap
+    what: AquaContext => Map[String, T]
+  ): Map[String, T] = {
+    def helper(ctx: AquaContext): Map[PName, T] =
+      what(ctx).map { case (name, v) => PName.simpleUnsafe(name) -> v } ++
+        ctx.abilities.flatMap { case (aname, ab) =>
+          helper(ab).map { case (name, v) => name.prefixed(aname) -> v }
+        }
+
+    helper(this).map { case (name, v) => name.value -> v }
+  }
 
   lazy val allServices: Map[String, ServiceModel] =
     all(_.services)
@@ -91,11 +96,11 @@ case class AquaContext(
         )
       }
 
-  private def pickOne[T](
-    name: String,
-    newName: String,
-    ctx: Map[String, T],
-    add: (AquaContext, Map[String, T]) => AquaContext
+  private def pickOne[N, T](
+    name: N,
+    newName: N,
+    ctx: Map[N, T],
+    add: (AquaContext, Map[N, T]) => AquaContext
   ): AquaContext = ctx
     .get(name)
     .fold(AquaContext.blank)(t =>
@@ -105,19 +110,25 @@ case class AquaContext(
       )
     )
 
-  def pick(name: String, maybeRename: Option[String]): AquaContext = {
-    val newName = maybeRename.getOrElse(name)
-    pickOne(name, newName, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|
-      pickOne(name, newName, types, (ctx, el) => ctx.copy(types = el)) |+|
-      pickOne(name, newName, values, (ctx, el) => ctx.copy(values = el)) |+|
-      pickOne(name, newName, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
-      pickOne(name, newName, services, (ctx, el) => ctx.copy(services = el))
-  }
+  def pick(name: PName, maybeRename: Option[PName]): AquaContext =
+    name.uncons match {
+      case (name, Some(subpath)) => abilities.get(name).map(_.pick(subpath, maybeRename)).orEmpty
+      case (name, None) => {
+        // WARNING: maybeRename here is lost if it is not a simple name
+        val newName = maybeRename.flatMap(_.simple).getOrElse(name)
+
+        pickOne(name.name, newName.name, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|
+          pickOne(name.name, newName.name, types, (ctx, el) => ctx.copy(types = el)) |+|
+          pickOne(name.name, newName.name, values, (ctx, el) => ctx.copy(values = el)) |+|
+          pickOne(name, newName, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
+          pickOne(name.name, newName.name, services, (ctx, el) => ctx.copy(services = el))
+      }
+    }
 
   def withModule(newModule: Option[String]): AquaContext =
     copy(module = newModule)
 
-  def withAbilities(newAbilities: Map[String, AquaContext]): AquaContext =
+  def withAbilities(newAbilities: Map[SName, AquaContext]): AquaContext =
     copy(abilities = newAbilities)
 
   def withServices(newServices: Map[String, ServiceModel]): AquaContext =
@@ -214,7 +225,7 @@ object AquaContext extends Logging {
         case None =>
           for {
             init <- raw.abilities.toList.traverse { case (sname, ab) =>
-              fromRawContext(ab).map(sname.name -> _)
+              fromRawContext(ab).map(sname -> _)
             }.map(abs => blank.withAbilities(abs.toMap))
             parts <- raw.parts.foldMapM(handlePart.tupled)
           } yield init |+| parts
@@ -262,7 +273,7 @@ object AquaContext extends Logging {
           blank
             .withAbilities(
               m.defaultId
-                .map(id => Map(m.name -> fromService(m, id)))
+                .map(id => Map(SName.nameUnsafe(m.name) -> fromService(m, id)))
                 .orEmpty
             )
             .withServices(Map(m.name -> srv))
