@@ -82,7 +82,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    */
   lazy val streamToImmutableArgs: Map[String, VarModel] =
     zipped.collect {
-      case ((name, _: ImmutableCollectionType), vr @ VarModel(_, MutableType(_), _)) =>
+      case ((name, _: ImmutableCollectionType), vr@MutableType(_)) =>
         name -> vr
     }.toMap
 

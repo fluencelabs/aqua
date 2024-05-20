@@ -532,8 +532,8 @@ class TypesInterpreter[S[_], X](using
   override def typeToStream(
     token: Token[S],
     givenType: Type
-  ): OptionT[State[X, *], StreamType] =
-    typeTo[StreamType](
+  ): OptionT[State[X, *], MutableStreamType] =
+    typeTo[MutableStreamType](
       token,
       givenType,
       s"Expected stream value, got value of type '$givenType'"

@@ -76,9 +76,9 @@ trait Exports[S] extends Scoped[S] {
 
   def deleteStreams(names: Set[String]): State[S, Unit]
 
-  def streams: State[S, Map[String, StreamType]]
+  def streams: State[S, Map[String, MutableStreamType]]
 
-  def streamScope[T](inside: State[S, T]): State[S, (T, Map[String, StreamType])] =
+  def streamScope[T](inside: State[S, T]): State[S, (T, Map[String, MutableStreamType])] =
     for {
       streamsBefore <- streams
       tree <- inside
@@ -101,7 +101,7 @@ trait Exports[S] extends Scoped[S] {
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
 
-    override def streams: State[R, Map[String, StreamType]] =
+    override def streams: State[R, Map[String, MutableStreamType]] =
       self.streams.transformS(f, g)
 
     override def deleteStreams(names: Set[String]): State[R, Unit] =
@@ -235,7 +235,7 @@ object Exports {
     override def resolved(exports: Map[String, ValueModel]): State[ExportsState, Unit] =
       State.modify(st => st.copy(values = st.values ++ exports))
 
-    override def streams: State[ExportsState, Map[String, StreamType]] =
+    override def streams: State[ExportsState, Map[String, MutableStreamType]] =
       State.get.map(_.streams)
 
     override def deleteStreams(names: Set[String]): State[ExportsState, Unit] =

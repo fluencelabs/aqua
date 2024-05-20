@@ -526,7 +526,7 @@ object Type {
   /**
    * `StreamType` is collectible with canonicalization
    */
-  type CollectibleType = DataType | StreamType
+  type CollectibleType = DataType | MutableStreamType
   
   def isStreamType(t: Type): Boolean =
     t match {
