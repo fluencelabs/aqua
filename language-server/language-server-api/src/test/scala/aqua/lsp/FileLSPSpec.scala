@@ -5,19 +5,18 @@ import aqua.compiler.FileIdString.given_FileId_String
 import aqua.compiler.{AquaCompilerConf, AquaError, AquaSources}
 import aqua.files.FileModuleId
 import aqua.lsp.Utils.*
-import aqua.parser.Parser
 import aqua.parser.lexer.Token
 import aqua.parser.lift.Span.S
 import aqua.parser.lift.{FileSpan, Span}
+import aqua.parser.{Ast, Parser, ParserError}
 import aqua.raw.ConstantRaw
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
 import aqua.semantics.{RulesViolated, SemanticError}
 import aqua.types.*
 
-import cats.Id
 import cats.data.*
-import fs2.io.file.Path
-import java.nio.file.Path as JPath
+import cats.parse.{LocationMap, Parser as P, Parser0}
+import cats.{Comonad, Eval, Id, Monad, Monoid, Order, ~>}
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -30,6 +29,7 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
       name: String,
       position: Int,
       code: String,
+      sourceFile: String,
       targetFile: String
     ): Boolean = {
       (for {
@@ -39,30 +39,43 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
       } yield {
         c.tokenPaths.exists { tip =>
           val (fileSpan, str) = tip.token.valueToken
-
           fileSpan.span.startIndex == pos._1 &&
-            fileSpan.span.endIndex == pos._2 &&
-            str == name &&
-            tip.path == targetFile &&
-            fileSpan.name == targetFile
+          fileSpan.span.endIndex == pos._2 &&
+          str == name &&
+          tip.path == targetFile &&
+          fileSpan.name == sourceFile
         }
       }).getOrElse(false)
     }
   }
 
-  private def aquaSourceFile(src: Map[FileModuleId, String], imports: Map[FileModuleId, String]) = {
-    new AquaSources[Id, String, FileModuleId] {
+  def spanStringParser: String => String => ValidatedNec[ParserError[FileSpan.F], Ast[FileSpan.F]] =
+    id =>
+      source => {
+        val nat = new (Span.S ~> FileSpan.F) {
+          override def apply[A](span: Span.S[A]): FileSpan.F[A] = {
+            (
+              FileSpan(id, Eval.later(LocationMap(source)), span._1),
+              span._2
+            )
+          }
+        }
+        Parser.natParser(Parser.spanParser, nat)(source)
+      }
 
-      override def sources: Id[ValidatedNec[String, Chain[(FileModuleId, String)]]] =
+  private def aquaSourceFile(src: Map[String, String], imports: Map[String, String]) = {
+    new AquaSources[Id, String, String] {
+
+      override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
         Validated.validNec(Chain.fromSeq(src.toSeq))
 
       override def resolveImport(
-        from: FileModuleId,
+        from: String,
         imp: String
-      ): Id[ValidatedNec[String, FileModuleId]] =
-        Validated.validNec(FileModuleId(Path(imp)))
+      ): Id[ValidatedNec[String, String]] =
+        Validated.validNec(imp)
 
-      override def load(file: FileModuleId): Id[ValidatedNec[String, String]] =
+      override def load(file: String): Id[ValidatedNec[String, String]] =
         Validated.fromEither(
           (imports ++ src)
             .get(file)
@@ -71,22 +84,16 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
-  def toFMI(path: String): FileModuleId = FileModuleId(Path.fromNioPath(JPath.of(path)))
-
-  def mapToFMI(src: Map[String, String]): Map[FileModuleId, String] = src.map { case (k, v) =>
-    toFMI(k) -> v
-  }
-
   def compileFileSpan(
-    src: Map[FileModuleId, String],
-    imports: Map[FileModuleId, String] = Map.empty
-  ): ValidatedNec[AquaError[FileModuleId, String, FileSpan.F], Map[FileModuleId, LspContext[
+    src: Map[String, String],
+    imports: Map[String, String] = Map.empty
+  ): ValidatedNec[AquaError[String, String, FileSpan.F], Map[String, LspContext[
     FileSpan.F
   ]]] = {
     LSPCompiler
-      .compileToLsp[Id, String, FileModuleId, FileSpan.F](
+      .compileToLsp[Id, String, String, FileSpan.F](
         aquaSourceFile(src, imports),
-        SpanParser.parser,
+        spanStringParser,
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
   }
@@ -96,13 +103,11 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
       """aqua Import declares *
         |
         |use "first.aqua" as Export
-        |import secondF from "second.aqua"
+        |import secondF from "second"
         |
         |""".stripMargin
-    val src = mapToFMI(
-      Map(
-        "index.aqua" -> main
-      )
+    val src = Map(
+      "index.aqua" -> main
     )
 
     val firstImport =
@@ -121,12 +126,10 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
         |
         |""".stripMargin
 
-    val imports = mapToFMI(
-      Map(
-        "first.aqua" ->
-          firstImport,
-        "second.aqua" -> secondImport
-      )
+    val imports = Map(
+      "first.aqua" ->
+        firstImport,
+      "second.aqua" -> secondImport
     )
 
     val res = compileFileSpan(src, imports).toOption.get.values.head
@@ -136,13 +139,15 @@ class FileLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "\"first.aqua\"",
       0,
       main,
-      toFMI("first.aqua").file.toString
+      "index.aqua",
+      "first.aqua"
     ) shouldBe true
     res.checkImportLocation(
-      "\"second.aqua\"",
+      "\"second\"",
       0,
       main,
-      toFMI("second.aqua").file.toString
+      "index.aqua",
+      "second.aqua"
     ) shouldBe true
   }
 }
