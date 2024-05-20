@@ -212,7 +212,7 @@ object Picker {
         declares = ctx.declares,
         exports = ctx.exports
       ) |+| ctx.module
-        .flatMap(blank.unscoped)
+        .map(blank.scoped)
         .orEmpty
 
     override def pickDeclared(ctx: RawContext): RawContext =

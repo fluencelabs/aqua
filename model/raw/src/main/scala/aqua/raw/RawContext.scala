@@ -105,28 +105,14 @@ case class RawContext(
     // TODO: How about names in abilities?
     parts.map { case (_, p) => p.name }.toList.toSet
 
-  // override def toString: String =
-  //   s"""|module: ${module.map(_.value).getOrElse("unnamed")}
-  //       |declares: ${declares.map(_.value).mkString(", ")}
-  //       |exports: ${exports.map { case (name, rename) =>
-  //     rename.fold(name.value)(name.value + " as " + _.value)
-  //   }.mkString(", ")}
-  //       |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
-  //       |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin
-
-  override def toString(): String = debug
-
-  def debug: String = {
-    val abs = abilities.map { case (name, ab) =>
-      s"${name.name}: (${ab.debug})"
-    }
-
+  override def toString: String =
     s"""|module: ${module.map(_.value).getOrElse("unnamed")}
         |declares: ${declares.map(_.value).mkString(", ")}
+        |exports: ${exports.map { case (name, rename) =>
+      rename.fold(name.value)(name.value + " as " + _.value)
+    }.mkString(", ")}
         |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
-        |abilities: ${abs.mkString}
-    """.stripMargin
-  }
+        |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin
 }
 
 object RawContext {

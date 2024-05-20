@@ -4,6 +4,7 @@ import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.compiler.AquaWarning.CompileWarning
 import aqua.compiler.{AquaError, AquaWarning}
 import aqua.files.FileModuleId
+import aqua.helpers.ext.Extension
 import aqua.io.AquaFileError
 import aqua.lsp.AquaLSP.logger
 import aqua.parser.lexer.LiteralToken
@@ -108,14 +109,11 @@ object ResultHelper extends Logging {
     }.toJSArray
 
   private def importsToTokenImport(
-    imports: List[LiteralToken[FileSpan.F]],
-    importPaths: Map[String, String]
+    paths: List[TokenImportPath[FileSpan.F]]
   ): js.Array[TokenImport] =
-    imports.flatMap { lt =>
-      val (span, str) = lt.valueToken
-      val unquoted = str.substring(1, str.length - 1)
-      val path = importPaths.getOrElse(unquoted, unquoted)
-      TokenLocation.fromSpan(span).map(l => TokenImport(l, path))
+    paths.flatMap { path =>
+      val (span, _) = path.token.valueToken
+      TokenLocation.fromSpan(span).map(l => TokenImport(l, path.path))
     }.toJSArray
 
   def lspToCompilationResult(lsp: LspContext[FileSpan.F]): CompilationResult = {
@@ -128,7 +126,7 @@ object ResultHelper extends Logging {
       case errs =>
         logger.debug("Errors: " + errs.mkString("\n"))
 
-    val importTokens = importsToTokenImport(lsp.importTokens, lsp.importPaths)
+    val importTokens = importsToTokenImport(lsp.tokenPaths)
 
     CompilationResult(
       errors.toJSArray,

@@ -1,13 +1,10 @@
 aqua Job declares *
 
-use "declare.aqua"
+use "declare"
 
 export timeout
 
-data Worker:
-  field: string
-
-func timeout() -> Worker:
+func timeout() -> AquaName.Worker:
   w <- AquaName.getWorker()
   a = w.host_id
   <- w

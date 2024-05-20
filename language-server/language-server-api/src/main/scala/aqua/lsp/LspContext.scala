@@ -30,6 +30,7 @@ case class LspContext[S[_]](
   importPaths: Map[String, String] = Map.empty
 ) {
   lazy val allLocations: List[TokenLocation[S]] = variables.locations
+  lazy val tokenPaths: List[TokenImportPath[S]] = TokenImportPath.importPathsFromContext(this)
 }
 
 object LspContext {
