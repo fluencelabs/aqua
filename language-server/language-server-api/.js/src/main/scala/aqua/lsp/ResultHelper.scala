@@ -4,6 +4,7 @@ import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.compiler.AquaWarning.CompileWarning
 import aqua.compiler.{AquaError, AquaWarning}
 import aqua.files.FileModuleId
+import aqua.helpers.ext.Extension
 import aqua.io.AquaFileError
 import aqua.lsp.AquaLSP.logger
 import aqua.parser.lexer.LiteralToken
@@ -11,8 +12,8 @@ import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation as TokenLoc}
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
-
 import cats.syntax.show.*
+
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scribe.Logging
@@ -107,12 +108,10 @@ object ResultHelper extends Logging {
       link.toList
     }.toJSArray
 
-  private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]], importPaths: Map[String, String]): js.Array[TokenImport] =
-    imports.flatMap { lt =>
-      val (span, str) = lt.valueToken
-      val unquoted = str.substring(1, str.length - 1)
-      val path = importPaths.getOrElse(unquoted, unquoted)
-      TokenLocation.fromSpan(span).map(l => TokenImport(l, path))
+  private def importsToTokenImport(paths: List[TokenImportPath[FileSpan.F]]): js.Array[TokenImport] =
+    paths.flatMap { path =>
+      val (span, _) = path.token.valueToken
+      TokenLocation.fromSpan(span).map(l => TokenImport(l, path.path))
     }.toJSArray
 
   def lspToCompilationResult(lsp: LspContext[FileSpan.F]): CompilationResult = {
@@ -125,7 +124,7 @@ object ResultHelper extends Logging {
       case errs =>
         logger.debug("Errors: " + errs.mkString("\n"))
 
-    val importTokens = importsToTokenImport(lsp.importTokens, lsp.importPaths)
+    val importTokens = importsToTokenImport(lsp.tokenPaths)
 
     CompilationResult(
       errors.toJSArray,
