@@ -2,7 +2,7 @@ aqua StreamMapTest declares *
 
 export testGetFunc
 
-func testGetFunc() -> string:
+func testGetFunc() -> []string:
   streamMap: %string
   key = "key"
   streamMap <<- (key, "test value")
