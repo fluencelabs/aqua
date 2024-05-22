@@ -509,8 +509,6 @@ object ArrowInliner extends Logging {
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
     canonStreamsWithNames <- canonStreamVariables(args)
     (renamedCanonStreams, canons) = canonStreamsWithNames
-    _ = println("renamed: " + renamedCanonStreams)
-    _ = println("canons: " + canons)
 
     renaming =
       data.renames ++

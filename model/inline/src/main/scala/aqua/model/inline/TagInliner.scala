@@ -228,6 +228,24 @@ object TagInliner extends Logging {
             )
         }
 
+      case PushToMapTag(key, operand, exportTo) =>
+        (
+          valueToModel(key),
+          valueToModel(operand),
+          valueToModel(exportTo.toRaw)
+        ).mapN {
+          case ((k, kp), (v, p), (VarModel(name, st, Chain.nil), None)) =>
+            TagInlined.Single(
+              model = InsertKeyValueModel(k, v, name, st),
+              prefix = SeqModel.wrap(kp.toList ++ p.toList).some
+            )
+          case (_, _, (vm, prefix)) =>
+            internalError(
+              s"stream ($exportTo) resolved " +
+                s"to ($vm) with prefix ($prefix)"
+            )
+        }
+
       case CanonicalizeTag(operand, exportTo) =>
         valueToModel(operand).flatMap {
           // pass literals as is

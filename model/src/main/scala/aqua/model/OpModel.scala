@@ -177,7 +177,7 @@ case class InsertKeyValueModel(
   key: ValueModel,
   value: ValueModel,
   assignTo: String,
-  assignToType: StreamMapType
+  assignToType: Type
 ) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 

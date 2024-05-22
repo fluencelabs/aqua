@@ -9,7 +9,6 @@ import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
 import cats.data.Chain
 import cats.data.State
-import cats.instances.stream
 import cats.syntax.applicative.*
 import cats.syntax.monoid.*
 import cats.syntax.option.*

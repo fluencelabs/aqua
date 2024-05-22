@@ -20,7 +20,7 @@ final case class Tracing(
     children.headOption
       .filter(_ => children.length == 1)
       .getOrElse(
-        SeqModel.wrap(children.toList: _*)
+        SeqModel.wrap(children.toList*)
       )
 
   override def folder: OpTransform.OpFolder = {

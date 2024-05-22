@@ -376,6 +376,21 @@ case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def toString: String = s"(push $operand $exportTo)"
 }
 
+case class PushToMapTag(key: ValueRaw, operand: ValueRaw, exportTo: Call.Export) extends RawTag {
+
+  override def exportsVarNames: Set[String] = Set.empty
+
+  override def usesVarNames: Set[String] = key.varNames ++ operand.varNames + exportTo.name
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    PushToMapTag(key.map(f), operand.map(f), exportTo)
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
+
+  override def toString: String = s"(pushmap ($key $operand) $exportTo)"
+}
+
 case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
 
   override def exportsVarNames: Set[String] = Set(assignTo)

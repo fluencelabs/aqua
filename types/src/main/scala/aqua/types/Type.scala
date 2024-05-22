@@ -325,6 +325,17 @@ case class CanonStreamType(
   override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
 
+case class CanonStreamMapType(
+  override val element: DataType
+) extends ImmutableCollectionType {
+
+  override val isStream: Boolean = false
+
+  override def toString: String = "#%" + element
+
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
+}
+
 case class ArrayType(
   override val element: DataType
 ) extends ImmutableCollectionType {
@@ -354,6 +365,11 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
   override def withElement(t: DataType): MutableStreamType = copy(element = t)
 
   override def toString: String = s"%$element"
+
+  val arrows: Map[String, ArrowType] = Map(
+    "get" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(element :: Nil))
+  )
+
 }
 
 object StreamMapType {
@@ -527,7 +543,7 @@ object Type {
    * `StreamType` is collectible with canonicalization
    */
   type CollectibleType = DataType | MutableStreamType
-  
+
   def isStreamType(t: Type): Boolean =
     t match {
       case _: MutableStreamType => true

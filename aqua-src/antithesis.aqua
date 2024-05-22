@@ -1,12 +1,9 @@
 aqua Job declares *
 
-export outer
+export test
 
-func test():
+func test() -> string:
   streamMap: %string
-  streamA: *string
-
-func outer() -> u32:
-  a = 1
-  test()
-  <- a
+  streamMap <<- ("sd", "ref")
+  res = streamMap.get("sd")
+  <- res
