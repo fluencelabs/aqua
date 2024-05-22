@@ -1,9 +1,10 @@
 aqua Job declares *
 
-export test
+export testGetFunc
 
-func test() -> []string:
+func testGetFunc() -> []string:
   streamMap: %string
-  streamMap <<- ("sd", "ref")
-  res = streamMap.get("sd")
+  key = "key"
+  streamMap <<- (key, "test value")
+  res = streamMap.get(key)
   <- res

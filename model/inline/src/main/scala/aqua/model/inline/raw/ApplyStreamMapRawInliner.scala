@@ -5,7 +5,17 @@ import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.*
 import aqua.raw.value.IntoArrowRaw
-import aqua.types.{ArrayType, CanonStreamMapType, CanonStreamType, DataType, ScalarType, StreamMapType, StreamType, StructType}
+import aqua.types.{
+  ArrayType,
+  CanonStreamMapType,
+  CanonStreamType,
+  DataType,
+  ScalarType,
+  StreamMapType,
+  StreamType,
+  StructType
+}
+
 import cats.data.NonEmptyMap
 import cats.data.{Chain, State}
 import cats.syntax.applicative.*
@@ -67,6 +77,31 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  def privateGetElement2(
+    mapName: String,
+    mapType: StreamMapType,
+    idxVar: ValueModel,
+    resultName: String,
+    mapCanonName: String
+  ): OpModel.Tree = {
+    val idx = idxVar match {
+      case VarModel(name, _, _) =>
+        name
+      case LiteralModel(literal, _) =>
+        literal
+    }
+    val arrayResultType = ArrayType(mapType.element)
+    val mapVar = VarModel(mapName, mapType)
+    val canonMap = VarModel(mapCanonName, CanonStreamMapType(mapType.element))
+    SeqModel.wrap(
+      CanonicalizeModel(mapVar, CallModel.Export(canonMap.name, canonMap.`type`)).leaf,
+      FlattenModel(
+        canonMap.withProperty(IntoIndexModel(idx, arrayResultType)),
+        resultName
+      ).leaf
+    )
+  }
+
   def apply[S: Mangler: Exports: Arrows: Config](
     mapName: String,
     mapType: StreamMapType,
@@ -87,7 +122,7 @@ object ApplyStreamMapRawInliner {
       uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
       uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
     } yield {
-      val gate = getElementFromMapModel(
+      /*val gate = getElementFromMapModel(
         mapName = mapName,
         mapType = mapType,
         idxVar = idxVar,
@@ -96,9 +131,10 @@ object ApplyStreamMapRawInliner {
         iterName = uniqueIterName,
         mapCanonName = uniqueCanonMapName,
         resultName = uniqueResultName
-      )
+      )*/
+      val getResultTree = privateGetElement2(mapName, mapType, idxVar, uniqueResultName, uniqueCanonMapName)
 
-      val inline = Inline(predo = Chain.one(gate))
+      val inline = Inline(predo = Chain.one(getResultTree))
       val value = VarModel(
         uniqueResultName,
         ArrayType(mapType.element)
