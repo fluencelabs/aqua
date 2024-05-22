@@ -82,21 +82,23 @@ object ApplyStreamMapRawInliner {
     mapType: StreamMapType,
     idxVar: ValueModel,
     resultName: String,
-    mapCanonName: String
+    mapCanonName: String,
+    idxName: String
   ): OpModel.Tree = {
-    val idx = idxVar match {
-      case VarModel(name, _, _) =>
-        name
-      case LiteralModel(literal, _) =>
-        literal
+    val (idx, idxModel) = idxVar match {
+      case vm: VarModel =>
+        vm -> EmptyModel.leaf
+      case lm: LiteralModel =>
+        VarModel(idxName, ScalarType.string) -> FlattenModel(lm, idxName).leaf
     }
     val arrayResultType = ArrayType(mapType.element)
     val mapVar = VarModel(mapName, mapType)
     val canonMap = VarModel(mapCanonName, CanonStreamMapType(mapType.element))
     SeqModel.wrap(
       CanonicalizeModel(mapVar, CallModel.Export(canonMap.name, canonMap.`type`)).leaf,
+      idxModel,
       FlattenModel(
-        canonMap.withProperty(IntoIndexModel(idx, arrayResultType)),
+        canonMap.withProperty(IntoIndexModel(idx.name, arrayResultType)),
         resultName
       ).leaf
     )
@@ -121,6 +123,7 @@ object ApplyStreamMapRawInliner {
       uniqueCanonStreamName <- Mangler[S].findAndForbidName(mapName + "_canon_stream")
       uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
       uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
+      uniqueIdxName <- Mangler[S].findAndForbidName(mapName + "_idx")
     } yield {
       /*val gate = getElementFromMapModel(
         mapName = mapName,
@@ -132,7 +135,14 @@ object ApplyStreamMapRawInliner {
         mapCanonName = uniqueCanonMapName,
         resultName = uniqueResultName
       )*/
-      val getResultTree = privateGetElement2(mapName, mapType, idxVar, uniqueResultName, uniqueCanonMapName)
+      val getResultTree = privateGetElement2(
+        mapName,
+        mapType,
+        idxVar,
+        uniqueResultName,
+        uniqueCanonMapName,
+        uniqueIdxName
+      )
 
       val inline = Inline(predo = Chain.one(getResultTree))
       val value = VarModel(
