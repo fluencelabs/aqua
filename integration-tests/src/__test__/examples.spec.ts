@@ -56,6 +56,9 @@ import {
   streamReturnFromInnerFunc,
 } from "../examples/streamCall.js";
 import {
+  testGetFuncCall
+} from "../examples/streamMapCall.js";
+import {
   topologyBug205Call,
   topologyBug394Call,
   topologyBug427Call,
@@ -845,6 +848,11 @@ describe("Testing examples", () => {
     let joinLocalCallResult = await joinIdxLocalCall(relayPeerId1);
     expect(joinLocalCallResult.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("streamMap.aqua get function call", async () => {
+      let result = await streamGetFuncCall();
+      expect(result).toEqual(["test value"]);
+    });
 
   it("stream.aqua", async () => {
     let streamResult = await streamCall();

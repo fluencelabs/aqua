@@ -2,7 +2,7 @@ aqua Job declares *
 
 export test
 
-func test() -> string:
+func test() -> []string:
   streamMap: %string
   streamMap <<- ("sd", "ref")
   res = streamMap.get("sd")

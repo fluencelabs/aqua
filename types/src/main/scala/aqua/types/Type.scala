@@ -367,7 +367,7 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
   override def toString: String = s"%$element"
 
   val arrows: Map[String, ArrowType] = Map(
-    "get" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(element :: Nil))
+    "get" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ArrayType(element) :: Nil))
   )
 
 }
