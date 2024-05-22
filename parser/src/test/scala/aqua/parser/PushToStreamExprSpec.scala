@@ -11,11 +11,11 @@ class PushToStreamExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "assign" should "be parsed" in {
     parsePush("a <<- \"b\"") should be(
-      PushToStreamExpr[Id]("a", toStr("b"))
+      PushToStreamExpr[Id]("a", Left(toStr("b")))
     )
 
     parsePush("a <<- b") should be(
-      PushToStreamExpr[Id]("a", toVar("b"))
+      PushToStreamExpr[Id]("a", Left(toVar("b")))
     )
   }
 }

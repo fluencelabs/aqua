@@ -850,7 +850,7 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua get function call", async () => {
-      let result = await streamGetFuncCall();
+      let result = await testGetFuncCall();
       expect(result).toEqual(["test value"]);
     });
 
