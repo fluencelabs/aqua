@@ -1,8 +1,8 @@
 package aqua.files
 
 import aqua.AquaIO
+import aqua.helpers.ext.Extension
 import aqua.io.*
-
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
 import cats.effect.kernel.Concurrent
@@ -16,6 +16,7 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import fs2.io.file.{Files, Path}
 import fs2.text
+
 import scala.util.Try
 
 class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
@@ -72,7 +73,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           .evalFilter(p =>
             Files[F]
               .isRegularFile(p)
-              .map(_ && p.extName == ".aqua")
+              .map(_ && p.extName == Extension.aqua)
           )
           .compile
           .toList
