@@ -2,9 +2,12 @@ aqua StreamMapTest declares *
 
 export testGetFunc
 
-func testGetFunc() -> []string:
+func testGetFunc() -> []string, []string, []string:
   streamMap: %string
+  resEmpty = streamMap.get(key)
   key = "key"
-  streamMap <<- (key, "test value")
-  res = streamMap.get(key)
-  <- res
+  streamMap <<- (key, "first value")
+  resFirst = streamMap.get(key)
+  streamMap <<- (key, "second value")
+  resSecond = streamMap.get(key)
+  <- resEmpty, resFirst, resSecond

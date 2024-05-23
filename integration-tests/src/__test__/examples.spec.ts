@@ -850,8 +850,10 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua get function call", async () => {
-      let result = await testGetFuncCall();
-      expect(result).toEqual(["test value"]);
+      let [resEmpty, resFirst, resSecond] = await testGetFuncCall();
+      expect(resEmpty).toEqual([]);
+      expect(resFirst).toEqual(["first value"]);
+      expect(resSecond).toEqual(["second value", "first value"]);
     });
 
   it("stream.aqua", async () => {
