@@ -65,6 +65,34 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  private def getKeysModel(
+    mapName: String,
+    mapType: StreamMapType,
+    streamName: String,
+    canonName: String,
+    iterName: String,
+    resultName: String
+  ): (VarModel, OpModel.Tree) = {
+    val mapVar = VarModel(mapName, mapType)
+    val arrayResultType = ArrayType(mapType.element)
+    val streamVar = VarModel(streamName, StreamType(ScalarType.string))
+    val canonMap = VarModel(canonName, CanonStreamMapType(arrayResultType))
+    val iter = VarModel(iterName, getIterType("iterName_type", mapType.element))
+    val result = VarModel(resultName, CanonStreamType(ScalarType.string))
+    result -> RestrictionModel(streamVar.name, streamVar.`type`).wrap(
+      CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,
+      ForModel(iter.name, canonMap).wrap(
+        PushToStreamModel(iter
+          .withProperty(
+            IntoFieldModel("key", ScalarType.string)
+          ), CallModel.Export(streamVar)).leaf,
+          NextModel(iter.name).leaf
+      ),
+      CanonicalizeModel(streamVar, CallModel.Export(result)).leaf,
+    )
+
+  }
+
   def getElement(
     mapName: String,
     mapType: StreamMapType,
@@ -103,10 +131,37 @@ object ApplyStreamMapRawInliner {
         get(mapName, mapType, arg)
       case ("getStream", arg :: Nil) =>
         getStream(mapName, mapType, arg)
+      case ("keys", Nil) =>
+        getKeys(mapName, mapType)
       case (n, _) =>
         internalError(
           s"StreamMap '$mapName' doesn't support function '$n''"
         )
+    }
+  }
+
+  def getKeys[S: Mangler: Exports: Arrows: Config](
+    mapName: String,
+    mapType: StreamMapType
+  ): State[S, (VarModel, Inline)] = {
+    for {
+      uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
+      uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
+      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_result")
+      uniqueCanonName <- Mangler[S].findAndForbidName(mapName + "_canon")
+    } yield {
+      val (value, getKeysTree) = getKeysModel(
+        mapName = mapName,
+        mapType = mapType,
+        streamName = uniqueStreamName,
+        iterName = uniqueIterName,
+        canonName = uniqueCanonName,
+        resultName = uniqueResultName
+      )
+
+      val inline = Inline(predo = Chain.one(getKeysTree))
+
+      (value, inline)
     }
   }
 

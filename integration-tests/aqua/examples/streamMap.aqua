@@ -1,6 +1,6 @@
 aqua StreamMapTest declares *
 
-export testGetFunc, testGetStreamFunc
+export testGetFunc, testGetStreamFunc, testKeysFunc
 
 func testGetFunc() -> []string, []string, []string:
   streamMap: %string
@@ -23,3 +23,12 @@ func testGetStreamFunc() -> []string, string, string:
   resFirst = resFirstStream[0]
   resSecond = resSecondStream[1]
   <- resEmptyStream, resFirst, resSecond
+
+func testKeysFunc() -> []string, []string, []string:
+  streamMap: %string
+  resEmpty = streamMap.keys()
+  streamMap <<- ("key one", "")
+  resFirst = streamMap.keys()
+  streamMap <<- ("key two", "")
+  resSecond = streamMap.keys()
+  <- resEmpty, resFirst, resSecond

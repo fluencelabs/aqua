@@ -57,7 +57,8 @@ import {
 } from "../examples/streamCall.js";
 import {
   testGetFuncCall,
-  testGetStreamFuncCall
+  testGetStreamFuncCall,
+  testKeysFuncCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
@@ -858,11 +859,18 @@ describe("Testing examples", () => {
     });
 
   it("streamMap.aqua get stream function call", async () => {
-        let [resEmpty, resFirst, resSecond] = await testGetStreamFuncCall();
-        expect(resEmpty).toEqual([]);
-        expect(resFirst).toEqual("first value");
-        expect(resSecond).toEqual("second value");
-      });
+      let [resEmpty, resFirst, resSecond] = await testGetStreamFuncCall();
+      expect(resEmpty).toEqual([]);
+      expect(resFirst).toEqual("first value");
+      expect(resSecond).toEqual("second value");
+  });
+
+  it("streamMap.aqua keys function call", async () => {
+      let [resEmpty, resFirst, resSecond] = await testGetKeysCall();
+      expect(resEmpty).toEqual([]);
+      expect(resFirst).toEqual(["key one"]);
+      expect(resSecond).toEqual(["key one", "key two"]);
+  });
 
   it("stream.aqua", async () => {
     let streamResult = await streamCall();

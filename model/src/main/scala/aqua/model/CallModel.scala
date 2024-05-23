@@ -27,5 +27,9 @@ object CallModel {
     override def toString: String = s"$name:${`type`}"
   }
 
+  object Export {
+    def apply(vm: VarModel): Export = Export(vm.name, vm.`type`)
+  }
+
   def callExport(ex: Call.Export): Export = Export(ex.name, ex.`type`)
 }
