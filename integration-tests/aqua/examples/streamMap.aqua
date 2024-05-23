@@ -11,3 +11,15 @@ func testGetFunc() -> []string, []string, []string:
   streamMap <<- (key, "second value")
   resSecond = streamMap.get(key)
   <- resEmpty, resFirst, resSecond
+
+func testGetStreamFunc() -> []string, string, string:
+  streamMap: %string
+  key = "key"
+  resEmptyStream = streamMap.getStream(key)
+  streamMap <<- (key, "first value")
+  resFirstStream = streamMap.getStream(key)
+  streamMap <<- (key, "second value")
+  resSecondStream = streamMap.getStream(key)
+  resFirst = resFirstStream[0]
+  resSecond = resSecondStream[1]
+  <- resEmptyStream, resFirst, resSecond

@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
@@ -27,28 +28,22 @@ object ApplyStreamMapRawInliner {
   private def getIterType(name: String, el: DataType) =
     StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> ArrayType(el)))
 
-  private def getElementFromMapModel(
+  private def getStreamFromMapModel(
     mapName: String,
     mapType: StreamMapType,
     idxVar: ValueModel,
     streamName: String,
-    streamCanonName: String,
-    iterName: String,
-    mapCanonName: String,
-    resultName: String
+    iterName: String
   ): OpModel.Tree = {
     val mapVar = VarModel(mapName, mapType)
     val arrayResultType = ArrayType(mapType.element)
     val streamVar = VarModel(streamName, StreamType(arrayResultType))
-    val streamCanonVar = VarModel(streamCanonName, CanonStreamType(arrayResultType))
-    val iterableCanon = VarModel(mapCanonName, CanonStreamMapType(arrayResultType))
     val iter = VarModel(iterName, getIterType("iterName_type", mapType.element))
-    RestrictionModel(streamName, StreamType(mapType.element)).wrap(
-      CanonicalizeModel(mapVar, CallModel.Export(iterableCanon.name, iterableCanon.`type`)).leaf,
-      ForModel(iter.name, iterableCanon).wrap(
+    ParModel.wrap(
+      ForModel(iter.name, mapVar, ForModel.Mode.Never).wrap(
         XorModel.wrap(
           MatchMismatchModel(
-            iterableCanon
+            iter
               .withProperty(
                 IntoFieldModel("key", ScalarType.string)
               ),
@@ -56,7 +51,7 @@ object ApplyStreamMapRawInliner {
             true
           ).wrap(
             PushToStreamModel(
-              iterableCanon
+              iter
                 .withProperty(
                   IntoFieldModel("value", arrayResultType)
                 ),
@@ -66,18 +61,11 @@ object ApplyStreamMapRawInliner {
           NextModel(iter.name).leaf
         )
       ),
-      CanonicalizeModel(
-        streamVar,
-        CallModel.Export(streamCanonVar.name, streamCanonVar.`type`)
-      ).leaf,
-      FlattenModel(
-        streamCanonVar.withProperty(IntoIndexModel("0", arrayResultType)),
-        resultName
-      ).leaf
+      NullModel.leaf
     )
   }
 
-  def privateGetElement2(
+  def getElement(
     mapName: String,
     mapType: StreamMapType,
     idxVar: ValueModel,
@@ -105,6 +93,52 @@ object ApplyStreamMapRawInliner {
   }
 
   def apply[S: Mangler: Exports: Arrows: Config](
+    funcName: String,
+    mapName: String,
+    mapType: StreamMapType,
+    args: List[ValueModel]
+  ): State[S, (VarModel, Inline)] = {
+    (funcName, args) match {
+      case ("get", arg :: Nil) =>
+        get(mapName, mapType, arg)
+      case ("getStream", arg :: Nil) =>
+        getStream(mapName, mapType, arg)
+      case (n, _) =>
+        internalError(
+          s"StreamMap '$mapName' doesn't support function '$n''"
+        )
+    }
+  }
+
+  def getStream[S: Mangler: Exports: Arrows: Config](
+    mapName: String,
+    mapType: StreamMapType,
+    idxVar: ValueModel
+  ): State[S, (VarModel, Inline)] = {
+    for {
+      uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
+      uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
+      value = VarModel(
+        uniqueStreamName,
+        StreamType(mapType.element)
+      )
+      _ <- Exports[S].resolved(uniqueStreamName, value)
+    } yield {
+      val getStreamResultTree = getStreamFromMapModel(
+        mapName = mapName,
+        mapType = mapType,
+        idxVar = idxVar,
+        streamName = uniqueStreamName,
+        iterName = uniqueIterName
+      )
+
+      val inline = Inline(predo = Chain.one(getStreamResultTree))
+
+      (value, inline)
+    }
+  }
+
+  def get[S: Mangler: Exports: Arrows: Config](
     mapName: String,
     mapType: StreamMapType,
     idxVar: ValueModel
@@ -135,7 +169,7 @@ object ApplyStreamMapRawInliner {
         mapCanonName = uniqueCanonMapName,
         resultName = uniqueResultName
       )*/
-      val getResultTree = privateGetElement2(
+      val getResultTree = getElement(
         mapName,
         mapType,
         idxVar,
