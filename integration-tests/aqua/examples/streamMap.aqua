@@ -4,8 +4,8 @@ export testGetFunc
 
 func testGetFunc() -> []string, []string, []string:
   streamMap: %string
-  resEmpty = streamMap.get(key)
   key = "key"
+  resEmpty = streamMap.get(key)
   streamMap <<- (key, "first value")
   resFirst = streamMap.get(key)
   streamMap <<- (key, "second value")
