@@ -866,7 +866,7 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua keys function call", async () => {
-      let [resEmpty, resFirst, resSecond] = await testGetKeysCall();
+      let [resEmpty, resFirst, resSecond] = await testKeysFuncCall();
       expect(resEmpty).toEqual([]);
       expect(resFirst).toEqual(["key one"]);
       expect(resSecond).toEqual(["key one", "key two"]);
