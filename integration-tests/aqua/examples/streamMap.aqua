@@ -1,6 +1,6 @@
 aqua StreamMapTest declares *
 
-export testGetFunc
+export testGetFunc, testGetStreamFunc
 
 func testGetFunc() -> []string, []string, []string:
   streamMap: %string
