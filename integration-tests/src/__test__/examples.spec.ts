@@ -56,7 +56,8 @@ import {
   streamReturnFromInnerFunc,
 } from "../examples/streamCall.js";
 import {
-  testGetFuncCall
+  testGetFuncCall,
+  testGetStreamFuncCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
