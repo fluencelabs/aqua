@@ -1,6 +1,6 @@
 aqua StreamMapTest declares *
 
-export testGetFunc, testGetStreamFunc, testKeysFunc
+export testGetFunc, testGetStreamFunc, testKeysFunc, testContainsFunc
 
 func testGetFunc() -> []string, []string, []string:
   streamMap: %string
@@ -32,3 +32,17 @@ func testKeysFunc() -> []string, []string, []string:
   streamMap <<- ("key two", "")
   resSecond = streamMap.keys()
   <- resEmpty, resFirst, resSecond
+
+func testContainsFunc() -> bool, bool, bool, bool, bool:
+  keyOne = "key one"
+  keyTwo = "key two"
+  streamMap: %string
+  resFirst = streamMap.contains(keyOne)
+  streamMap <<- (keyOne, "")
+  resSecond = streamMap.contains(keyOne)
+  resThird = streamMap.contains(keyTwo)
+  streamMap <<- (keyOne, "new")
+  streamMap <<- (keyTwo, "")
+  resFourth = streamMap.contains(keyOne)
+  resFifth = streamMap.contains(keyTwo)
+  <- resFirst, resSecond, resThird, resFourth, resFifth

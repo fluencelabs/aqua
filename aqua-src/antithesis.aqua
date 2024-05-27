@@ -1,12 +1,15 @@
 aqua Job declares *
 
-export testGetKeysFunc
+export testContainsFunc
 
-func testKeysFunc() -> []string, []string, []string:
+func testContainsFunc() -> bool, bool, bool, bool, bool:
   streamMap: %string
-  resEmpty = streamMap.keys()
+  resFirst = streamMap.contains("key one")
   streamMap <<- ("key one", "")
-  resFirst = streamMap.keys()
+  resSecond = streamMap.contains("key one")
+  resThird = streamMap.contains("key one")
+  streamMap <<- ("key one", "new")
   streamMap <<- ("key two", "")
-  resSecond = streamMap.keys()
-  <- resEmpty, resFirst, resSecond
+  resFourth = streamMap.contains("key one")
+  resFifth = streamMap.contains("key two")
+  <- resFirst, resSecond, resThird, resFourth, resFifth

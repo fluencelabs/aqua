@@ -1,22 +1,12 @@
 package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
-import aqua.model.*
+import aqua.model.{SeqModel, *}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.*
 import aqua.raw.value.IntoArrowRaw
-import aqua.types.{
-  ArrayType,
-  CanonStreamMapType,
-  CanonStreamType,
-  DataType,
-  ScalarType,
-  StreamMapType,
-  StreamType,
-  StructType
-}
-
+import aqua.types.{ArrayType, CanonStreamMapType, CanonStreamType, DataType, ScalarType, StreamMapType, StreamType, StructType}
 import cats.data.NonEmptyMap
 import cats.data.{Chain, State}
 import cats.syntax.applicative.*
@@ -82,13 +72,16 @@ object ApplyStreamMapRawInliner {
     result -> RestrictionModel(streamVar.name, streamVar.`type`).wrap(
       CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,
       ForModel(iter.name, canonMap).wrap(
-        PushToStreamModel(iter
-          .withProperty(
-            IntoFieldModel("key", ScalarType.string)
-          ), CallModel.Export(streamVar)).leaf,
-          NextModel(iter.name).leaf
+        PushToStreamModel(
+          iter
+            .withProperty(
+              IntoFieldModel("key", ScalarType.string)
+            ),
+          CallModel.Export(streamVar)
+        ).leaf,
+        NextModel(iter.name).leaf
       ),
-      CanonicalizeModel(streamVar, CallModel.Export(result)).leaf,
+      CanonicalizeModel(streamVar, CallModel.Export(result)).leaf
     )
 
   }
@@ -120,6 +113,62 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  private def keyContains(
+    mapName: String,
+    mapType: StreamMapType,
+    keyVar: ValueModel,
+    resultArrayName: String,
+    resultName: String,
+    mapCanonName: String,
+    idxName: String
+  ): OpModel.Tree = {
+    val getElementTree =
+      getElement(mapName, mapType, keyVar, resultArrayName, mapCanonName, idxName)
+    val arrayResultType = ArrayType(mapType.element)
+    val resultArrayVar = VarModel(resultArrayName, arrayResultType)
+    SeqModel.wrap(
+      getElementTree,
+      XorModel.wrap(
+        MatchMismatchModel(
+          resultArrayVar.withProperty(FunctorModel("length", ScalarType.u32)),
+          LiteralModel.number(0),
+          true
+        ).wrap(
+          FlattenModel(LiteralModel.bool(false), resultName).leaf
+        ),
+        FlattenModel(LiteralModel.bool(true), resultName).leaf
+      )
+    )
+  }
+
+  def contains[S: Mangler: Exports: Arrows: Config](
+    mapName: String,
+    mapType: StreamMapType,
+    keyVar: ValueModel
+  ): State[S, (VarModel, Inline)] = {
+    for {
+      uniqueResultArrayName <- Mangler[S].findAndForbidName(mapName + "_result_array")
+      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_contains_result")
+      uniqueCanonName <- Mangler[S].findAndForbidName(mapName + "_canon")
+      uniqueIdxName <- Mangler[S].findAndForbidName(mapName + "_idx")
+    } yield {
+      val result = VarModel(uniqueResultName, ScalarType.bool)
+      val getKeysTree = keyContains(
+        mapName = mapName,
+        mapType = mapType,
+        keyVar = keyVar,
+        resultArrayName = uniqueResultArrayName,
+        mapCanonName = uniqueCanonName,
+        resultName = uniqueResultName,
+        idxName = uniqueIdxName
+      )
+
+      val inline = Inline(predo = Chain.one(getKeysTree))
+
+      (result, inline)
+    }
+  }
+
   def apply[S: Mangler: Exports: Arrows: Config](
     funcName: String,
     mapName: String,
@@ -131,6 +180,8 @@ object ApplyStreamMapRawInliner {
         get(mapName, mapType, arg)
       case ("getStream", arg :: Nil) =>
         getStream(mapName, mapType, arg)
+      case ("contains", arg :: Nil) =>
+        contains(mapName, mapType, arg)
       case ("keys", Nil) =>
         getKeys(mapName, mapType)
       case (n, _) =>
@@ -147,7 +198,7 @@ object ApplyStreamMapRawInliner {
     for {
       uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
       uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
-      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_result")
+      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_get_keys_result")
       uniqueCanonName <- Mangler[S].findAndForbidName(mapName + "_canon")
     } yield {
       val (value, getKeysTree) = getKeysModel(
@@ -198,32 +249,11 @@ object ApplyStreamMapRawInliner {
     mapType: StreamMapType,
     idxVar: ValueModel
   ): State[S, (VarModel, Inline)] = {
-    // get
-    // create stream
-    // canon map
-    // fold over the canonmap
-    // - if key = str
-    // -- add elements to stream
-    // convert stream to array
-    // return this array
     for {
-      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_stream_result")
+      uniqueResultName <- Mangler[S].findAndForbidName(mapName + "_get_result")
       uniqueCanonMapName <- Mangler[S].findAndForbidName(mapName + "_canon")
-      uniqueCanonStreamName <- Mangler[S].findAndForbidName(mapName + "_canon_stream")
-      uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
-      uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
       uniqueIdxName <- Mangler[S].findAndForbidName(mapName + "_idx")
     } yield {
-      /*val gate = getElementFromMapModel(
-        mapName = mapName,
-        mapType = mapType,
-        idxVar = idxVar,
-        streamName = uniqueStreamName,
-        streamCanonName = uniqueCanonStreamName,
-        iterName = uniqueIterName,
-        mapCanonName = uniqueCanonMapName,
-        resultName = uniqueResultName
-      )*/
       val getResultTree = getElement(
         mapName,
         mapType,

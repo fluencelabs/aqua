@@ -58,7 +58,8 @@ import {
 import {
   testGetFuncCall,
   testGetStreamFuncCall,
-  testKeysFuncCall
+  testKeysFuncCall,
+  testContainsFuncCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
@@ -871,6 +872,11 @@ describe("Testing examples", () => {
       expect(resFirst).toEqual(["key one"]);
       expect(resSecond).toEqual(["key one", "key two"]);
   });
+
+  it("streamMap.aqua contains function call", async () => {
+        let res = await testContainsFuncCall();
+        expect(res).toEqual([false, true, false, true, true]);
+    });
 
   it("stream.aqua", async () => {
     let streamResult = await streamCall();
