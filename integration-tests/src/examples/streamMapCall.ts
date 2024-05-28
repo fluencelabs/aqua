@@ -1,5 +1,5 @@
 import {
-  testGetFunc, testGetStreamFunc, testKeysFunc, testContainsFunc
+  testGetFunc, testGetStreamFunc, testKeysFunc, testContainsFunc, testForFunc
 } from "../compiled/examples/streamMap.js";
 
 export async function testGetFuncCall() {
@@ -16,5 +16,9 @@ export async function testKeysFuncCall() {
 
 export async function testContainsFuncCall() {
   return testContainsFunc();
+}
+
+export async function testForFuncCall() {
+  return testForFunc();
 }
 

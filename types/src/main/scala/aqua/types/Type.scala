@@ -374,6 +374,9 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
     "contains" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ScalarType.bool :: Nil))
   )
 
+  def iterType(name: String) =
+    StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> ArrayType(element)))
+
 }
 
 object StreamMapType {

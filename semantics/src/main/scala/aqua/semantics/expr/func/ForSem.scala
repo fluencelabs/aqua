@@ -9,6 +9,7 @@ import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
@@ -26,8 +27,8 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
   def program[F[_]: Monad](using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
-    T: TypesAlgebra[S, F],
-    A: AbilitiesAlgebra[S, F]
+    A: AbilitiesAlgebra[S, F],
+    M: ManglerAlgebra[F]
   ): Prog[F, Raw] =
     Prog
       .around(
@@ -81,12 +82,18 @@ object ForSem {
   )(using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
-    T: TypesAlgebra[S, F]
+    M: ManglerAlgebra[F]
   ): F[Option[ValueRaw]] = (for {
     value <- V.valueToIterable(iterable)
     (raw, typ) = value
+    itemType <- typ match {
+      case smt: StreamMapType =>
+        val typeName = "-streamMapIter-"
+        OptionT.liftF(M.rename(typeName).map(s => smt.iterType(s)))
+      case _ => OptionT.some(typ.element)
+    }
     _ <- OptionT.liftF(
-      N.define(item, typ.element)
+      N.define(item, itemType)
     )
   } yield raw).value
 }

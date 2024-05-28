@@ -15,9 +15,6 @@ import cats.syntax.option.*
 
 object ApplyStreamMapRawInliner {
 
-  private def getIterType(name: String, el: DataType) =
-    StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> ArrayType(el)))
-
   private def getStreamFromMapModel(
     mapName: String,
     mapType: StreamMapType,
@@ -28,7 +25,7 @@ object ApplyStreamMapRawInliner {
     val mapVar = VarModel(mapName, mapType)
     val arrayResultType = ArrayType(mapType.element)
     val streamVar = VarModel(streamName, StreamType(arrayResultType))
-    val iter = VarModel(iterName, getIterType("iterName_type", mapType.element))
+    val iter = VarModel(iterName, mapType.iterType("iterName_type"))
     ParModel.wrap(
       ForModel(iter.name, mapVar, ForModel.Mode.Never).wrap(
         XorModel.wrap(
@@ -67,7 +64,7 @@ object ApplyStreamMapRawInliner {
     val arrayResultType = ArrayType(mapType.element)
     val streamVar = VarModel(streamName, StreamType(ScalarType.string))
     val canonMap = VarModel(canonName, CanonStreamMapType(arrayResultType))
-    val iter = VarModel(iterName, getIterType("iterName_type", mapType.element))
+    val iter = VarModel(iterName, mapType.iterType("iterName_type"))
     val result = VarModel(resultName, CanonStreamType(ScalarType.string))
     result -> RestrictionModel(streamVar.name, streamVar.`type`).wrap(
       CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,

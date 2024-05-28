@@ -59,7 +59,8 @@ import {
   testGetFuncCall,
   testGetStreamFuncCall,
   testKeysFuncCall,
-  testContainsFuncCall
+  testContainsFuncCall,
+  testForFuncCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
@@ -853,30 +854,36 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua get function call", async () => {
-      let [resEmpty, resFirst, resSecond] = await testGetFuncCall();
-      expect(resEmpty).toEqual([]);
-      expect(resFirst).toEqual(["first value"]);
-      expect(resSecond).toEqual(["first value", "second value"]);
-    });
+    let [resEmpty, resFirst, resSecond] = await testGetFuncCall();
+    expect(resEmpty).toEqual([]);
+    expect(resFirst).toEqual(["first value"]);
+    expect(resSecond).toEqual(["first value", "second value"]);
+  });
 
   it("streamMap.aqua get stream function call", async () => {
-      let [resEmpty, resFirst, resSecond] = await testGetStreamFuncCall();
-      expect(resEmpty).toEqual([]);
-      expect(resFirst).toEqual("first value");
-      expect(resSecond).toEqual("second value");
+    let [resEmpty, resFirst, resSecond] = await testGetStreamFuncCall();
+    expect(resEmpty).toEqual([]);
+    expect(resFirst).toEqual("first value");
+    expect(resSecond).toEqual("second value");
   });
 
   it("streamMap.aqua keys function call", async () => {
-      let [resEmpty, resFirst, resSecond] = await testKeysFuncCall();
-      expect(resEmpty).toEqual([]);
-      expect(resFirst).toEqual(["key one"]);
-      expect(resSecond).toEqual(["key one", "key two"]);
+    let [resEmpty, resFirst, resSecond] = await testKeysFuncCall();
+    expect(resEmpty).toEqual([]);
+    expect(resFirst).toEqual(["key one"]);
+    expect(resSecond).toEqual(["key one", "key two"]);
   });
 
   it("streamMap.aqua contains function call", async () => {
-        let res = await testContainsFuncCall();
-        expect(res).toEqual([false, true, false, true, true]);
-    });
+    let res = await testContainsFuncCall();
+    expect(res).toEqual([false, true, false, true, true]);
+  });
+
+  it("streamMap.aqua call with for over map", async () => {
+    let [keys, values] = await testForFuncCall();
+    expect(keys).toEqual(["key one", "key two", "key three", "key four"]);
+    expect(values).toEqual([["1", "2"], ["3", "4", "5"], ["6"], ["7"]);
+  });
 
   it("stream.aqua", async () => {
     let streamResult = await streamCall();

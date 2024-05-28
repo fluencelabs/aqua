@@ -8,6 +8,7 @@ import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, CollectionType, StreamType}
@@ -26,7 +27,8 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F],
-    A: AbilitiesAlgebra[S, F]
+    A: AbilitiesAlgebra[S, F],
+    M: ManglerAlgebra[F]
   ): Prog[F, Raw] =
     Prog
       .around(
@@ -49,10 +51,7 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
     viaVM: List[ValueRaw],
     ops: Raw
   )(using
-    V: ValuesAlgebra[S, F],
-    N: NamesAlgebra[S, F],
-    T: TypesAlgebra[S, F],
-    A: AbilitiesAlgebra[S, F]
+    V: ValuesAlgebra[S, F]
   ): F[Raw] =
     V.valueToRaw(expr.peerId).map((_, iterableVM, ops)).flatMap {
       case (Some(peerId), Some(vm), FuncOp(op)) =>
