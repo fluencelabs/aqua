@@ -46,7 +46,9 @@ sealed trait Type {
    */
   def airPrefix: String = this match {
     case _: StreamType => "$"
-    case _: CanonStreamType => "#"
+    case _: CanonStreamType => "#$"
+    case _: StreamMapType => "%"
+    case _: CanonStreamMapType => "#%"
     case _ => ""
   }
 }
@@ -320,7 +322,7 @@ case class CanonStreamType(
 
   override val isStream: Boolean = false
 
-  override def toString: String = "#" + element
+  override def toString: String = "#$" + element
 
   override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }

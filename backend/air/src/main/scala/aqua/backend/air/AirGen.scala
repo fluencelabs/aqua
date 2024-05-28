@@ -29,7 +29,7 @@ object AirGen extends Logging {
   def varNameToString(name: String, `type`: Type): String =
     (`type` match {
       case _: StreamType => "$" + name
-      case _: CanonStreamType => "#" + name
+      case _: CanonStreamType => "#$" + name
       case _: CanonStreamMapType => "#%" + name
       case _: StreamMapType => "%" + name
       case _ => name
