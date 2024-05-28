@@ -2,14 +2,14 @@ aqua Job declares *
 
 export testForFunc
 
-func testForFunc() -> []string, [][]string:
+func testForFunc() -> []string, []string:
   streamMap: %string
   streamMap <<- ("key one", "1")
   streamMap <<- ("key one", "2")
   streamMap <<- ("key two", "3")
 
   streamKeys: *string
-  streamValues: *[]string
+  streamValues: *string
 
   for kv <- streamMap:
     streamKeys <<- kv.key
