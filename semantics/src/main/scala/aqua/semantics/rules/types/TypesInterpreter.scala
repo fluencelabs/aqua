@@ -303,7 +303,7 @@ class TypesInterpreter[S[_], X](using
         locations.pointFieldLocation(ab.name, opName, op) *>
           checkArrowType(op, ab.fields.lookup(opName), abName, avStr, types)
       case st: StreamMapType =>
-        checkArrowType(op, st.arrows.get(opName), st.toString, st.toString, types)
+        checkArrowType(op, st.funcByString(opName), st.toString, st.toString, types)
       case t =>
         /* NOTE: Arrows are only supported on services and abilities,
            (`.copy(...)` for structs is resolved by separate method) */

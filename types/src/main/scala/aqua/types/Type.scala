@@ -362,19 +362,30 @@ case class OptionType(
 
 case class StreamMapType(override val element: DataType) extends MutableStreamType {
 
+  import StreamMapType.Func
+  import StreamMapType.Func.*
+
   override val isStream: Boolean = true
 
   override def withElement(t: DataType): MutableStreamType = copy(element = t)
 
   override def toString: String = s"%$element"
 
-  val arrows: Map[String, ArrowType] = Map(
-    "get" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ArrayType(element) :: Nil)),
-    "getStream" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(StreamType(element) :: Nil)),
-    "keys" -> ArrowType(NilType, ProductType(ArrayType(ScalarType.string) :: Nil)),
-    "keysStream" -> ArrowType(NilType, ProductType(StreamType(ScalarType.string) :: Nil)),
-    "contains" -> ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ScalarType.bool :: Nil))
-  )
+  def getFunc(f: Func): ArrowType =
+    f match {
+      case Get =>
+        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ArrayType(element) :: Nil))
+      case GetStream =>
+        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(StreamType(element) :: Nil))
+      case Keys => ArrowType(NilType, ProductType(ArrayType(ScalarType.string) :: Nil))
+      case KeysStream => ArrowType(NilType, ProductType(StreamType(ScalarType.string) :: Nil))
+      case Contains =>
+        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ScalarType.bool :: Nil))
+    }
+
+  def funcByString(s: String): Option[ArrowType] = {
+    StreamMapType.funcByString(s).map(getFunc)
+  }
 
   def iterType(name: String): StructType =
     StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> element))
@@ -382,6 +393,22 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
 }
 
 object StreamMapType {
+
+  enum Func:
+    case Get, GetStream, Keys, KeysStream, Contains
+
+  import Func.*
+
+  def funcByString(s: String): Option[Func] =
+    s match {
+      case "get" => Some(Get)
+      case "getStream" => Some(GetStream)
+      case "keys" => Some(Keys)
+      case "keysStream" => Some(KeysStream)
+      case "contains" => Some(Contains)
+      case _ => None
+    }
+
   def top(): StreamMapType = StreamMapType(TopType)
 }
 

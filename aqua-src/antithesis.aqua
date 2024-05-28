@@ -2,16 +2,7 @@ aqua Job declares *
 
 export testForFunc
 
-func testForFunc() -> []string, []string:
+func testForFunc() -> bool:
   streamMap: %string
-  streamMap <<- ("key one", "1")
-  streamMap <<- ("key one", "2")
-  streamMap <<- ("key two", "3")
-
-  streamKeys: *string
-  streamValues: *string
-
-  for kv <- streamMap:
-    streamKeys <<- kv.key
-    streamValues <<- kv.value
-  <- streamKeys, streamValues
+  res = streamMap.contains("key")
+  <- res

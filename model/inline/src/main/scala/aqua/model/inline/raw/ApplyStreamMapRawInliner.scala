@@ -1,12 +1,23 @@
 package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
-import aqua.model.{SeqModel, *}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.*
+import aqua.model.{SeqModel, *}
 import aqua.raw.value.IntoArrowRaw
-import aqua.types.{ArrayType, CanonStreamMapType, CanonStreamType, DataType, ScalarType, StreamMapType, StreamType, StructType}
+import aqua.types.StreamMapType.Func.*
+import aqua.types.{
+  ArrayType,
+  CanonStreamMapType,
+  CanonStreamType,
+  DataType,
+  ScalarType,
+  StreamMapType,
+  StreamType,
+  StructType
+}
+
 import cats.data.NonEmptyMap
 import cats.data.{Chain, State}
 import cats.syntax.applicative.*
@@ -166,28 +177,6 @@ object ApplyStreamMapRawInliner {
     }
   }
 
-  def apply[S: Mangler: Exports: Arrows: Config](
-    funcName: String,
-    mapName: String,
-    mapType: StreamMapType,
-    args: List[ValueModel]
-  ): State[S, (VarModel, Inline)] = {
-    (funcName, args) match {
-      case ("get", arg :: Nil) =>
-        get(mapName, mapType, arg)
-      case ("getStream", arg :: Nil) =>
-        getStream(mapName, mapType, arg)
-      case ("contains", arg :: Nil) =>
-        contains(mapName, mapType, arg)
-      case ("keys", Nil) =>
-        getKeys(mapName, mapType)
-      case (n, _) =>
-        internalError(
-          s"StreamMap '$mapName' doesn't support function '$n''"
-        )
-    }
-  }
-
   def getKeys[S: Mangler: Exports: Arrows: Config](
     mapName: String,
     mapType: StreamMapType
@@ -268,5 +257,35 @@ object ApplyStreamMapRawInliner {
 
       (value, inline)
     }
+  }
+
+  def apply[S: Mangler: Exports: Arrows: Config](
+    funcName: String,
+    mapName: String,
+    mapType: StreamMapType,
+    args: List[ValueModel]
+  ): State[S, (VarModel, Inline)] = {
+    StreamMapType
+      .funcByString(funcName)
+      .map(_ -> args)
+      .map {
+        case (Get, arg :: Nil) =>
+          get(mapName, mapType, arg)
+        case (GetStream, arg :: Nil) =>
+          getStream(mapName, mapType, arg)
+        case (Contains, arg :: Nil) =>
+          contains(mapName, mapType, arg)
+        case (Keys, Nil) =>
+          getKeys(mapName, mapType)
+        case (n, args) =>
+          internalError(
+            s"StreamMap '$mapName' has wrong arguments '$args' for function '$n'"
+          )
+      }
+      .getOrElse {
+        internalError(
+          s"StreamMap '$mapName' doesn't support function '$funcName''"
+        )
+      }
   }
 }
