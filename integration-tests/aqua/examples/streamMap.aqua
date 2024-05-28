@@ -47,7 +47,7 @@ func testContainsFunc() -> bool, bool, bool, bool, bool:
   resFifth = streamMap.contains(keyTwo)
   <- resFirst, resSecond, resThird, resFourth, resFifth
 
-func testForFunc() -> []string, [][]string:
+func testForFunc() -> []string, []string:
   streamMap: %string
   streamMap <<- ("key one", "1")
   streamMap <<- ("key one", "2")
@@ -61,7 +61,7 @@ func testForFunc() -> []string, [][]string:
   streamMap <<- ("key four", "7")
 
   streamKeys: *string
-  streamValues: *[]string
+  streamValues: *string
 
   for kv <- streamMap:
     streamKeys <<- kv.key
