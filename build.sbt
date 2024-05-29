@@ -1,6 +1,6 @@
 import BundleJS.*
 
-val aquaVersion = "0.14.7"
+val aquaVersion = "0.14.8"
 
 val scalaV = "3.4.2"
 val catsV = "2.10.0"
