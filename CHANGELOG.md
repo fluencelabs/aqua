@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.8](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.7...aqua-v0.14.8) (2024-05-29)
+
+
+### Features
+
+* **compiler:** Add extension to imports on preparing import tokens ([7468f6f](https://github.com/fluencelabs/aqua/commit/7468f6fd18a68eadfe1f94b98c19b1be9f38eee8))
+
 ## [0.14.7](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.6...aqua-v0.14.7) (2024-05-14)
 
 
