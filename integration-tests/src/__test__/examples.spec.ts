@@ -59,6 +59,7 @@ import {
   testGetFuncCall,
   testGetStreamFuncCall,
   testKeysFuncCall,
+  testKeysStreamFuncCall,
   testContainsFuncCall,
   testForFuncCall
 } from "../examples/streamMapCall.js";
@@ -873,6 +874,13 @@ describe("Testing examples", () => {
     expect(resFirst).toEqual(["key one"]);
     expect(resSecond).toEqual(["key one", "key two"]);
   });
+
+  it("streamMap.aqua keysStream function call", async () => {
+      let [resEmpty, resFirst, resSecond] = await testKeysStreamFuncCall();
+      expect(resEmpty).toEqual([]);
+      expect(resFirst).toEqual(["key one"]);
+      expect(resSecond).toEqual(["key one", "key one", "key two"]);
+    });
 
   it("streamMap.aqua contains function call", async () => {
     let res = await testContainsFuncCall();

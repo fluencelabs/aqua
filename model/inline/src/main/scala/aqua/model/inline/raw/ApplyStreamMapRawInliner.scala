@@ -63,6 +63,31 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  private def getKeysStreamModel(
+    mapName: String,
+    mapType: StreamMapType,
+    streamName: String,
+    iterName: String
+  ): (VarModel, OpModel.Tree) = {
+    val mapVar = VarModel(mapName, mapType)
+    val arrayResultType = ArrayType(mapType.element)
+    val streamVar = VarModel(streamName, StreamType(arrayResultType))
+    val iter = VarModel(iterName, mapType.iterType("iterName_type"))
+    streamVar -> ParModel.wrap(
+      ForModel(iter.name, mapVar, ForModel.Mode.Never).wrap(
+        PushToStreamModel(
+          iter
+            .withProperty(
+              IntoFieldModel("key", arrayResultType)
+            ),
+          CallModel.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        NextModel(iter.name).leaf
+      ),
+      NullModel.leaf
+    )
+  }
+
   private def getKeysModel(
     mapName: String,
     mapType: StreamMapType,
@@ -202,6 +227,27 @@ object ApplyStreamMapRawInliner {
     }
   }
 
+  def getKeysStream[S: Mangler: Exports: Arrows: Config](
+    mapName: String,
+    mapType: StreamMapType
+  ): State[S, (VarModel, Inline)] = {
+    for {
+      uniqueStreamName <- Mangler[S].findAndForbidName(mapName + "_stream")
+      uniqueIterName <- Mangler[S].findAndForbidName(mapName + "_iter")
+    } yield {
+      val (value, getKeysTree) = getKeysStreamModel(
+        mapName = mapName,
+        mapType = mapType,
+        streamName = uniqueStreamName,
+        iterName = uniqueIterName
+      )
+
+      val inline = Inline(predo = Chain.one(getKeysTree))
+
+      (value, inline)
+    }
+  }
+
   def getStream[S: Mangler: Exports: Arrows: Config](
     mapName: String,
     mapType: StreamMapType,
@@ -277,6 +323,8 @@ object ApplyStreamMapRawInliner {
           contains(mapName, mapType, arg)
         case (Keys, Nil) =>
           getKeys(mapName, mapType)
+        case (KeysStream, Nil) =>
+          getKeysStream(mapName, mapType)
         case (n, args) =>
           internalError(
             s"StreamMap '$mapName' has wrong arguments '$args' for function '$n'"
