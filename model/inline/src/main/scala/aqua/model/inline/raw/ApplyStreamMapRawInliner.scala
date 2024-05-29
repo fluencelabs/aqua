@@ -30,6 +30,9 @@ object ApplyStreamMapRawInliner {
   private def mang[S: Mangler](name: String, suffix: String): State[S, String] =
     Mangler[S].findAndForbidName(s"-${name}_$suffix-")
 
+  // - fold a map in parallel
+  // - when a key matches index, push result to a stream
+  // - return the stream
   private def getStreamModel(
     mapName: String,
     mapType: StreamMapType,
@@ -67,6 +70,10 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  // - create a stream
+  // - fold over the map in parallel
+  // - push keys to the stream
+  // - return stream
   private def getKeysStreamModel(
     mapName: String,
     mapType: StreamMapType,
@@ -92,6 +99,10 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  // - canonicalize the map
+  // - create a stream
+  // - fold over map and push all keys to the stream
+  // - canonicalize the stream
   private def keysModel(
     mapName: String,
     mapType: StreamMapType,
@@ -123,6 +134,8 @@ object ApplyStreamMapRawInliner {
 
   }
 
+  // - canonicalize map
+  // - get a key as from JSON object
   private def getModel(
     mapName: String,
     mapType: StreamMapType,
@@ -151,6 +164,9 @@ object ApplyStreamMapRawInliner {
     )
   }
 
+  // - get elements by key
+  // - check if an array is empty
+  // - return this check
   private def containsModel(
     mapName: String,
     mapType: StreamMapType,
