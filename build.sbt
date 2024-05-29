@@ -1,6 +1,6 @@
 import BundleJS.*
 
-val aquaVersion = "0.14.7"
+val aquaVersion = "0.14.8"
 
 val scalaV = "3.4.2"
 val catsV = "2.10.0"
@@ -8,7 +8,7 @@ val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.18"
 val scalaTestScalaCheckV = "3.2.18.0"
-val sourcecodeV = "0.4.1"
+val sourcecodeV = "0.4.2"
 // Snapshot is used to get latest fixes
 val fs2V = "3.10.2"
 val catsEffectV = "3.6-1f95fd7"
