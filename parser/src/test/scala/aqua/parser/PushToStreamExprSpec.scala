@@ -18,4 +18,14 @@ class PushToStreamExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       PushToStreamExpr[Id]("a", Right(toVar("b")))
     )
   }
+
+  "assign with tuple" should "be parsed" in {
+    parsePush("a <<- (\"b\", \"c\")") should be(
+      PushToStreamExpr[Id]("a", Left((toStr("b"), toStr("c"))))
+    )
+
+    parsePush("a <<- (b, c)") should be(
+      PushToStreamExpr[Id]("a", Left((toVar("b"), toVar("c"))))
+    )
+  }
 }
