@@ -2,8 +2,7 @@ package aqua.semantics.header
 
 import aqua.helpers.data.PName
 import aqua.raw.{RawContext, RawPart}
-import aqua.types.{AbilityType, ArrowType, Type}
-
+import aqua.types.{AbilityType, ArrowType, StreamMapType, Type}
 import cats.Semigroup
 import cats.syntax.foldable.*
 import cats.syntax.semigroup.*
@@ -81,16 +80,18 @@ object Picker {
       Picker[A].setExports(p, exports)
   }
 
-  private def returnsAbilityOrArrow(arrowType: ArrowType): Boolean =
+  private def returnsAbilityOrArrowOrStreamMap(arrowType: ArrowType): Boolean =
     arrowType.codomain.toList.exists {
       case _: AbilityType => true
       case _: ArrowType => true
+      case _: StreamMapType => true
       case _ => false
     }
 
-  private def acceptsAbility(arrowType: ArrowType): Boolean =
+  private def acceptsAbilityOrStreamMap(arrowType: ArrowType): Boolean =
     arrowType.domain.toList.exists {
       case _: AbilityType => true
+      case _: StreamMapType => true
       case _ => false
     }
 
@@ -111,10 +112,10 @@ object Picker {
       ctx.types.get(name).exists(isAbilityType)
 
     override def funcReturnAbilityOrArrow(ctx: RawContext, name: String): Boolean =
-      ctx.funcs.get(name).map(_.arrow.`type`).exists(returnsAbilityOrArrow)
+      ctx.funcs.get(name).map(_.arrow.`type`).exists(returnsAbilityOrArrowOrStreamMap)
 
     override def funcAcceptAbility(ctx: RawContext, name: String): Boolean =
-      ctx.funcs.get(name).map(_.arrow.`type`).exists(acceptsAbility)
+      ctx.funcs.get(name).map(_.arrow.`type`).exists(acceptsAbilityOrStreamMap)
 
     override def funcNames(ctx: RawContext): Set[String] = ctx.funcs.keySet
 

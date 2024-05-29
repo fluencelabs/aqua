@@ -2,12 +2,6 @@ aqua Job declares *
 
 export testKeysStreamFunc
 
-func testKeysStreamFunc() -> []string, []string, []string:
+func testKeysStreamFunc() -> %string:
   streamMap: %string
-  resEmpty = streamMap.keysStream()
-  streamMap <<- ("key one", "")
-  resFirst = streamMap.keysStream()
-  streamMap <<- ("key one", "new")
-  streamMap <<- ("key two", "")
-  resSecond = streamMap.keysStream()
-  <- resEmpty, resFirst, resSecond
+  <- streamMap
