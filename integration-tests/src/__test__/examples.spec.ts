@@ -12,6 +12,9 @@ import {
 import { dataAliasCall } from "../examples/dataAliasCall.js";
 import { onCall } from "../examples/onCall.js";
 import {
+  testParSeqCall
+} from "../examples/parSeqCall.js";
+import {
   onPropagateCall,
   nestedOnPropagateCall,
   seqOnPropagateCall,
@@ -936,6 +939,11 @@ describe("Testing examples", () => {
   it("streamCan.aqua", async () => {
     let streamCanResult = await streamCanCall();
     expect(streamCanResult).toEqual(["a", "b", null]);
+  });
+
+  it("parseq.aqua", async () => {
+    let res = await testParSeqCall();
+    expect(res).toEqual("ok");
   });
 
   it("streamCallback.aqua", async () => {

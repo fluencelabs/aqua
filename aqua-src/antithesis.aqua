@@ -1,7 +1,35 @@
 aqua Job declares *
 
-export testKeysStreamFunc
+export testParSeqMap, testParSeq
 
-func testKeysStreamFunc() -> %string:
-  streamMap: %string
-  <- streamMap
+import "builtin.aqua"
+
+func testParSeqMap(relay1: string, relay2: string, relay3: string) -> string:
+  relays = [relay1, relay2, relay3]
+  map: %u64
+  map2: %u64
+  parseq r <- relays on r:
+    map <<- ("time", Peer.timestamp_ms())
+
+  for r <- relays par:
+    on r:
+      join map.get("time")[relays.length - 1]
+      map2 <<- ("time", Peer.timestamp_ms())
+
+  join map2.get("time")[relays.length - 1]
+  <- "ok"
+
+func testParSeq(relay1: string, relay2: string, relay3: string) -> string:
+  relays = [relay1, relay2, relay3]
+  stream: *u64
+  stream2: *u64
+  parseq r <- relays on r:
+    stream <- Peer.timestamp_ms()
+
+  for r <- relays par:
+    on r:
+      join stream[relays.length - 1]
+      stream2 <<- Peer.timestamp_ms()
+
+  join stream2[relays.length - 1]
+  <- "ok"
