@@ -3,11 +3,11 @@ import {
   getObjAssignCall,
   getObjCall,
   getObjRelayCall,
-  getObjForCall,
+  getObjForCall
 } from "../examples/objectCall.js";
 import {
   callArrowCall,
-  reproArgsBug426Call,
+  reproArgsBug426Call
 } from "../examples/callArrowCall.js";
 import { dataAliasCall } from "../examples/dataAliasCall.js";
 import { onCall } from "../examples/onCall.js";
@@ -17,7 +17,7 @@ import {
 import {
   onPropagateCall,
   nestedOnPropagateCall,
-  seqOnPropagateCall,
+  seqOnPropagateCall
 } from "../examples/onErrorPropagation.js";
 import { errorClearCall } from "../examples/errorClear.js";
 import { handleResultErrorCall } from "../examples/handleResultError.js";
@@ -32,7 +32,7 @@ import { parCall, testTimeoutCall } from "../examples/parCall.js";
 import { complexCall } from "../examples/complex.js";
 import {
   constantsCall,
-  particleTtlAndTimestampCall,
+  particleTtlAndTimestampCall
 } from "../examples/constantsCall.js";
 import {
   abilityCall,
@@ -42,7 +42,7 @@ import {
   bugLNG258Call2,
   bugLNG258Call3,
   multipleAbilityWithClosureCall,
-  returnSrvAsAbilityCall,
+  returnSrvAsAbilityCall
 } from "../examples/abilityCall.js";
 import { bugLNG314Call, bugLNG338Call } from "../examples/abilityClosureCall.js";
 import { bugLNG346Call } from "../examples/abilityClosureRenameCall.js";
@@ -56,7 +56,7 @@ import {
   streamFunctorCall,
   streamIntFunctorCall,
   streamJoinCall,
-  streamReturnFromInnerFunc,
+  streamReturnFromInnerFunc
 } from "../examples/streamCall.js";
 import {
   testGetFuncCall,
@@ -65,6 +65,7 @@ import {
   testKeysStreamFuncCall,
   testContainsFuncCall,
   testForFuncCall,
+  testForTupleFuncCall,
   testParSeqMapCall
 } from "../examples/streamMapCall.js";
 import {
@@ -72,7 +73,7 @@ import {
   topologyBug394Call,
   topologyBug427Call,
   topologyBug257Call,
-  topologyCall,
+  topologyCall
 } from "../examples/topologyCall.js";
 import { foldJoinCall } from "../examples/foldJoinCall.js";
 import {
@@ -87,14 +88,14 @@ import {
   viaArrCall,
   viaOptCall,
   viaOptNullCall,
-  viaStreamCall,
+  viaStreamCall
 } from "../examples/viaCall.js";
 import { nestedFuncsCall } from "../examples/nestedFuncsCall.js";
 import { assignmentCall } from "../examples/assignment.js";
 import {
   boolAlgebraCall,
   compareStreamsCall,
-  compareStructsCall,
+  compareStructsCall
 } from "../examples/boolAlgebra.js";
 import { tryCatchCall } from "../examples/tryCatchCall.js";
 import { tryOtherwiseCall } from "../examples/tryOtherwiseCall.js";
@@ -107,7 +108,7 @@ import {
   streamArgsCall,
   modifyStreamCall,
   returnDerivedStreamCall,
-  lng280BugWithForEmptyStreamFuncCall,
+  lng280BugWithForEmptyStreamFuncCall
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall.js";
@@ -115,18 +116,18 @@ import {
   servicesAsAbilitiesCall,
   expectedServiceResults,
   servicesAsAbilitiesCaptureCall,
-  expectedServiceCaptureResults,
+  expectedServiceCaptureResults
 } from "../examples/servicesAsAbilities.js";
 import { streamReturnCall } from "../examples/streamReturn.js";
 import {
   streamCaptureSimpleCall,
-  streamCaptureReturnCall,
+  streamCaptureReturnCall
 } from "../examples/streamCapture.js";
 import {
   streamIfCall,
   streamForCall,
   streamTryCall,
-  streamComplexCall,
+  streamComplexCall
 } from "../examples/streamScopes.js";
 import { pushToStreamCall } from "../examples/pushToStreamCall.js";
 import { literalCall } from "../examples/returnLiteralCall.js";
@@ -146,21 +147,21 @@ import {
   bugLNG63_2Call,
   bugLNG63_3Call,
   bugLNG63Call,
-  streamCanCall,
+  streamCanCall
 } from "../examples/streamCanCall.js";
 import { streamCallbackCall } from "../examples/streamCallback.js";
 import { streamResCall } from "../examples/streamRestrictionsCall.js";
 import {
   joinIdxCall,
   joinIdxLocalCall,
-  joinIdxRelayCall,
+  joinIdxRelayCall
 } from "../examples/joinCall.js";
 import { renameVarsCall } from "../examples/renameVars.js";
 import {
   arraySugarCall,
   bugLNG59Call,
   optionSugarCall,
-  streamSugarCall,
+  streamSugarCall
 } from "../examples/collectionSugarCall.js";
 import { funcsCall, bugLNG260Call } from "../examples/funcsCall.js";
 import { nestedDataCall } from "../examples/nestedDataCall.js";
@@ -170,7 +171,7 @@ import {
   mathTestI16Call,
   mathTestI32Call,
   mathTestI64Call,
-  mathTestU64Call,
+  mathTestU64Call
 } from "../examples/mathCall.js";
 import { lng58Bug } from "../compiled/examples/closures.js";
 import { config, isEphemeral } from "../config.js";
@@ -178,7 +179,7 @@ import { bugLng79Call } from "../examples/canonCall.js";
 import { bugLng119Call } from "../examples/functorsCall.js";
 import {
   returnArrowCall,
-  returnArrowChainCall,
+  returnArrowChainCall
 } from "../examples/returnArrowCall.js";
 import { rangeCall } from "../examples/recursiveStreams/rangeCall.js";
 import { nestedCall } from "../examples/recursiveStreams/nestedCall.js";
@@ -224,7 +225,7 @@ describe("Testing examples", () => {
     registerPrintln({
       print: (arg0) => {
         console.dir(arg0);
-      },
+      }
     });
   }, 12000);
 
@@ -265,7 +266,7 @@ describe("Testing examples", () => {
         expect(yesNo).toEqual(
           range(0, i)
             .map((_) => "yes")
-            .concat(["no"]),
+            .concat(["no"])
         );
       }
     }, 15000);
@@ -327,7 +328,7 @@ describe("Testing examples", () => {
       "third",
       "thirdarg for func2  second literal",
       "fourth",
-      "fourth from second literal",
+      "fourth from second literal"
     ]);
   });
 
@@ -446,7 +447,7 @@ describe("Testing examples", () => {
     let result = await arraySugarCall();
     expect(result).toEqual([
       [1, 2, 3],
-      [4, 5, 6],
+      [4, 5, 6]
     ]);
   });
 
@@ -457,8 +458,8 @@ describe("Testing examples", () => {
       num: 5,
       inner: {
         arr: ["a", "b", "c"],
-        num: 6,
-      },
+        num: 6
+      }
     });
   });
 
@@ -470,49 +471,49 @@ describe("Testing examples", () => {
         num: 1,
         inner: {
           arr: ["copy"],
-          num: 11,
-        },
+          num: 11
+        }
       },
       {
         str: "second copied",
         num: 2,
         inner: {
           arr: ["copy"],
-          num: 22,
-        },
+          num: 22
+        }
       },
       {
         str: "third copied",
         num: 3,
         inner: {
           arr: ["copy"],
-          num: 33,
-        },
+          num: 33
+        }
       },
       {
         str: "for",
         num: 1,
         inner: {
           arr: [],
-          num: 1,
-        },
+          num: 1
+        }
       },
       {
         str: "for",
         num: 2,
         inner: {
           arr: [],
-          num: 2,
-        },
+          num: 2
+        }
       },
       {
         str: "for",
         num: 3,
         inner: {
           arr: [],
-          num: 3,
-        },
-      },
+          num: 3
+        }
+      }
     ];
     expect(result).toEqual(res);
   });
@@ -525,18 +526,18 @@ describe("Testing examples", () => {
         num: 5,
         inner: {
           arr: ["d", "e", "f"],
-          num: 7,
-        },
+          num: 7
+        }
       },
       {
         str: "some str",
         num: 6,
         inner: {
           arr: ["a", "b", "c"],
-          num: 7,
-        },
+          num: 7
+        }
       },
-      1,
+      1
     ]);
   });
 
@@ -544,7 +545,7 @@ describe("Testing examples", () => {
     let result = await streamSugarCall();
     expect(result).toEqual([
       [1, 2, 3],
-      [4, 5, 6],
+      [4, 5, 6]
     ]);
   });
 
@@ -597,7 +598,7 @@ describe("Testing examples", () => {
       "some-str",
       [1, 2],
       null,
-      10,
+      10
     ]);
   });
 
@@ -638,8 +639,8 @@ describe("Testing examples", () => {
     let nestedDataResult = await nestedDataCall();
     expect(nestedDataResult).toEqual({
       one: {
-        val: "hellohello",
-      },
+        val: "hellohello"
+      }
     });
   });
 
@@ -649,7 +650,7 @@ describe("Testing examples", () => {
       "declare_const123",
       "efre123",
       "declare_const123",
-      12,
+      12
     ]);
   });
 
@@ -690,14 +691,14 @@ describe("Testing examples", () => {
   });
 
   it("abilitiesClosure.aqua bug LNG-338", async () => {
-      let result = await bugLNG338Call();
-      expect(result).toEqual("job done");
-    });
+    let result = await bugLNG338Call();
+    expect(result).toEqual("job done");
+  });
 
   it("abilitiesClosureRename.aqua bug LNG-346", async () => {
-      let result = await bugLNG346Call();
-      expect(result).toEqual("hello");
-    });
+    let result = await bugLNG346Call();
+    expect(result).toEqual("hello");
+  });
 
   it("functors.aqua LNG-119 bug", async () => {
     let result = await bugLng119Call();
@@ -722,12 +723,12 @@ describe("Testing examples", () => {
   it("streamArgs.aqua modify stream", async () => {
     let streamArgsResult = await modifyStreamCall([
       "passed value 1",
-      "passed value 2",
+      "passed value 2"
     ]);
     expect(streamArgsResult).toEqual([
       "passed value 1",
       "passed value 2",
-      "appended value",
+      "appended value"
     ]);
   });
 
@@ -744,7 +745,7 @@ describe("Testing examples", () => {
       "valueUseStream",
       "valueReturnStream",
       "valueUseStream",
-      "valueReturnStream",
+      "valueReturnStream"
     ]);
   });
 
@@ -755,7 +756,7 @@ describe("Testing examples", () => {
       [1, 2],
       [1, 3],
       [1, 4],
-      [1, 5],
+      [1, 5]
     ]);
   });
 
@@ -766,7 +767,7 @@ describe("Testing examples", () => {
       [1, 2],
       [1, 3],
       [1, 4],
-      [1, 5],
+      [1, 5]
     ]);
   });
 
@@ -791,14 +792,14 @@ describe("Testing examples", () => {
   });
 
   it("closureStreamScopes.aqua simple", async () => {
-      let result = await simpleStreamScopeCall();
-      // it is not hanging
-      expect(result).toEqual(["result"]);
+    let result = await simpleStreamScopeCall();
+    // it is not hanging
+    expect(result).toEqual(["result"]);
   });
 
   it("closureStreamScopes.aqua complex", async () => {
-      let result = await complexStreamScopeCall();
-      expect(result).toEqual([["something in INSIDE", "something out INSIDE"], ["something out OUTSIDE"]]);
+    let result = await complexStreamScopeCall();
+    expect(result).toEqual([["something in INSIDE", "something out INSIDE"], ["something out OUTSIDE"]]);
   });
 
   // TODO: Unskip this after LNG-226 is fixed
@@ -809,7 +810,7 @@ describe("Testing examples", () => {
       "two",
       "three",
       "four",
-      "five",
+      "five"
     ]);
   });
 
@@ -839,7 +840,7 @@ describe("Testing examples", () => {
       true,
       false,
       true,
-      false,
+      false
     ]);
   });
 
@@ -880,11 +881,11 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua keysStream function call", async () => {
-      let [resEmpty, resFirst, resSecond] = await testKeysStreamFuncCall();
-      expect(resEmpty).toEqual([]);
-      expect(resFirst).toEqual(["key one"]);
-      expect(resSecond).toEqual(["key one", "key one", "key two"]);
-    });
+    let [resEmpty, resFirst, resSecond] = await testKeysStreamFuncCall();
+    expect(resEmpty).toEqual([]);
+    expect(resFirst).toEqual(["key one"]);
+    expect(resSecond).toEqual(["key one", "key one", "key two"]);
+  });
 
   it("streamMap.aqua contains function call", async () => {
     let res = await testContainsFuncCall();
@@ -895,6 +896,14 @@ describe("Testing examples", () => {
     let [keys, values] = await testForFuncCall();
     expect(keys).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
     expect(values).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+  });
+
+  it("streamMap.aqua call with for with tuples over map", async () => {
+    let [arr1, arr2] = await testForFuncCall();
+    expect(arr1).toEqual(["1", "2", "3", "4", "5", "6", "7",
+      "key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
+    expect(arr2).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four",
+      "1", "2", "3", "4", "5", "6", "7"]);
   });
 
   it("streamMap.aqua call with parseq over map", async () => {
@@ -908,7 +917,7 @@ describe("Testing examples", () => {
       "first updated",
       "second updated",
       "third updated",
-      "fourth updated",
+      "fourth updated"
     ]);
     // bug LNG-84
     let returnNilResult = await returnNilCall();
@@ -970,7 +979,7 @@ describe("Testing examples", () => {
   it("declare.aqua", async () => {
     let declareResult = await declareCall();
     expect(declareResult).toBe(
-      "small_foodeclare all barsmall_fooexport_constdeclare_constdeclare_const2",
+      "small_foodeclare all barsmall_fooexport_constdeclare_constdeclare_const2"
     );
   });
 
@@ -1042,7 +1051,7 @@ describe("Testing examples", () => {
   it("onErrorPropagate.aqua", async () => {
     let call = onPropagateCall(peer2, relay2.peerId);
     expect(call).rejects.toMatchObject({
-      message: expect.stringContaining("propagated error"),
+      message: expect.stringContaining("propagated error")
     });
   });
 
@@ -1052,10 +1061,10 @@ describe("Testing examples", () => {
       relay2.peerId,
       config.relays[3].peerId,
       config.relays[4].peerId,
-      config.relays[5].peerId,
+      config.relays[5].peerId
     );
     expect(call).rejects.toMatchObject({
-      message: expect.stringContaining("propagated error"),
+      message: expect.stringContaining("propagated error")
     });
   });
 
@@ -1064,10 +1073,10 @@ describe("Testing examples", () => {
       peer2,
       relay2.peerId,
       config.relays[3].peerId,
-      config.relays[4].peerId,
+      config.relays[4].peerId
     );
     expect(call).rejects.toMatchObject({
-      message: expect.stringContaining("propagated error"),
+      message: expect.stringContaining("propagated error")
     });
   });
 
@@ -1083,7 +1092,7 @@ describe("Testing examples", () => {
     // so matching with object guarantees that error was handled
     expect(call).rejects.toMatchObject({
       message: expect.stringContaining("0"),
-      error_code: expect.any(Number),
+      error_code: expect.any(Number)
     });
   });
 
@@ -1101,7 +1110,7 @@ describe("Testing examples", () => {
       "4",
       "2",
       "2",
-      selfPeerId,
+      selfPeerId
     ]);
   });
 
@@ -1112,15 +1121,15 @@ describe("Testing examples", () => {
       num: 5,
       inner: {
         arr: ["a", "b", "c"],
-        num: 6,
-      },
+        num: 6
+      }
     });
   });
 
   it("collectionSugar bug LNG-59", async () => {
     let result = await bugLNG59Call([
       config.relays[2].peerId,
-      config.relays[3].peerId,
+      config.relays[3].peerId
     ]);
     expect(result).toEqual("some str");
   });
@@ -1130,7 +1139,7 @@ describe("Testing examples", () => {
       peer1,
       relay1.peerId,
       peer2,
-      relay2.peerId,
+      relay2.peerId
     );
     expect(topologyResult).toBe("finish");
   });
@@ -1153,7 +1162,7 @@ describe("Testing examples", () => {
       peer1.getPeerId(),
       relay1.peerId,
       peer2.getPeerId(),
-      relay2.peerId,
+      relay2.peerId
     );
 
     expect(topologyResult).toEqual(selfPeerId);
@@ -1203,13 +1212,13 @@ describe("Testing examples", () => {
   });
 
   it("closures.aqua bug LNG-325", async () => {
-      let result = await lng325BugCall();
-      expect(result).toEqual("firstStream string");
+    let result = await lng325BugCall();
+    expect(result).toEqual("firstStream string");
   });
 
   it("closures.aqua bug LNG-325 two functions", async () => {
-      let result = await lng325BugTwoFuncsCall();
-      expect(result).toEqual(["firstStream string", "secondStream string"]);
+    let result = await lng325BugTwoFuncsCall();
+    expect(result).toEqual(["firstStream string", "secondStream string"]);
   });
 
   it("closureArrowCapture.aqua", async () => {

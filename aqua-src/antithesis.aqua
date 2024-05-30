@@ -1,35 +1,28 @@
 aqua Job declares *
 
-export testParSeqMap, testParSeq
+export testForTuple
 
-import "builtin.aqua"
+func testForTuple() -> []string, []string:
+  streamMap: %string
+  streamMap <<- ("key one", "1")
+  streamMap <<- ("key one", "2")
 
-func testParSeqMap(relay1: string, relay2: string, relay3: string) -> string:
-  relays = [relay1, relay2, relay3]
-  map: %u64
-  map2: %u64
-  parseq r <- relays on r:
-    map <<- ("time", Peer.timestamp_ms())
+  streamMap <<- ("key two", "3")
+  streamMap <<- ("key two", "4")
+  streamMap <<- ("key two", "5")
 
-  for r <- relays par:
-    on r:
-      join map.get("time")[relays.length - 1]
-      map2 <<- ("time", Peer.timestamp_ms())
+  streamMap <<- ("key three", "6")
 
-  join map2.get("time")[relays.length - 1]
-  <- "ok"
+  streamMap <<- ("key four", "7")
 
-func testParSeq(relay1: string, relay2: string, relay3: string) -> string:
-  relays = [relay1, relay2, relay3]
-  stream: *u64
-  stream2: *u64
-  parseq r <- relays on r:
-    stream <- Peer.timestamp_ms()
+  streamFirst: *string
+  streamSecond: *string
 
-  for r <- relays par:
-    on r:
-      join stream[relays.length - 1]
-      stream2 <<- Peer.timestamp_ms()
+  for k, v <- streamMap:
+    streamFirst <<- k
+    streamSecond <<- v
 
-  join stream2[relays.length - 1]
-  <- "ok"
+  for k, v <- streamMap:
+    streamFirst <<- v
+    streamSecond <<- k
+  <- streamFirst, streamSecond

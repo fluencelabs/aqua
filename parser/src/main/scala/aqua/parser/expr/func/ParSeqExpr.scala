@@ -11,24 +11,31 @@ import aqua.parser.lift.Span.{given, *}
 
 import cats.parse.Parser as P
 import cats.syntax.comonad.*
+import cats.syntax.either.*
 import cats.{Comonad, ~>}
 
 case class ParSeqExpr[F[_]](
-  item: Name[F],
+  item: ForExpr.NameOrPair[F],
   iterable: ValueToken[F],
   peerId: ValueToken[F],
   via: List[ValueToken[F]]
-) extends Expr[F](ParSeqExpr, item) {
+) extends Expr[F](ParSeqExpr, iterable) {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ParSeqExpr[K] =
-    copy(item.mapK(fk), iterable.mapK(fk), peerId.mapK(fk), via.map(_.mapK(fk)))
+    copy(
+      item.bimap(p => (p._1.mapK(fk), p._2.mapK(fk)), v => v.mapK(fk)),
+      iterable.mapK(fk),
+      peerId.mapK(fk),
+      via.map(_.mapK(fk))
+    )
 }
 
 object ParSeqExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
-  private lazy val parseqPart = (`parseq` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value`
+  private lazy val parseqPart =
+    (`parseq` *> ` ` *> ForExpr.nameOrPair <* ` <- `) ~ ValueToken.`value`
 
   private lazy val onPart =
     `on` *> ` ` *> ValueToken.`value` ~ (` ` *> `via` *> ` ` *> ValueToken.`value`).rep0

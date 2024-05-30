@@ -61,16 +61,18 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
           strategy = OnTag.ReturnStrategy.Relay.some
         )
 
+        val (item, pair) = ForSem.itemOrPair(expr.item)
+
         /**
          * `parseq` => par (`never` as `last` in `fold`)
          * So that peer initiating `parseq` would not continue execution past it
          */
         ForTag
-          .par(expr.item.value, vm)
+          .par(item, vm, pair)
           .wrap(
             ParTag.wrap(
               onTag.wrap(op),
-              NextTag(expr.item.value).leaf
+              NextTag(item).leaf
             )
           )
           .toFuncOp

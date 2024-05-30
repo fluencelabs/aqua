@@ -51,10 +51,12 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 case ForTag.Mode.RecMode => ParTag
               }
 
-              val forTag = ForTag(expr.item.value, vm, mode).wrap(
+              val (item, pair) = ForSem.itemOrPair(expr.item)
+
+              val forTag = ForTag(item, vm, mode, pair).wrap(
                 innerTag.wrap(
                   op,
-                  NextTag(expr.item.value).leaf
+                  NextTag(item).leaf
                 )
               )
 
@@ -76,8 +78,14 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
 object ForSem {
 
+  def itemOrPair[S[_]](nameOrPair: ForExpr.NameOrPair[S]): (String, Option[ForKeyValue]) =
+    nameOrPair match {
+      case Right(v) => (v.value, None)
+      case Left(k, v) => ("-iterable-", ForKeyValue(k.value, v.value).some)
+    }
+
   def beforeFor[S[_], F[_]: Monad](
-    item: Name[S],
+    item: ForExpr.NameOrPair[S],
     iterable: ValueToken[S]
   )(using
     V: ValuesAlgebra[S, F],
@@ -86,14 +94,23 @@ object ForSem {
   ): F[Option[ValueRaw]] = (for {
     value <- V.valueToIterable(iterable)
     (raw, typ) = value
-    itemType <- typ match {
-      case smt: StreamMapType =>
+    res <- (typ, item) match {
+      case (smt: StreamMapType, Left(key, value)) =>
+        OptionT.liftF(for {
+          _ <- N.define(key, ScalarType.string)
+          _ <- N.define(value, smt.element)
+        } yield raw)
+      case (smt: StreamMapType, Right(it)) =>
         val typeName = "-streamMapIter-"
-        OptionT.liftF(M.rename(typeName).map(s => smt.iterType(s)))
-      case _ => OptionT.some(typ.element)
+        OptionT.liftF(for {
+          newTypeName <- M.rename(typeName)
+          iterType = smt.iterType(newTypeName)
+          _ <- N.define(it, iterType)
+        } yield raw)
+      case (_, Left(_, _)) =>
+        OptionT.none
+      case (_, Right(it)) =>
+        OptionT.liftF(N.define(it, typ.element).map(_ => raw))
     }
-    _ <- OptionT.liftF(
-      N.define(item, itemType)
-    )
-  } yield raw).value
+  } yield res).value
 }

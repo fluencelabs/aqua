@@ -205,8 +205,8 @@ object TagInliner extends Logging {
       case TryTag =>
         TryTagInliner.inlined
 
-      case ForTag(item, iterable, mode) =>
-        ForTagInliner(item, iterable, mode).inlined
+      case ForTag(item, iterable, mode, keyValue) =>
+        ForTagInliner(item, iterable, mode, keyValue).inlined
 
       case PushToStreamTag(operand, exportTo) =>
         (
