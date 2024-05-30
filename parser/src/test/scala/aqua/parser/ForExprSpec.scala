@@ -15,27 +15,27 @@ class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     mode: Option[ForExpr.Mode]
   ): Unit = {
     parseFor(s"for some <- 1$modeStr") should be(
-      ForExpr[Id]("some", toNumber(1), mode)
+      ForExpr[Id](Right("some"), toNumber(1), mode)
     )
 
     parseFor(s"for some <- false$modeStr") should be(
-      ForExpr[Id]("some", toBool(false), mode)
+      ForExpr[Id](Right("some"), toBool(false), mode)
     )
 
     parseFor(s"for some <- \"a\"$modeStr") should be(
-      ForExpr[Id]("some", toStr("a"), mode)
+      ForExpr[Id](Right("some"), toStr("a"), mode)
     )
 
     parseFor(s"for i <- []$modeStr") should be(
-      ForExpr[Id]("i", toArr(Nil), mode)
+      ForExpr[Id](Right("i"), toArr(Nil), mode)
     )
 
     parseFor(s"for i <- [1, 2, 3]$modeStr") should be(
-      ForExpr[Id]("i", toArr(List(toNumber(1), toNumber(2), toNumber(3))), mode)
+      ForExpr[Id](Right("i"), toArr(List(toNumber(1), toNumber(2), toNumber(3))), mode)
     )
 
     parseFor(s"for i <- stream$modeStr") should be(
-      ForExpr[Id]("i", toVar("stream"), mode)
+      ForExpr[Id](Right("i"), toVar("stream"), mode)
     )
   }
 
