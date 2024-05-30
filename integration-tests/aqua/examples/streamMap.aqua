@@ -1,6 +1,6 @@
 aqua StreamMapTest declares *
 
-export testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc,
+export testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc
 export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
