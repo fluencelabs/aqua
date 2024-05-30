@@ -607,7 +607,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                          |""".stripMargin
 
     insideBody(script) { body =>
-      matchSubtree(body) { case (ForTag("p", _, ForTag.Mode.ParMode), forTag) =>
+      matchSubtree(body) { case (ForTag(Right("p"), _, ForTag.Mode.ParMode), forTag) =>
         matchChildren(forTag) { case (ParTag, parTag) =>
           matchChildren(parTag)(
             { case (OnTag(_, _, strat), _) =>
@@ -629,7 +629,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                    |""".stripMargin
 
     insideBody(script) { body =>
-      matchSubtree(body) { case (ForTag("i", stream, ForTag.Mode.RecMode), forTag) =>
+      matchSubtree(body) { case (ForTag(Right("i"), stream, ForTag.Mode.RecMode), forTag) =>
         stream.`type` shouldBe StreamType(ScalarType.i32)
         matchChildren(forTag) { case (ParTag, parTag) =>
           matchChildren(parTag)(
