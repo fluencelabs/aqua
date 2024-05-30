@@ -904,10 +904,10 @@ describe("Testing examples", () => {
     console.log(arr1)
     console.log("arr2")
     console.log(arr2)
-    expect(arr1).toEqual(["1", "2", "3", "4", "5", "6", "7",
+    expect(arr1).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four",
+      "1", "2", "3", "4", "5", "6", "7",]);
+    expect(arr2).toEqual(["1", "2", "3", "4", "5", "6", "7",
       "key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
-    expect(arr2).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four",
-      "1", "2", "3", "4", "5", "6", "7"]);
   });
 
   it("streamMap.aqua call with parseq over map", async () => {
