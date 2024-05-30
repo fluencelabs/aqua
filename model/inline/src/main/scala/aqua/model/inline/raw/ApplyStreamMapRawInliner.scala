@@ -21,6 +21,7 @@ import aqua.types.{
 import cats.data.NonEmptyMap
 import cats.data.{Chain, State}
 import cats.syntax.applicative.*
+import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.option.*
 
@@ -340,7 +341,7 @@ object ApplyStreamMapRawInliner {
   ): State[S, (VarModel, Inline)] = {
     StreamMapType
       .funcByString(funcName)
-      .map(_ -> args)
+      .tupleRight(args)
       .map {
         case (Get, arg :: Nil) =>
           get(mapName, mapType, arg)
