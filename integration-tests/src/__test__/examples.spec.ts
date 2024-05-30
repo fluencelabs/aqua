@@ -893,13 +893,13 @@ describe("Testing examples", () => {
   });
 
   it("streamMap.aqua call with for over map", async () => {
-    let [keys, values] = await testForTupleFuncCall();
+    let [keys, values] = await testForFuncCall();
     expect(keys).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
     expect(values).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
   });
 
   it("streamMap.aqua call with for with tuples over map", async () => {
-    let [arr1, arr2] = await testForFuncCall();
+    let [arr1, arr2] = await testForTupleFuncCall();
     expect(arr1).toEqual(["1", "2", "3", "4", "5", "6", "7",
       "key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
     expect(arr2).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four",
