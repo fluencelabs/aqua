@@ -18,9 +18,9 @@ func testForTuple() -> []string, []string:
   streamFirst: *string
   streamSecond: *string
 
-  for k, v <- streamMap:
-    streamFirst <<- k
-    streamSecond <<- v
+  for kv <- streamMap:
+    streamFirst <<- kv.key
+    streamSecond <<- kv.value
 
   for k, v <- streamMap:
     streamFirst <<- v

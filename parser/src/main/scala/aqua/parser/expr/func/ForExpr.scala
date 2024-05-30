@@ -32,7 +32,7 @@ object ForExpr extends Expr.AndIndented {
   private val pair: P[(Name[S], Name[S])] =
     (Name.p <* (` `.? ~ `,` ~ ` `.?)) ~ Name.p
 
-  val nameOrPair: P[NameOrPair[S]] = pair.eitherOr(Name.p).map(_.swap)
+  val nameOrPair: P[NameOrPair[S]] = pair.backtrack.eitherOr(Name.p).map(_.swap)
 
   override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
