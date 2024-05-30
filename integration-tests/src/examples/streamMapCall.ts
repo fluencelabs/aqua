@@ -1,6 +1,9 @@
 import {
   testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc, testContainsFunc, testForFunc, testParSeqMap
 } from "../compiled/examples/streamMap.js";
+import { config } from "../config.js";
+
+const relays = config.relays;
 
 export async function testGetFuncCall() {
   return testGetFunc();
