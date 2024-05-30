@@ -7,7 +7,13 @@ import aqua.model.inline.state.*
 import aqua.model.inline.tag.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{CanonStreamType, MutableStreamType, StreamType}
+import aqua.types.{
+  CanonStreamMapType,
+  CanonStreamType,
+  MutableStreamType,
+  StreamMapType,
+  StreamType
+}
 
 import cats.data.{Chain, State, StateT}
 import cats.instances.list.*
@@ -166,11 +172,17 @@ object TagInliner extends Logging {
     op: Option[OpModel.Tree]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
-      case ValueModel.Stream(v @ VarModel(n, _, l), StreamType(t)) =>
+      case ValueModel.MutableType(v @ VarModel(n, _, l), mt: MutableStreamType) =>
         val canonName = n + "_canon"
+        val canonType = mt match {
+          case StreamType(element) =>
+            CanonStreamType(element)
+          case StreamMapType(element) =>
+            CanonStreamMapType(element)
+        }
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
-          canonV = VarModel(canonN, CanonStreamType(t), l)
+          canonV = VarModel(canonN, canonType, l)
           canonOp = CanonicalizeModel(
             v.copy(properties = Chain.empty),
             CallModel.Export(canonV.name, canonV.baseType)
