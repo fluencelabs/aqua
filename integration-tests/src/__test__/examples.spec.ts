@@ -64,7 +64,8 @@ import {
   testKeysFuncCall,
   testKeysStreamFuncCall,
   testContainsFuncCall,
-  testForFuncCall
+  testForFuncCall,
+  testParSeqMapCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
@@ -894,6 +895,11 @@ describe("Testing examples", () => {
     let [keys, values] = await testForFuncCall();
     expect(keys).toEqual(["key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
     expect(values).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+  });
+
+  it("streamMap.aqua call with parseq over map", async () => {
+    let res = await testParSeqCall();
+    expect(res).toEqual("ok");
   });
 
   it("stream.aqua", async () => {
