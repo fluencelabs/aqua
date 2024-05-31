@@ -42,7 +42,6 @@ object ApplyStreamMapRawInliner {
     iterName: String
   ): OpModel.Tree = {
     val mapVar = VarModel(mapName, mapType)
-    val arrayResultType = ArrayType(mapType.element)
     val iter = VarModel(iterName, mapType.iterType("iterName_type"))
 
     ParModel.wrap(
@@ -59,7 +58,7 @@ object ApplyStreamMapRawInliner {
             PushToStreamModel(
               iter
                 .withProperty(
-                  IntoFieldModel("value", arrayResultType)
+                  IntoFieldModel("value", mapType.element)
                 ),
               CallModel.Export(streamVar)
             ).leaf
@@ -90,7 +89,7 @@ object ApplyStreamMapRawInliner {
         PushToStreamModel(
           iter
             .withProperty(
-              IntoFieldModel("key", arrayResultType)
+              IntoFieldModel("key", ScalarType.string)
             ),
           CallModel.Export(streamVar.name, streamVar.`type`)
         ).leaf,
