@@ -157,7 +157,7 @@ object ApplyStreamMapRawInliner {
       CanonicalizeModel(mapVar, CallModel.Export(canonMap.name, canonMap.`type`)).leaf,
       idxModel,
       FlattenModel(
-        canonMap.withProperty(IntoIndexModel(idx.name, CanonStreamType(mapType.element))),
+        canonMap.withProperty(IntoIndexModel(idx.name, ArrayType(mapType.element))),
         resultName
       ).leaf
     )
