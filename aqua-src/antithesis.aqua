@@ -1,24 +1,14 @@
 aqua StreamMapTest declares *
 
-export testForFunc
+export testKeysFunc
 
-func testForFunc() -> []string, []string:
+func testKeysFunc() -> []string, []string, []string:
   streamMap: %string
-  streamMap <<- ("key one", "1")
-  streamMap <<- ("key one", "2")
-
-  streamMap <<- ("key two", "3")
-  streamMap <<- ("key two", "4")
-  streamMap <<- ("key two", "5")
-
-  streamMap <<- ("key three", "6")
-
-  streamMap <<- ("key four", "7")
-
-  streamKeys: *string
-  streamValues: *string
-
-  for kv <- streamMap:
-    streamKeys <<- kv.key
-    streamValues <<- kv.value
-  <- streamKeys, streamValues
+  resEmpty = streamMap.keys()
+  streamMap <<- ("key one", "")
+  resFirst = streamMap.keys()
+  streamMap <<- ("key two", "")
+  streamMap <<- ("key one", "")
+  streamMap <<- ("key one", "text")
+  resSecond = streamMap.keys()
+  <- resEmpty, resFirst, resSecond

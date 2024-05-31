@@ -29,7 +29,7 @@ object ApplyStreamMapRawInliner {
 
   // make unique name that cannot be used in Aqua
   private def mang[S: Mangler](name: String, suffix: String): State[S, String] =
-    Mangler[S].findAndForbidName(s"-${name}_$suffix-")
+    Mangler[S].findAndForbidName(s"-${name}_$suffix")
 
   // - fold a map in parallel
   // - when a key matches index, push result to a stream
@@ -111,14 +111,14 @@ object ApplyStreamMapRawInliner {
     result: VarModel
   ): OpModel.Tree = {
     val mapVar = VarModel(mapName, mapType)
-    val arrayResultType = ArrayType(mapType.element)
     val streamVar = VarModel(streamName, StreamType(ScalarType.string))
-    val canonMap = VarModel(canonName, CanonStreamMapType(arrayResultType))
-    val iter = VarModel(iterName, mapType.iterType("iterName_type"))
+    val iterType = mapType.iterType("iterName_type")
+    val scalarMap = VarModel(canonName, ArrayType(iterType))
+    val iter = VarModel(iterName, iterType)
 
     RestrictionModel(streamVar.name, streamVar.`type`).wrap(
-      CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,
-      ForModel(iter.name, canonMap).wrap(
+      CanonicalizeModel(mapVar, CallModel.Export(scalarMap)).leaf,
+      ForModel(iter.name, scalarMap).wrap(
         PushToStreamModel(
           iter
             .withProperty(
