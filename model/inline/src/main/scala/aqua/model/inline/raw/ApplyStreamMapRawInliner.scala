@@ -81,7 +81,6 @@ object ApplyStreamMapRawInliner {
     iterName: String
   ): OpModel.Tree = {
     val mapVar = VarModel(mapName, mapType)
-    val arrayResultType = ArrayType(mapType.element)
     val iter = VarModel(iterName, mapType.iterType("iterName_type"))
 
     ParModel.wrap(
@@ -140,10 +139,9 @@ object ApplyStreamMapRawInliner {
     mapName: String,
     mapType: StreamMapType,
     idxVar: ValueModel,
-    resultName: String,
     mapCanonName: String,
     idxName: String
-  ): OpModel.Tree = {
+  ): (VarModel, OpModel.Tree) = {
     val (idx, idxModel) = idxVar match {
       case vm: VarModel =>
         vm -> EmptyModel.leaf
@@ -153,13 +151,9 @@ object ApplyStreamMapRawInliner {
     val mapVar = VarModel(mapName, mapType)
     val canonMap = VarModel(mapCanonName, CanonStreamMapType(mapType.element))
 
-    SeqModel.wrap(
+    canonMap.withProperty(IntoIndexModel(idx.name, ArrayType(mapType.element))) -> SeqModel.wrap(
       CanonicalizeModel(mapVar, CallModel.Export(canonMap.name, canonMap.`type`)).leaf,
-      idxModel,
-      FlattenModel(
-        canonMap.withProperty(IntoIndexModel(idx.name, ArrayType(mapType.element))),
-        resultName
-      ).leaf
+      idxModel
     )
   }
 
@@ -170,21 +164,18 @@ object ApplyStreamMapRawInliner {
     mapName: String,
     mapType: StreamMapType,
     keyVar: ValueModel,
-    resultArrayName: String,
     resultName: String,
     mapCanonName: String,
     idxName: String
   ): OpModel.Tree = {
-    val getElementTree =
-      getModel(mapName, mapType, keyVar, resultArrayName, mapCanonName, idxName)
-    val arrayResultType = ArrayType(mapType.element)
-    val resultArrayVar = VarModel(resultArrayName, arrayResultType)
+    val (result, getElementTree) =
+      getModel(mapName, mapType, keyVar, mapCanonName, idxName)
 
     SeqModel.wrap(
       getElementTree,
       XorModel.wrap(
         MatchMismatchModel(
-          resultArrayVar.withProperty(FunctorModel("length", ScalarType.u32)),
+          result.withProperty(FunctorModel("length", ScalarType.u32)),
           LiteralModel.number(0),
           true
         ).wrap(
@@ -201,7 +192,6 @@ object ApplyStreamMapRawInliner {
     keyVar: ValueModel
   ): State[S, (VarModel, Inline)] = {
     for {
-      resultArrayName <- mang(mapName, "result_array")
       resultName <- mang(mapName, "contains_result")
       canonName <- mang(mapName, "canon")
       idxName <- mang(mapName, "idx")
@@ -211,7 +201,6 @@ object ApplyStreamMapRawInliner {
         mapName = mapName,
         mapType = mapType,
         keyVar = keyVar,
-        resultArrayName = resultArrayName,
         mapCanonName = canonName,
         resultName = resultName,
         idxName = idxName
@@ -308,26 +297,20 @@ object ApplyStreamMapRawInliner {
     idxVar: ValueModel
   ): State[S, (VarModel, Inline)] = {
     for {
-      resultName <- mang(mapName, "get_result")
       canonMapName <- mang(mapName, "canon")
       idxName <- mang(mapName, "idx")
     } yield {
-      val getResultTree = getModel(
+      val (result, getResultTree) = getModel(
         mapName,
         mapType,
         idxVar,
-        resultName,
         canonMapName,
         idxName
       )
 
       val inline = Inline(predo = Chain.one(getResultTree))
-      val value = VarModel(
-        resultName,
-        ArrayType(mapType.element)
-      )
 
-      (value, inline)
+      (result, inline)
     }
   }
 
