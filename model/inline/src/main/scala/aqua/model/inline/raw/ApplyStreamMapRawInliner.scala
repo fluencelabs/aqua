@@ -63,9 +63,9 @@ object ApplyStreamMapRawInliner {
                 ),
               CallModel.Export(streamVar)
             ).leaf
-          ),
-          NextModel(iter.name).leaf
-        )
+          )
+        ),
+        NextModel(iter.name).leaf
       ),
       NullModel.leaf
     )
@@ -151,7 +151,6 @@ object ApplyStreamMapRawInliner {
       case lm: LiteralModel =>
         VarModel(idxName, ScalarType.string) -> FlattenModel(lm, idxName).leaf
     }
-    val arrayResultType = ArrayType(mapType.element)
     val mapVar = VarModel(mapName, mapType)
     val canonMap = VarModel(mapCanonName, CanonStreamMapType(mapType.element))
 
@@ -159,7 +158,7 @@ object ApplyStreamMapRawInliner {
       CanonicalizeModel(mapVar, CallModel.Export(canonMap.name, canonMap.`type`)).leaf,
       idxModel,
       FlattenModel(
-        canonMap.withProperty(IntoIndexModel(idx.name, arrayResultType)),
+        canonMap.withProperty(IntoIndexModel(idx.name, CanonStreamType(mapType.element))),
         resultName
       ).leaf
     )

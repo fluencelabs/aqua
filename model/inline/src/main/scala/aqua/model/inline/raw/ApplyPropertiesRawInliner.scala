@@ -364,11 +364,11 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             for {
               argsInlined <- args.traverse(unfold(_)).map(_.unzip)
               (argsVM, argsInline) = argsInlined
-              mapInlined <- ApplyStreamMapRawInliner(arrowName, nameVM, st, argsVM)
-              (mapVM, mapInline) = mapInlined
+              resultInlined <- ApplyStreamMapRawInliner(arrowName, nameVM, st, argsVM)
+              (resultVM, resultInline) = resultInlined
               propsInlined <- unfoldProperties(
-                (argsInline :+ mapInline).combineAll,
-                mapVM,
+                (argsInline :+ resultInline).combineAll,
+                resultVM,
                 otherProperties,
                 propertiesAllowed
               )

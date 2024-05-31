@@ -172,7 +172,7 @@ object TagInliner extends Logging {
     op: Option[OpModel.Tree]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
-      case ValueModel.MutableType(v @ VarModel(n, _, l), mt: MutableStreamType) =>
+      case ValueModel.MutableStream(v @ VarModel(n, _, l), mt: MutableStreamType) =>
         val canonName = n + "_canon"
         val canonType = mt match {
           case StreamType(element) =>

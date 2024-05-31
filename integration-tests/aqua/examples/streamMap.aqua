@@ -33,6 +33,8 @@ func testKeysFunc() -> []string, []string, []string:
   streamMap <<- ("key one", "")
   resFirst = streamMap.keys()
   streamMap <<- ("key two", "")
+  streamMap <<- ("key one", "")
+  streamMap <<- ("key one", "text")
   resSecond = streamMap.keys()
   <- resEmpty, resFirst, resSecond
 

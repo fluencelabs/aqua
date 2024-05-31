@@ -1,6 +1,6 @@
 package aqua.model.inline.state
 
-import aqua.model.ValueModel.{Ability, MutableType, Stream}
+import aqua.model.ValueModel.{Ability, MutableStream, Stream}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{AbilityType, GeneralAbilityType, MutableStreamType, NamedType, StreamType}
 import cats.data.{NonEmptyList, State}
@@ -218,7 +218,7 @@ object Exports {
         case Ability(vm, at) if vm.properties.isEmpty =>
           val pairs = getAbilityPairs(vm.name, exportName, at, state.values)
           state.copy(values = state.values ++ pairs.toList.toMap + (exportName -> value))
-        case MutableType(VarModel(streamName, _, _), st) if exportName == streamName =>
+        case MutableStream(VarModel(streamName, _, _), st) if exportName == streamName =>
           state.copy(
             values = state.values + (exportName -> value),
             streams = state.streams + (exportName -> st)

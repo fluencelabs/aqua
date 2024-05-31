@@ -388,7 +388,7 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
   }
 
   def iterType(name: String): StructType =
-    StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> element))
+    StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> ArrayType(element)))
 
 }
 
