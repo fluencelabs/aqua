@@ -878,6 +878,7 @@ describe("Testing examples", () => {
     const [resEmpty, resFirst, resSecond] = await testKeysFuncCall();
     expect(resEmpty).toEqual([]);
     expect(resFirst).toEqual(["key one"]);
+    // FIX: it shouldn't work this way, it should return unique keys
     expect(resSecond).toEqual(["key one", "key two", "key one", "key one"]);
   });
 
