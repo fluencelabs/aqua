@@ -175,7 +175,7 @@ object ApplyStreamMapRawInliner {
       getElementTree,
       XorModel.wrap(
         MatchMismatchModel(
-          result.withProperty(FunctorModel("length", ScalarType.u32)),
+          result.withProperty(IntoFieldModel("length", ScalarType.u32)),
           LiteralModel.number(0),
           true
         ).wrap(
