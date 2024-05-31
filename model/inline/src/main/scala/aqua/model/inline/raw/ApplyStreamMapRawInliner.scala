@@ -113,12 +113,12 @@ object ApplyStreamMapRawInliner {
     val mapVar = VarModel(mapName, mapType)
     val streamVar = VarModel(streamName, StreamType(ScalarType.string))
     val iterType = mapType.iterType("iterName_type")
-    val scalarMap = VarModel(canonName, ArrayType(iterType))
+    val canonMap = VarModel(canonName, CanonStreamMapType(iterType))
     val iter = VarModel(iterName, iterType)
 
     RestrictionModel(streamVar.name, streamVar.`type`).wrap(
-      CanonicalizeModel(mapVar, CallModel.Export(scalarMap)).leaf,
-      ForModel(iter.name, scalarMap).wrap(
+      CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,
+      ForModel(iter.name, canonMap).wrap(
         PushToStreamModel(
           iter
             .withProperty(
