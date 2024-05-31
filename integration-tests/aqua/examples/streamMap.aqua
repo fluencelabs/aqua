@@ -5,7 +5,7 @@ export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
-func testGetFunc() -> []string, []string, []string:
+func testGetFunc() -> []string, []string, []string, u32:
   streamMap: %string
   key = "key"
   resEmpty = streamMap.get(key)
@@ -13,7 +13,7 @@ func testGetFunc() -> []string, []string, []string:
   resFirst = streamMap.get(key)
   streamMap <<- (key, "second value")
   resSecond = streamMap.get(key)
-  <- resEmpty, resFirst, resSecond
+  <- resEmpty, resFirst, resSecond, resSecond.length
 
 func testGetStreamFunc() -> []string, string, string:
   streamMap: %string

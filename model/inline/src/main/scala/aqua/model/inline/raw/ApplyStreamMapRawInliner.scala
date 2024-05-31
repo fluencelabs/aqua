@@ -164,6 +164,7 @@ object ApplyStreamMapRawInliner {
     mapName: String,
     mapType: StreamMapType,
     keyVar: ValueModel,
+    arrayName: String,
     resultName: String,
     mapCanonName: String,
     idxName: String
@@ -171,11 +172,15 @@ object ApplyStreamMapRawInliner {
     val (result, getElementTree) =
       getModel(mapName, mapType, keyVar, mapCanonName, idxName)
 
+    val arrayVar = VarModel(arrayName, ArrayType(mapType.element))
+
     SeqModel.wrap(
       getElementTree,
+      // flatten canonicalized map
+      FlattenModel(result, arrayName).leaf,
       XorModel.wrap(
         MatchMismatchModel(
-          result.withProperty(IntoFieldModel("length", ScalarType.u32)),
+          arrayVar.withProperty(FunctorModel("length", ScalarType.u32)),
           LiteralModel.number(0),
           true
         ).wrap(
@@ -192,6 +197,7 @@ object ApplyStreamMapRawInliner {
     keyVar: ValueModel
   ): State[S, (VarModel, Inline)] = {
     for {
+      arrayName <- mang(mapName, "array")
       resultName <- mang(mapName, "contains_result")
       canonName <- mang(mapName, "canon")
       idxName <- mang(mapName, "idx")
@@ -201,6 +207,7 @@ object ApplyStreamMapRawInliner {
         mapName = mapName,
         mapType = mapType,
         keyVar = keyVar,
+        arrayName = arrayName,
         mapCanonName = canonName,
         resultName = resultName,
         idxName = idxName
