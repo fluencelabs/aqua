@@ -19,6 +19,7 @@ import cats.data.{Chain, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 
 final case class ForTagInliner(
   item: String,
