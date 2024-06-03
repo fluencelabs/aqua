@@ -371,17 +371,22 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
 
   override def toString: String = s"%$element"
 
-  def getFunc(f: Func): ArrowType =
-    f match {
+  def getFunc(f: Func): ArrowType ={
+    val (args, rets) = f match {
       case Get =>
-        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ArrayType(element) :: Nil))
+        (ScalarType.string :: Nil) -> (ArrayType(element) :: Nil)
       case GetStream =>
-        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(StreamType(element) :: Nil))
-      case Keys => ArrowType(NilType, ProductType(ArrayType(ScalarType.string) :: Nil))
-      case KeysStream => ArrowType(NilType, ProductType(StreamType(ScalarType.string) :: Nil))
+        (ScalarType.string :: Nil) -> (StreamType(element) :: Nil)
+      case Keys =>
+        Nil -> (ArrayType(ScalarType.string) :: Nil)
+      case KeysStream =>
+        Nil -> (StreamType(ScalarType.string) :: Nil)
       case Contains =>
-        ArrowType(ProductType(ScalarType.string :: Nil), ProductType(ScalarType.bool :: Nil))
+        (ScalarType.string :: Nil) -> (ScalarType.bool :: Nil)
     }
+
+    ArrowType(ProductType(args), ProductType(rets))
+  }
 
   def funcByString(s: String): Option[ArrowType] = {
     StreamMapType.funcByString(s).map(getFunc)
