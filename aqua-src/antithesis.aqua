@@ -1,6 +1,15 @@
 aqua StreamMapTest declares *
 
 export testKeysFunc
+export main
+
+service Test("test-srv"):
+  call()
+
+func main():
+  stream: *string
+  for k, v <- stream:
+    Test.call()
 
 func testKeysFunc() -> []string, []string, []string:
   streamMap: %string

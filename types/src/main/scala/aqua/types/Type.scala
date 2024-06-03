@@ -413,7 +413,7 @@ object StreamMapType {
   def funcByString(s: String): Option[Func] =
     Func.values.find(_.name == s)
 
-  lazy val allFuncs: List[Func] =  Get :: GetStream :: Keys :: KeysStream :: Contains :: Nil
+  lazy val allFuncs: List[Func] =  Func.values.toList
 
   def top(): StreamMapType = StreamMapType(TopType)
 }

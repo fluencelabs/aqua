@@ -303,7 +303,7 @@ class TypesInterpreter[S[_], X](using
         locations.pointFieldLocation(ab.name, opName, op) *>
           checkArrowType(op, ab.fields.lookup(opName), abName, avStr, types)
       case st: StreamMapType =>
-        val avStr = StreamMapType.allFuncs.map(k => s"`$k`").mkString(", ")
+        val avStr = StreamMapType.allFuncs.map(k => s"`${k.name}`").mkString(", ")
         checkArrowType(op, st.funcByString(opName), st.toString, avStr, types)
       case t =>
         /* NOTE: Arrows are only supported on services and abilities,

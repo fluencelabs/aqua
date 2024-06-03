@@ -28,7 +28,8 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     A: AbilitiesAlgebra[S, F],
-    M: ManglerAlgebra[F]
+    M: ManglerAlgebra[F],
+    T: TypesAlgebra[S, F]
   ): Prog[F, Raw] =
     Prog
       .around(
@@ -90,7 +91,8 @@ object ForSem {
   )(using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
-    M: ManglerAlgebra[F]
+    M: ManglerAlgebra[F],
+    T: TypesAlgebra[S, F]
   ): F[Option[ValueRaw]] = (for {
     value <- V.valueToIterable(iterable)
     (raw, typ) = value
@@ -108,7 +110,7 @@ object ForSem {
           _ <- N.define(it, iterType)
         } yield raw)
       case (_, Left(_, _)) =>
-        OptionT.none
+        OptionT(T.ensureTypeMatches(iterable, StreamMapType(TopType), typ).map(_ => None))
       case (_, Right(it)) =>
         OptionT.liftF(N.define(it, typ.element).map(_ => raw))
     }
