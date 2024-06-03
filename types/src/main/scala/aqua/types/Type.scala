@@ -314,7 +314,9 @@ object CollectionType {
 sealed trait ImmutableCollectionType extends CollectionType with DataType {
   def withElement(t: DataType): ImmutableCollectionType
 }
-sealed trait MutableStreamType extends CollectionType
+sealed trait MutableStreamType extends CollectionType {
+  def toCanon: ImmutableCollectionType
+}
 
 case class CanonStreamType(
   override val element: DataType
@@ -395,6 +397,7 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
   def iterType(name: String): StructType =
     StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> element))
 
+  def toCanon: ImmutableCollectionType = CanonStreamMapType(element)
 }
 
 object StreamMapType {
@@ -410,6 +413,8 @@ object StreamMapType {
   def funcByString(s: String): Option[Func] =
     Func.values.find(_.name == s)
 
+  lazy val allFuncs: List[Func] =  Get :: GetStream :: Keys :: KeysStream :: Contains :: Nil
+
   def top(): StreamMapType = StreamMapType(TopType)
 }
 
@@ -420,6 +425,8 @@ case class StreamType(override val element: DataType) extends MutableStreamType 
   override def toString: String = s"*$element"
 
   override def withElement(t: DataType): StreamType = copy(element = t)
+
+  def toCanon: ImmutableCollectionType = CanonStreamType(element)
 }
 
 sealed trait NamedType extends Type {

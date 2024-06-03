@@ -11,12 +11,15 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
 import aqua.types.TopType
+
 import cats.Monad
 import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 import cats.syntax.functor.*
+import cats.syntax.option.*
 
 class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
 
@@ -37,54 +40,27 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    N.read(expr.stream).flatMap {
-      case None => Raw.error("Cannot resolve stream type").pure[Alg]
-      case Some(st) =>
-        expr.value match {
-          case Left((key, value)) =>
-            (V.valueToRaw(key), V.valueToRaw(value)).flatMapN {
-              case (Some(k), Some(vm)) =>
-                ensureStreamElementMatches(
-                  expr.token,
-                  value,
-                  st,
-                  vm.`type`
-                ).flatMap {
-                  case false =>
-                    Raw.error("Stream type and element type does not match").pure[Alg]
-                  case true =>
-                    T.ensureTypeMatches(
-                      key,
-                      ScalarType.string,
-                      k.`type`
-                    ).map {
-                      case false =>
-                        Raw.error("Key for map can be only a string")
-                      case true =>
-                        PushToMapTag(k, vm, Call.Export(expr.stream.value, st)).funcOpLeaf
-                    }
-                }
-
-              case _ => Raw.error("Cannot resolve value").pure[Alg]
-            }
-          case Right(value) =>
-            V.valueToRaw(value).flatMap {
-              case Some(vm) =>
-                ensureStreamElementMatches(
-                  expr.token,
-                  value,
-                  st,
-                  vm.`type`
-                ).map {
-                  case false =>
-                    Raw.error("Stream type and element type does not match")
-                  case true =>
-                    PushToStreamTag(vm, Call.Export(expr.stream.value, st)).funcOpLeaf
-                }
-
-              case _ => Raw.error("Cannot resolve value").pure[Alg]
-            }
-        }
-    }
+    (for {
+      st <- OptionT(N.read(expr.stream))
+      (key, value) = expr.value.fold(
+        { case (key, value) => (key.some, value) },
+        value => (none, value)
+      )
+      keyRaw <- key.traverse(k =>
+        for {
+          raw <- OptionT(V.valueToRaw(k))
+          _ <- OptionT.withFilterF(
+            T.ensureTypeMatches(k, ScalarType.string, raw.`type`)
+          )
+        } yield raw
+      )
+      valueRaw <- OptionT(V.valueToRaw(value))
+      _ <- OptionT.withFilterF(
+        ensureStreamElementMatches(expr.token, value, st, valueRaw.`type`)
+      )
+    } yield (keyRaw match {
+      case Some(k) => PushToMapTag(k, valueRaw, Call.Export(expr.stream.value, st))
+      case None => PushToStreamTag(valueRaw, Call.Export(expr.stream.value, st))
+    }).funcOpLeaf).getOrElse(Raw.error("Cannot resolve push to stream"))
 
 }

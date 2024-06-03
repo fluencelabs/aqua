@@ -101,7 +101,7 @@ object ForSem {
           _ <- N.define(value, smt.element)
         } yield raw)
       case (smt: StreamMapType, Right(it)) =>
-        val typeName = "-streamMapIter-"
+        val typeName = s"KVPair(${smt.element})"
         OptionT.liftF(for {
           newTypeName <- M.rename(typeName)
           iterType = smt.iterType(newTypeName)

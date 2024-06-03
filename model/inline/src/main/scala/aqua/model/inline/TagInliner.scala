@@ -174,12 +174,7 @@ object TagInliner extends Logging {
     vm match {
       case ValueModel.MutableStream(v @ VarModel(n, _, l), mt: MutableStreamType) =>
         val canonName = n + "_canon"
-        val canonType = mt match {
-          case StreamType(element) =>
-            CanonStreamType(element)
-          case StreamMapType(element) =>
-            CanonStreamMapType(element)
-        }
+        val canonType = mt.toCanon
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
           canonV = VarModel(canonN, canonType, l)
