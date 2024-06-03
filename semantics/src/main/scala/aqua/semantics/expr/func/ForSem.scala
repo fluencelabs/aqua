@@ -110,9 +110,9 @@ object ForSem {
           _ <- N.define(it, iterType)
         } yield raw)
       case (_, Left(_, _)) =>
-        OptionT(T.ensureTypeMatches(iterable, StreamMapType(TopType), typ).map(_ => None))
+        OptionT(T.ensureTypeMatches(iterable, StreamMapType(TopType), typ).as(None))
       case (_, Right(it)) =>
-        OptionT.liftF(N.define(it, typ.element).map(_ => raw))
+        OptionT.liftF(N.define(it, typ.element).as(raw))
     }
   } yield res).value
 }
