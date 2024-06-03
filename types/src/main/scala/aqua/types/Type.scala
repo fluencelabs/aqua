@@ -399,20 +399,16 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
 
 object StreamMapType {
 
-  enum Func:
-    case Get, GetStream, Keys, KeysStream, Contains
-
-  import Func.*
+  enum Func(val name: String) {
+    case Get extends Func("get")
+    case GetStream extends Func("getStream")
+    case Keys extends Func("keys")
+    case KeysStream extends Func("keysStream")
+    case Contains extends Func("contains")
+  }
 
   def funcByString(s: String): Option[Func] =
-    s match {
-      case "get" => Some(Get)
-      case "getStream" => Some(GetStream)
-      case "keys" => Some(Keys)
-      case "keysStream" => Some(KeysStream)
-      case "contains" => Some(Contains)
-      case _ => None
-    }
+    Func.values.find(_.name == s)
 
   def top(): StreamMapType = StreamMapType(TopType)
 }
