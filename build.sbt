@@ -3,7 +3,7 @@ import BundleJS.*
 val aquaVersion = "0.14.8"
 
 val scalaV = "3.4.2"
-val catsV = "2.10.0"
+val catsV = "2.12.0"
 val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.18"
