@@ -47,20 +47,9 @@ final case class ForTagInliner(
     _ <- Exports[S].resolved(item, itemVar)
     pref <- keyValue.traverse(kv =>
       for {
-        keyName <- Mangler[S].findAndForbidName(kv.key)
-        _ <- Exports[S].resolved(kv.key, VarModel(keyName, ScalarType.string))
-        valueName <- Mangler[S].findAndForbidName(kv.value)
-        _ <- Exports[S].resolved(kv.value, VarModel(valueName, elementType))
-      } yield SeqModel.wrap(
-        FlattenModel(
-          itemVar.withProperty(IntoFieldModel("key", ScalarType.string)),
-          keyName
-        ).leaf,
-        FlattenModel(
-          itemVar.withProperty(IntoFieldModel("value", elementType)),
-          valueName
-        ).leaf
-      )
+        _ <- Exports[S].resolved(kv.key, itemVar.withProperty(IntoFieldModel("key", ScalarType.string)))
+        _ <- Exports[S].resolved(kv.value, itemVar.withProperty(IntoFieldModel("value", elementType)))
+      } yield EmptyModel
     )
     modeModel = mode match {
       case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
