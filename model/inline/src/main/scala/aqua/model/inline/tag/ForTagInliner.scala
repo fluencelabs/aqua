@@ -22,11 +22,11 @@ import cats.syntax.flatMap.*
 import cats.syntax.traverse.*
 
 final case class ForTagInliner(
-  item: String,
-  iterable: ValueRaw,
-  mode: ForTag.Mode,
-  keyValue: Option[ForKeyValue]
-) {
+                                item: String,
+                                iterable: ValueRaw,
+                                mode: ForTag.Mode,
+                                keyValue: Option[ForKeyValue]
+                              ) {
 
   def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = for {
     vp <- valueToModel(iterable)
@@ -45,11 +45,22 @@ final case class ForTagInliner(
     }
     itemVar = VarModel(n, elementType)
     _ <- Exports[S].resolved(item, itemVar)
-    _ <- keyValue.traverse(kv =>
+    pref <- keyValue.traverse(kv =>
       for {
-        _ <- Exports[S].resolved(kv.key, itemVar.withProperty(IntoFieldModel("key", ScalarType.string)))
-        _ <- Exports[S].resolved(kv.value, itemVar.withProperty(IntoFieldModel("value", elementType)))
-      } yield {}
+        keyName <- Mangler[S].findAndForbidName(kv.key)
+        _ <- Exports[S].resolved(kv.key, VarModel(keyName, ScalarType.string))
+        valueName <- Mangler[S].findAndForbidName(kv.value)
+        _ <- Exports[S].resolved(kv.value, VarModel(valueName, elementType))
+      } yield SeqModel.wrap(
+        FlattenModel(
+          itemVar.withProperty(IntoFieldModel("key", ScalarType.string)),
+          keyName
+        ).leaf,
+        FlattenModel(
+          itemVar.withProperty(IntoFieldModel("value", elementType)),
+          valueName
+        ).leaf
+      )
     )
     modeModel = mode match {
       case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
@@ -57,7 +68,7 @@ final case class ForTagInliner(
     }
     model = ForModel(n, v, modeModel)
   } yield TagInlined.Around(
-    model = StreamRestrictions.restrictStreams(model.wrap),
+    model = StreamRestrictions.restrictStreams(ss => model.wrap(Chain.fromOption(pref) ++ ss)),
     prefix = p
   )
 }
