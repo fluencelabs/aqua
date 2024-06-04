@@ -45,11 +45,11 @@ final case class ForTagInliner(
     }
     itemVar = VarModel(n, elementType)
     _ <- Exports[S].resolved(item, itemVar)
-    pref <- keyValue.traverse(kv =>
+    _ <- keyValue.traverse(kv =>
       for {
         _ <- Exports[S].resolved(kv.key, itemVar.withProperty(IntoFieldModel("key", ScalarType.string)))
         _ <- Exports[S].resolved(kv.value, itemVar.withProperty(IntoFieldModel("value", elementType)))
-      } yield EmptyModel
+      } yield {}
     )
     modeModel = mode match {
       case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
@@ -57,7 +57,7 @@ final case class ForTagInliner(
     }
     model = ForModel(n, v, modeModel)
   } yield TagInlined.Around(
-    model = StreamRestrictions.restrictStreams(ss => model.wrap(Chain.fromOption(pref) ++ ss)),
+    model = StreamRestrictions.restrictStreams(model.wrap),
     prefix = p
   )
 }
