@@ -1,34 +1,20 @@
 aqua StreamMapTest declares *
 
-export testForTupleFunc
+export main
+
+data A:
+  a: string
+
+data B:
+  a: string
+  b: string
+
+func addA(m: %A) -> string:
+  m <<- ("A", A(a = "a"))
+  <- "s"
 
 
-func testForTupleFunc() -> []string, []string, []string:
-  streamMap: %string
-  streamMap <<- ("key one", "1")
-  streamMap <<- ("key one", "2")
-
-  streamMap <<- ("key two", "3")
-  streamMap <<- ("key two", "4")
-  streamMap <<- ("key two", "5")
-
-  streamMap <<- ("key three", "6")
-
-  streamMap <<- ("key four", "7")
-
-  streamFirst: *string
-  streamSecond: *string
-  streamThird: *string
-
-  for k, v <- streamMap:
-    streamFirst <<- k
-    streamSecond <<- v
-
-  for k, v <- streamMap:
-    streamFirst <<- v
-    streamSecond <<- k
-
-  for k, v <- streamMap:
-    streamThird <<- streamMap.get(k)!
-
-  <- streamFirst, streamSecond, streamThird
+func main() -> string:
+  m: %B
+  addA(m)
+  <- m.get("A")[0].b

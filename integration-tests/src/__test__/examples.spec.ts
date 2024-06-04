@@ -906,7 +906,7 @@ describe("Testing examples", () => {
       "1", "2", "3", "4", "5", "6", "7",]);
     expect(arr2).toEqual(["1", "2", "3", "4", "5", "6", "7",
       "key one", "key one", "key two", "key two", "key two", "key three", "key four"]);
-    expect(arr3).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+    expect(arr3).toEqual(["1", "1", "3", "3", "3", "6", "7"]);
   });
 
   it("streamMap.aqua call with parseq over map", async () => {
