@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-api",
-  "version": "0.14.7",
+  "version": "0.14.8",
   "description": "Aqua API",
   "type": "module",
   "main": "index.js",
@@ -27,6 +27,6 @@
   "homepage": "https://github.com/fluencelabs/aqua#readme",
   "devDependencies": {
     "@fluencelabs/interfaces": "0.12.0",
-    "prettier": "3.1.1"
+    "prettier": "3.3.0"
   }
 }
