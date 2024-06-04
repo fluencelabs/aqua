@@ -49,17 +49,16 @@ func testKeysStreamFunc() -> []string, []string, []string:
   <- resEmpty, resFirst, resSecond
 
 func testContainsFunc() -> bool, bool, bool, bool, bool:
-  keyOne = "key one"
-  keyTwo = "key two"
+  keys = ["key one", "key two"]
   streamMap: %string
-  resFirst = streamMap.contains(keyOne)
-  streamMap <<- (keyOne, "")
-  resSecond = streamMap.contains(keyOne)
-  resThird = streamMap.contains(keyTwo)
-  streamMap <<- (keyOne, "new")
-  streamMap <<- (keyTwo, "")
-  resFourth = streamMap.contains(keyOne)
-  resFifth = streamMap.contains(keyTwo)
+  resFirst = streamMap.contains(keys[0])
+  streamMap <<- (keys[0], "")
+  resSecond = streamMap.contains(keys[0])
+  resThird = streamMap.contains(keys[1])
+  streamMap <<- (keys[0], "new")
+  streamMap <<- (keys[1], "")
+  resFourth = streamMap.contains(keys[0])
+  resFifth = streamMap.contains(keys[1])
   <- resFirst, resSecond, resThird, resFourth, resFifth
 
 func testForFunc() -> []string, []string:
@@ -124,6 +123,6 @@ func testForTupleFunc() -> []string, []string, []string:
     streamSecond <<- k
 
   for k, v <- streamMap:
-    streamThird <<- streamMap.get(k)
+    streamThird <<- streamMap.get(k)!
 
   <- streamFirst, streamSecond, streamThird

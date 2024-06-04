@@ -1,6 +1,7 @@
 package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
+import aqua.mangler.ManglerState
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.*
@@ -18,8 +19,8 @@ import aqua.types.{
   StructType
 }
 
-import cats.data.NonEmptyMap
-import cats.data.{Chain, State}
+import cats.Eval
+import cats.data.{Chain, IndexedStateT, NonEmptyMap, State}
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
@@ -321,22 +322,38 @@ object ApplyStreamMapRawInliner {
     }
   }
 
+  private def flatProps[S: Mangler](
+    arg: ValueModel,
+    op: ValueModel => State[S, (VarModel, Inline)]
+  ): State[S, (VarModel, Inline)] =
+    (arg match {
+      case vm @ VarModel(name, _, properties) if properties.nonEmpty =>
+        mang(name, "ap").map { n =>
+          VarModel(n, vm.`type`) -> Some(FlattenModel(vm, n).leaf)
+        }
+      case a => State.pure(a -> None)
+    }).flatMap { case (v, inl) =>
+      op(v).map { case (res, resInl) =>
+        res -> resInl.prepend(inl)
+      }
+    }
+
   def apply[S: Mangler: Exports: Arrows: Config](
     funcName: String,
     mapName: String,
     mapType: StreamMapType,
     args: List[ValueModel]
-  ): State[S, (VarModel, Inline)] = {
+  ): State[S, (VarModel, Inline)] =
     StreamMapType
       .funcByString(funcName)
       .tupleRight(args)
       .map {
         case (Get, arg :: Nil) =>
-          get(mapName, mapType, arg)
+          flatProps(arg, get(mapName, mapType, _))
+        case (Contains, arg :: Nil) =>
+          flatProps(arg, contains(mapName, mapType, _))
         case (GetStream, arg :: Nil) =>
           getStream(mapName, mapType, arg)
-        case (Contains, arg :: Nil) =>
-          contains(mapName, mapType, arg)
         case (Keys, Nil) =>
           getKeys(mapName, mapType)
         case (KeysStream, Nil) =>
@@ -351,5 +368,5 @@ object ApplyStreamMapRawInliner {
           s"StreamMap '$mapName' doesn't support function '$funcName''"
         )
       }
-  }
+
 }
