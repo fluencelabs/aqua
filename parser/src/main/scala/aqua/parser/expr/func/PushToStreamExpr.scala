@@ -4,10 +4,9 @@ import aqua.parser.Expr
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.expr.func.PushToStreamExpr.ValueOrPair
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Name, ValueToken}
-import aqua.parser.lift.LiftParser
-import aqua.parser.lift.Span
+import aqua.parser.lexer.{Name, Token, ValueToken}
 import aqua.parser.lift.Span.{given, *}
+import aqua.parser.lift.{LiftParser, Span}
 
 import cats.parse.Parser as P
 import cats.syntax.either.*
@@ -27,9 +26,9 @@ object PushToStreamExpr extends Expr.Leaf {
   type ValueOrPair[S[_]] = Either[(ValueToken[S], ValueToken[S]), ValueToken[S]]
 
   private val pair: P[(ValueToken[S], ValueToken[S])] =
-    ` `.?.with1 ~ `(` ~ `/s*` *> ((ValueToken.`value` <* (` `.? ~ `,` ~ ` `.?)) ~ ValueToken.`value`) <* `/s*` ~ `)`
+    ` *`.?.with1 ~ `(` ~ `/s*` *> ((ValueToken.`value` <* (` `.? ~ `,` ~ ` `.?)) ~ ValueToken.`value`) <* `/s*` ~ `)`
 
-  private val valueOrPair: P[ValueOrPair[S]] = ValueToken.`value`.eitherOr(pair)
+  private val valueOrPair: P[ValueOrPair[S]] = ValueToken.`value`.backtrack.eitherOr(pair)
 
   override val p: P[PushToStreamExpr[Span.S]] =
     ((Name.p <* ` <<- `).with1 ~ valueOrPair).map { case (variable, value) =>
