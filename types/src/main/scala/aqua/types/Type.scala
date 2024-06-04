@@ -594,6 +594,12 @@ object Type {
       case _ => false
     }
 
+  def isStreamMapType(t: Type): Boolean =
+    t match {
+      case _: StreamMapType => true
+      case _ => false
+    }
+
   given PartialOrder[Type] =
     CompareTypes.partialOrder
 

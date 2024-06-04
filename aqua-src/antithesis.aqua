@@ -2,19 +2,8 @@ aqua StreamMapTest declares *
 
 export main
 
-data A:
-  a: string
-
-data B:
-  a: string
-  b: string
-
-func addA(m: %A) -> string:
-  m <<- ("A", A(a = "a"))
-  <- "s"
-
 
 func main() -> string:
-  m: %B
-  addA(m)
-  <- m.get("A")[0].b
+  m: %string
+  b <- m.get("asf")!
+  <- "a"
