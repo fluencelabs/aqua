@@ -348,6 +348,7 @@ object ApplyStreamMapRawInliner {
       .funcByString(funcName)
       .tupleRight(args)
       .map {
+        // flat properties for Get and Contains, because argument uses in IntoIndexModel
         case (Get, arg :: Nil) =>
           flatProps(arg, get(mapName, mapType, _))
         case (Contains, arg :: Nil) =>
