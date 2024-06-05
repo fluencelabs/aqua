@@ -1,0 +1,14 @@
+aqua StreamRestriction
+
+export streamMapRes
+
+func streamFold(arr: []string) -> %string:
+  res: %string
+  for n <- arr:
+    res <<- n, n
+  <- res
+
+func streamRes(arr: []string) -> []string, []string:
+  res: *string
+  res2 <- streamFold(arr)
+  <- res.keys(), res2.keys()

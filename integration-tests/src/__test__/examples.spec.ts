@@ -155,6 +155,7 @@ import {
 } from "../examples/streamCanCall.js";
 import { streamCallbackCall } from "../examples/streamCallback.js";
 import { streamResCall } from "../examples/streamRestrictionsCall.js";
+import { streamMapResCall } from "../examples/streamMapRestrictionsCall.js";
 import {
   joinIdxCall,
   joinIdxLocalCall,
@@ -340,6 +341,11 @@ describe("Testing examples", () => {
     const streamResResult = await streamResCall();
 
     expect(streamResResult).toEqual([[], ["a", "b", "c"]]);
+  });
+
+  it("streamMapRestrictions.aqua", async () => {
+    const result = await streamMapResCall();
+    expect(result).toEqual([[], ["a", "b", "c"]]);
   });
 
   it("streamScopes.aqua streamIf", async () => {
