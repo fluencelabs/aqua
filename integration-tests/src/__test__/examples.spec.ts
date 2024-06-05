@@ -15,6 +15,9 @@ import {
   testParSeqCall
 } from "../examples/parSeqCall.js";
 import {
+  streamMapAbilityTestCall
+} from "../examples/streamMapAbilitiesCall.js";
+import {
   onPropagateCall,
   nestedOnPropagateCall,
   seqOnPropagateCall
