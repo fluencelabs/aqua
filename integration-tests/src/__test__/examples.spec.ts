@@ -372,6 +372,12 @@ describe("Testing examples", () => {
     expect(streamTryResult).toEqual(13);
   });
 
+  it("streamMapAbilities.aqua", async () => {
+    const [res1, res2] = await streamMapAbilityTestCall();
+    expect(res1).toEqual(["one", "two", "three"]);
+    expect(res2).toEqual(["1", "2", "3"]);
+  });
+
   it("if.aqua", async () => {
     await ifCall();
   });
