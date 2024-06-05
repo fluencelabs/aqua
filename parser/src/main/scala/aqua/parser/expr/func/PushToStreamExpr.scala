@@ -25,10 +25,13 @@ object PushToStreamExpr extends Expr.Leaf {
 
   type ValueOrPair[S[_]] = Either[(ValueToken[S], ValueToken[S]), ValueToken[S]]
 
-  private val pair: P[(ValueToken[S], ValueToken[S])] =
-    ` *`.?.with1 ~ `(` ~ `/s*` *> ((ValueToken.`value` <* (` `.? ~ `,` ~ ` `.?)) ~ ValueToken.`value`) <* `/s*` ~ `)`
-
-  private val valueOrPair: P[ValueOrPair[S]] = ValueToken.`value`.backtrack.eitherOr(pair)
+  private val valueOrPair: P[ValueOrPair[S]] =
+    P.repSep(ValueToken.`value`, 1, 2, ` `.? ~ `,`).map { l =>
+      l.tail match {
+        case r :: _ => Left(l.head -> r)
+        case _ => Right(l.head)
+      }
+    }
 
   override val p: P[PushToStreamExpr[Span.S]] =
     ((Name.p <* ` <<- `).with1 ~ valueOrPair).map { case (variable, value) =>

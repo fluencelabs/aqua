@@ -30,21 +30,21 @@ func testGetStreamFunc() -> []string, string, string:
 func testKeysFunc() -> []string, []string, []string:
   streamMap: %string
   resEmpty = streamMap.keys()
-  streamMap <<- ("key one", "")
+  streamMap <<- "key one", ""
   resFirst = streamMap.keys()
-  streamMap <<- ("key two", "")
-  streamMap <<- ("key one", "")
-  streamMap <<- ("key one", "text")
+  streamMap <<- "key two", ""
+  streamMap <<- "key one", ""
+  streamMap <<- "key one", "text"
   resSecond = streamMap.keys()
   <- resEmpty, resFirst, resSecond
 
 func testKeysStreamFunc() -> []string, []string, []string:
   streamMap: %string
   resEmpty = streamMap.keysStream()
-  streamMap <<- ("key one", "")
+  streamMap <<- "key one", ""
   resFirst = streamMap.keysStream()
-  streamMap <<- ("key one", "new")
-  streamMap <<- ("key two", "")
+  streamMap <<- "key one", "new"
+  streamMap <<- "key two", ""
   resSecond = streamMap.keysStream()
   <- resEmpty, resFirst, resSecond
 
@@ -63,16 +63,16 @@ func testContainsFunc() -> bool, bool, bool, bool, bool:
 
 func testForFunc() -> []string, []string:
   streamMap: %string
-  streamMap <<- ("key one", "1")
-  streamMap <<- ("key one", "2")
+  streamMap <<- "key one", "1"
+  streamMap <<- "key one", "2"
 
-  streamMap <<- ("key two", "3")
-  streamMap <<- ("key two", "4")
-  streamMap <<- ("key two", "5")
+  streamMap <<- "key two", "3"
+  streamMap <<- "key two", "4"
+  streamMap <<- "key two", "5"
 
-  streamMap <<- ("key three", "6")
+  streamMap <<- "key three", "6"
 
-  streamMap <<- ("key four", "7")
+  streamMap <<- "key four", "7"
 
   streamKeys: *string
   streamValues: *string
@@ -87,28 +87,28 @@ func testParSeqMap(relay1: string, relay2: string, relay3: string) -> string:
   map: %u64
   map2: %u64
   parseq r <- relays on r:
-    map <<- ("time", Peer.timestamp_ms())
+    map <<- "time", Peer.timestamp_ms()
 
   for r <- relays par:
     on r:
       join map.get("time")[relays.length - 1]
-      map2 <<- ("time", Peer.timestamp_ms())
+      map2 <<- "time", Peer.timestamp_ms()
 
   join map2.get("time")[relays.length - 1]
   <- "ok"
 
 func testForTupleFunc() -> []string, []string, []string:
   streamMap: %string
-  streamMap <<- ("key one", "1")
-  streamMap <<- ("key one", "2")
+  streamMap <<- "key one", "1"
+  streamMap <<- "key one", "2"
 
-  streamMap <<- ("key two", "3")
-  streamMap <<- ("key two", "4")
-  streamMap <<- ("key two", "5")
+  streamMap <<- "key two", "3"
+  streamMap <<- "key two", "4"
+  streamMap <<- "key two", "5"
 
-  streamMap <<- ("key three", "6")
+  streamMap <<- "key three", "6"
 
-  streamMap <<- ("key four", "7")
+  streamMap <<- "key four", "7"
 
   streamFirst: *string
   streamSecond: *string

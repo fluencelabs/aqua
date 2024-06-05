@@ -1,9 +1,128 @@
 aqua StreamMapTest declares *
 
-export main
+export testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc
+export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc
 
+import "builtin.aqua"
 
-func main() -> string:
-  m: %string
-  b <- m.get("asf")!
-  <- "a"
+func testGetFunc() -> []string, []string, []string, u32:
+  streamMap: %string
+  key = "key"
+  resEmpty = streamMap.get(key)
+  streamMap <<- key, "first value"
+  resFirst = streamMap.get(key)
+  streamMap <<- key, "second value"
+  resSecond = streamMap.get(key)
+  <- resEmpty, resFirst, resSecond, resSecond.length
+
+func testGetStreamFunc() -> []string, string, string:
+  streamMap: %string
+  key = "key"
+  resEmptyStream = streamMap.getStream(key)
+  streamMap <<- key, "first value"
+  resFirstStream = streamMap.getStream(key)
+  streamMap <<- key, "second value"
+  resSecondStream = streamMap.getStream(key)
+  resFirst = resFirstStream[0]
+  resSecond = resSecondStream[1]
+  <- resEmptyStream, resFirst, resSecond
+
+func testKeysFunc() -> []string, []string, []string:
+  streamMap: %string
+  resEmpty = streamMap.keys()
+  streamMap <<- "key one", ""
+  resFirst = streamMap.keys()
+  streamMap <<- "key two", ""
+  streamMap <<- "key one", ""
+  streamMap <<- "key one", "text"
+  resSecond = streamMap.keys()
+  <- resEmpty, resFirst, resSecond
+
+func testKeysStreamFunc() -> []string, []string, []string:
+  streamMap: %string
+  resEmpty = streamMap.keysStream()
+  streamMap <<- "key one", ""
+  resFirst = streamMap.keysStream()
+  streamMap <<- "key one", "new"
+  streamMap <<- "key two", ""
+  resSecond = streamMap.keysStream()
+  <- resEmpty, resFirst, resSecond
+
+func testContainsFunc() -> bool, bool, bool, bool, bool:
+  keys = ["key one", "key two"]
+  streamMap: %string
+  resFirst = streamMap.contains(keys[0])
+  streamMap <<- keys[0], ""
+  resSecond = streamMap.contains(keys[0])
+  resThird = streamMap.contains(keys[1])
+  streamMap <<- keys[0], "new"
+  streamMap <<- keys[1], ""
+  resFourth = streamMap.contains(keys[0])
+  resFifth = streamMap.contains(keys[1])
+  <- resFirst, resSecond, resThird, resFourth, resFifth
+
+func testForFunc() -> []string, []string:
+  streamMap: %string
+  streamMap <<- "key one", "1"
+  streamMap <<- "key one", "2"
+
+  streamMap <<- "key two", "3"
+  streamMap <<- "key two", "4"
+  streamMap <<- "key two", "5"
+
+  streamMap <<- "key three", "6"
+
+  streamMap <<- "key four", "7"
+
+  streamKeys: *string
+  streamValues: *string
+
+  for kv <- streamMap:
+    streamKeys <<- kv.key
+    streamValues <<- kv.value
+  <- streamKeys, streamValues
+
+func testParSeqMap(relay1: string, relay2: string, relay3: string) -> string:
+  relays = [relay1, relay2, relay3]
+  map: %u64
+  map2: %u64
+  parseq r <- relays on r:
+    map <<- "time", Peer.timestamp_ms()
+
+  for r <- relays par:
+    on r:
+      join map.get("time")[relays.length - 1]
+      map2 <<- "time", Peer.timestamp_ms()
+
+  join map2.get("time")[relays.length - 1]
+  <- "ok"
+
+func testForTupleFunc() -> []string, []string, []string:
+  streamMap: %string
+  streamMap <<- "key one", "1"
+  streamMap <<- "key one", "2"
+
+  streamMap <<- "key two", "3"
+  streamMap <<- "key two", "4"
+  streamMap <<- "key two", "5"
+
+  streamMap <<- "key three", "6"
+
+  streamMap <<- "key four", "7"
+
+  streamFirst: *string
+  streamSecond: *string
+  streamThird: *string
+
+  for k, v <- streamMap:
+    streamFirst <<- k
+    streamSecond <<- v
+
+  for k, v <- streamMap:
+    streamFirst <<- v
+    streamSecond <<- k
+
+  for k, v <- streamMap:
+    streamThird <<- streamMap.get(k)!
+
+  <- streamFirst, streamSecond, streamThird
