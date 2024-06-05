@@ -1,0 +1,50 @@
+aqua StreamMapCapture
+
+export testStreamMapCaptureSimple, testStreamMapCaptureReturn
+
+-- SIMPLE
+
+func useCaptureSimple(push: string, string -> ()):
+    push("two", "2")
+
+func testStreamMapCaptureSimple() -> []string:
+    stream: %string
+
+    stream <<- "one", "1"
+
+    push = (s: string, n: string):
+        stream <<- s, n
+
+    useCaptureSimple(push)
+    push("three", "3")
+
+    <- stream.keys()
+
+-- RETURN
+
+func captureStream() -> (string, string -> []string):
+    stream: %string
+
+    stream <<- "one", "1"
+
+    capture = (s: string, n: string) -> []string:
+        stream <<- s, n
+        <- stream.keys()
+
+    capture("two", "2")
+
+    <- capture
+
+func useCaptureReturn(capture: string, string -> []string):
+    capture("three", "3")
+
+func rereturnCapture() -> (string, string -> []string):
+    capture <- captureStream()
+    useCaptureReturn(capture)
+    capture("four", "4")
+    <- capture
+
+func testStreamMapCaptureReturn() -> []string:
+    on HOST_PEER_ID:
+        capture <- rereturnCapture()
+    <- capture("five", "5")

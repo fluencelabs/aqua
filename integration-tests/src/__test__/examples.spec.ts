@@ -124,6 +124,10 @@ import {
   streamCaptureReturnCall
 } from "../examples/streamCapture.js";
 import {
+  streamMapCaptureSimpleCall,
+  streamMapCaptureReturnCall
+} from "../examples/streamMapCapture.js";
+import {
   streamIfCall,
   streamForCall,
   streamTryCall,
@@ -805,6 +809,22 @@ describe("Testing examples", () => {
   it("streamCapture.aqua return", async () => {
     const streamCaptureResult = await streamCaptureReturnCall();
     expect(streamCaptureResult).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "five"
+    ]);
+  });
+
+  it("streamMapCapture.aqua simple", async () => {
+    const streamMapCaptureResult = await streamMapCaptureSimpleCall();
+    expect(streamMapCaptureResult).toEqual(["one", "two", "three"]);
+  });
+
+  it("streamMapCapture.aqua return", async () => {
+    const streamMapCaptureResult = await streamMapCaptureReturnCall();
+    expect(streamMapCaptureResult).toEqual([
       "one",
       "two",
       "three",
