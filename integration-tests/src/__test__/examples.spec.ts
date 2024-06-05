@@ -802,8 +802,7 @@ describe("Testing examples", () => {
     expect(result).toEqual([["something in INSIDE", "something out INSIDE"], ["something out OUTSIDE"]]);
   });
 
-  // TODO: Unskip this after LNG-226 is fixed
-  it.skip("streamCapture.aqua return", async () => {
+  it("streamCapture.aqua return", async () => {
     const streamCaptureResult = await streamCaptureReturnCall();
     expect(streamCaptureResult).toEqual([
       "one",

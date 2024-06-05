@@ -26,7 +26,7 @@ object PushToStreamExpr extends Expr.Leaf {
   type ValueOrPair[S[_]] = Either[(ValueToken[S], ValueToken[S]), ValueToken[S]]
 
   private val valueOrPair: P[ValueOrPair[S]] =
-    P.repSep(ValueToken.`value`, 1, 2, ` `.? ~ `,`).map { l =>
+    P.repSep(ValueToken.`value` <* ` `.?, 1, 2, `,`).map { l =>
       l.tail match {
         case r :: _ => Left(l.head -> r)
         case _ => Right(l.head)

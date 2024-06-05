@@ -9,9 +9,9 @@ func testGetFunc() -> []string, []string, []string, u32:
   streamMap: %string
   key = "key"
   resEmpty = streamMap.get(key)
-  streamMap <<- (key, "first value")
+  streamMap <<- key, "first value"
   resFirst = streamMap.get(key)
-  streamMap <<- (key, "second value")
+  streamMap <<- key, "second value"
   resSecond = streamMap.get(key)
   <- resEmpty, resFirst, resSecond, resSecond.length
 
@@ -19,9 +19,9 @@ func testGetStreamFunc() -> []string, string, string:
   streamMap: %string
   key = "key"
   resEmptyStream = streamMap.getStream(key)
-  streamMap <<- (key, "first value")
+  streamMap <<- key, "first value"
   resFirstStream = streamMap.getStream(key)
-  streamMap <<- (key, "second value")
+  streamMap <<- key, "second value"
   resSecondStream = streamMap.getStream(key)
   resFirst = resFirstStream[0]
   resSecond = resSecondStream[1]
@@ -52,11 +52,11 @@ func testContainsFunc() -> bool, bool, bool, bool, bool:
   keys = ["key one", "key two"]
   streamMap: %string
   resFirst = streamMap.contains(keys[0])
-  streamMap <<- (keys[0], "")
+  streamMap <<- keys[0], ""
   resSecond = streamMap.contains(keys[0])
   resThird = streamMap.contains(keys[1])
-  streamMap <<- (keys[0], "new")
-  streamMap <<- (keys[1], "")
+  streamMap <<- keys[0], "new"
+  streamMap <<- keys[1], ""
   resFourth = streamMap.contains(keys[0])
   resFifth = streamMap.contains(keys[1])
   <- resFirst, resSecond, resThird, resFourth, resFifth
