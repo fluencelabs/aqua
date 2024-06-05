@@ -32,6 +32,9 @@ object ApplyStreamMapRawInliner {
   private def mang[S: Mangler](name: String, suffix: String): State[S, String] =
     Mangler[S].findAndForbidName(s"-${name}_$suffix")
 
+  private def intoField(vm: VarModel, field: String, errorMsg: String): VarModel =
+    vm.intoField(field).getOrElse(internalError(errorMsg))
+
   // - fold a map in parallel
   // - when a key matches index, push result to a stream
   // - return the stream
@@ -49,18 +52,12 @@ object ApplyStreamMapRawInliner {
       ForModel(iter.name, mapVar, ForModel.Mode.Never).wrap(
         XorModel.wrap(
           MatchMismatchModel(
-            iter
-              .withProperty(
-                IntoFieldModel("key", ScalarType.string)
-              ),
+            intoField(iter, "key", "Unexpected. No 'key' field in 'getStream'"),
             idxVar,
             true
           ).wrap(
             PushToStreamModel(
-              iter
-                .withProperty(
-                  IntoFieldModel("value", mapType.element)
-                ),
+              intoField(iter, "value", "Unexpected. No 'value' field in 'getStream'"),
               CallModel.Export(streamVar)
             ).leaf
           )
@@ -87,10 +84,7 @@ object ApplyStreamMapRawInliner {
     ParModel.wrap(
       ForModel(iter.name, mapVar, ForModel.Mode.Never).wrap(
         PushToStreamModel(
-          iter
-            .withProperty(
-              IntoFieldModel("key", ScalarType.string)
-            ),
+          intoField(iter, "key", "Unexpected. No 'key' field in 'getKeysStream'"),
           CallModel.Export(streamVar.name, streamVar.`type`)
         ).leaf,
         NextModel(iter.name).leaf
@@ -121,10 +115,7 @@ object ApplyStreamMapRawInliner {
       CanonicalizeModel(mapVar, CallModel.Export(canonMap)).leaf,
       ForModel(iter.name, canonMap).wrap(
         PushToStreamModel(
-          iter
-            .withProperty(
-              IntoFieldModel("key", ScalarType.string)
-            ),
+          intoField(iter, "key", "Unexpected. No 'key' field in 'keys'"),
           CallModel.Export(streamVar)
         ).leaf,
         NextModel(iter.name).leaf
