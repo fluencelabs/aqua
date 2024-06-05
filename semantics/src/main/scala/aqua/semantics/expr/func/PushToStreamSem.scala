@@ -27,9 +27,10 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     streamToken: Token[S],
     elementToken: Token[S],
     stream: Type,
-    element: Type
+    element: Type,
+    isMap: Boolean
   )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] = (
-    T.typeToStream(streamToken, stream),
+    T.typeToStream(streamToken, stream, isMap),
     T.typeToCollectible(elementToken, element)
   ).merged.semiflatMap { case (st, et) =>
     T.ensureTypeMatches(elementToken, st.element, et)
@@ -56,7 +57,7 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
       )
       valueRaw <- OptionT(V.valueToRaw(value))
       _ <- OptionT.withFilterF(
-        ensureStreamElementMatches(expr.token, value, st, valueRaw.`type`)
+        ensureStreamElementMatches(expr.token, value, st, valueRaw.`type`, key.isDefined)
       )
     } yield (keyRaw match {
       case Some(k) => PushToMapTag(k, valueRaw, Call.Export(expr.stream.value, st))

@@ -547,13 +547,21 @@ class TypesInterpreter[S[_], X](using
 
   override def typeToStream(
     token: Token[S],
-    givenType: Type
+    givenType: Type,
+    isMap: Boolean
   ): OptionT[State[X, *], MutableStreamType] =
-    typeTo[MutableStreamType](
-      token,
-      givenType,
-      s"Expected stream value or stream map, got value of type '$givenType'"
-    )
+    if (isMap)
+      typeTo[StreamMapType](
+        token,
+        givenType,
+        s"Expected stream map value (%), got value of type '$givenType'"
+      ).map(s => s: MutableStreamType)
+    else
+      typeTo[StreamType](
+        token,
+        givenType,
+        s"Expected stream value (*), got value of type '$givenType'"
+      ).map(s => s: MutableStreamType)
 
   override def typeToIterable(
     token: Token[S],
