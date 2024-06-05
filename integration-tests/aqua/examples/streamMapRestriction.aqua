@@ -9,6 +9,6 @@ func streamFold(arr: []string) -> %string:
   <- res
 
 func streamRes(arr: []string) -> []string, []string:
-  res: *string
+  res: %string
   res2 <- streamFold(arr)
   <- res.keys(), res2.keys()
