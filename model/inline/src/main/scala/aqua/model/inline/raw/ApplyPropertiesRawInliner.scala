@@ -355,6 +355,29 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
               s"Unfolded stream ($vr) cannot be a literal"
             )
         }
+      case (
+            vr @ VarRaw(_, st @ StreamMapType(_)),
+            Some(iar @ IntoArrowRaw(arrowName, _, args), otherProperties)
+          ) =>
+        unfold(vr).flatMap {
+          case (VarModel(nameVM, _, _), inl) =>
+            for {
+              argsInlined <- args.traverse(unfold(_)).map(_.unzip)
+              (argsVM, argsInline) = argsInlined
+              resultInlined <- ApplyStreamMapRawInliner(arrowName, nameVM, st, argsVM)
+              (resultVM, resultInline) = resultInlined
+              propsInlined <- unfoldProperties(
+                (argsInline :+ resultInline).combineAll,
+                resultVM,
+                otherProperties,
+                propertiesAllowed
+              )
+            } yield propsInlined
+          case _ =>
+            internalError(
+              s"Unfolded stream map ($vr) cannot be a literal"
+            )
+        }
 
       case (_, _) =>
         unfold(raw).flatMap {

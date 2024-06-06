@@ -4,27 +4,17 @@ export testParSeq
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
-service NumOp("op"):
-  identity(n: u64) -> u64
-
-data PeerRelay:
-  peer: string
-  relay: string
-
-func testParSeq(peer1: string, peer2: string, peer3: string, relay1: string, relay2: string, relay3: string) -> string:
-  pr1 = PeerRelay(peer = peer1, relay = relay1)
-  pr2 = PeerRelay(peer = peer2, relay = relay2)
-  pr3 = PeerRelay(peer = peer3, relay = relay3)
-  peers = [pr1, pr2, pr3]
+func testParSeq(relay1: string, relay2: string, relay3: string) -> string:
+  relays = [relay1, relay2, relay3]
   stream: *u64
   stream2: *u64
-  parseq p <- peers on p.peer via p.relay:
+  parseq r <- relays on r:
     stream <- Peer.timestamp_ms()
 
-  for p <- peers par:
-    on p.peer via p.relay:
-      join stream[peers.length - 1]
+  for r <- relays par:
+    on r:
+      join stream[relays.length - 1]
       stream2 <<- Peer.timestamp_ms()
 
-  join stream2[peers.length - 1]
+  join stream2[relays.length - 1]
   <- "ok"

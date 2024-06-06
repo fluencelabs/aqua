@@ -46,7 +46,9 @@ sealed trait Type {
    */
   def airPrefix: String = this match {
     case _: StreamType => "$"
-    case _: CanonStreamType => "#"
+    case _: CanonStreamType => "#$"
+    case _: StreamMapType => "%"
+    case _: CanonStreamMapType => "#%"
     case _ => ""
   }
 }
@@ -312,7 +314,9 @@ object CollectionType {
 sealed trait ImmutableCollectionType extends CollectionType with DataType {
   def withElement(t: DataType): ImmutableCollectionType
 }
-sealed trait MutableStreamType extends CollectionType
+sealed trait MutableStreamType extends CollectionType {
+  def toCanon: ImmutableCollectionType
+}
 
 case class CanonStreamType(
   override val element: DataType
@@ -320,7 +324,18 @@ case class CanonStreamType(
 
   override val isStream: Boolean = false
 
-  override def toString: String = "#" + element
+  override def toString: String = "#$" + element
+
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
+}
+
+case class CanonStreamMapType(
+  override val element: DataType
+) extends ImmutableCollectionType {
+
+  override val isStream: Boolean = false
+
+  override def toString: String = "#%" + element
 
   override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
@@ -349,14 +364,57 @@ case class OptionType(
 
 case class StreamMapType(override val element: DataType) extends MutableStreamType {
 
+  import StreamMapType.Func
+  import StreamMapType.Func.*
+
   override val isStream: Boolean = true
 
   override def withElement(t: DataType): MutableStreamType = copy(element = t)
 
   override def toString: String = s"%$element"
+
+  def getFunc(f: Func): ArrowType ={
+    val (args, rets) = f match {
+      case Get =>
+        (ScalarType.string :: Nil) -> (ArrayType(element) :: Nil)
+      case GetStream =>
+        (ScalarType.string :: Nil) -> (StreamType(element) :: Nil)
+      case Keys =>
+        Nil -> (ArrayType(ScalarType.string) :: Nil)
+      case KeysStream =>
+        Nil -> (StreamType(ScalarType.string) :: Nil)
+      case Contains =>
+        (ScalarType.string :: Nil) -> (ScalarType.bool :: Nil)
+    }
+
+    ArrowType(ProductType(args), ProductType(rets))
+  }
+
+  def funcByString(s: String): Option[ArrowType] = {
+    StreamMapType.funcByString(s).map(getFunc)
+  }
+
+  def iterType(name: String): StructType =
+    StructType(name, NonEmptyMap.of("key" -> ScalarType.string, "value" -> element))
+
+  def toCanon: ImmutableCollectionType = CanonStreamMapType(element)
 }
 
 object StreamMapType {
+
+  enum Func(val name: String) {
+    case Get extends Func("get")
+    case GetStream extends Func("getStream")
+    case Keys extends Func("keys")
+    case KeysStream extends Func("keysStream")
+    case Contains extends Func("contains")
+  }
+
+  def funcByString(s: String): Option[Func] =
+    Func.values.find(_.name == s)
+
+  lazy val allFuncs: List[Func] =  Func.values.toList
+
   def top(): StreamMapType = StreamMapType(TopType)
 }
 
@@ -367,6 +425,8 @@ case class StreamType(override val element: DataType) extends MutableStreamType 
   override def toString: String = s"*$element"
 
   override def withElement(t: DataType): StreamType = copy(element = t)
+
+  def toCanon: ImmutableCollectionType = CanonStreamType(element)
 }
 
 sealed trait NamedType extends Type {
@@ -526,11 +586,17 @@ object Type {
   /**
    * `StreamType` is collectible with canonicalization
    */
-  type CollectibleType = DataType | StreamType
-  
+  type CollectibleType = DataType | MutableStreamType
+
   def isStreamType(t: Type): Boolean =
     t match {
       case _: MutableStreamType => true
+      case _ => false
+    }
+
+  def isStreamMapType(t: Type): Boolean =
+    t match {
+      case _: StreamMapType => true
       case _ => false
     }
 

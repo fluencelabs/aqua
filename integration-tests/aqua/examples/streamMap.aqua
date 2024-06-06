@@ -3,7 +3,7 @@ aqua StreamMapTest declares *
 export testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc
 export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc
 
-import "builtin.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 func testGetFunc() -> []string, []string, []string, u32:
   streamMap: %string
@@ -46,6 +46,8 @@ func testKeysStreamFunc() -> []string, []string, []string:
   streamMap <<- "key one", "new"
   streamMap <<- "key two", ""
   resSecond = streamMap.keysStream()
+  join resFirst[0]
+  join resSecond[2]
   <- resEmpty, resFirst, resSecond
 
 func testContainsFunc() -> bool, bool, bool, bool, bool:
@@ -91,10 +93,10 @@ func testParSeqMap(relay1: string, relay2: string, relay3: string) -> string:
 
   for r <- relays par:
     on r:
-      join map.get("time")[relays.length - 1]
+      join map.getStream("time")[relays.length - 1]
       map2 <<- "time", Peer.timestamp_ms()
 
-  join map2.get("time")[relays.length - 1]
+  join map2.getStream("time")[relays.length - 1]
   <- "ok"
 
 func testForTupleFunc() -> []string, []string, []string:

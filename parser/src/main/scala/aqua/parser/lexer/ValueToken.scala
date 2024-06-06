@@ -23,6 +23,8 @@ sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
+
+
 case class PropertyToken[F[_]: Comonad](
   value: ValueToken[F],
   properties: NonEmptyList[PropertyOp[F]]

@@ -7,13 +7,18 @@ import aqua.model.inline.state.*
 import aqua.model.inline.tag.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{CanonStreamType, CollectionType, StreamType}
+import aqua.types.{
+  CanonStreamMapType,
+  CanonStreamType,
+  MutableStreamType,
+  StreamMapType,
+  StreamType
+}
 
 import cats.data.{Chain, State, StateT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.traverse.*
@@ -32,7 +37,7 @@ object TagInliner extends Logging {
 
   import aqua.model.inline.Inline.parDesugarPrefix
 
-  import RawValueInliner.{valueListToModel, valueToModel}
+  import RawValueInliner.valueToModel
 
   /**
    * Result of [[RawTag]] inlining
@@ -167,11 +172,12 @@ object TagInliner extends Logging {
     op: Option[OpModel.Tree]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
-      case ValueModel.Stream(v @ VarModel(n, _, l), StreamType(t)) =>
+      case ValueModel.MutableStream(v @ VarModel(n, _, l), mt: MutableStreamType) =>
         val canonName = n + "_canon"
+        val canonType = mt.toCanon
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
-          canonV = VarModel(canonN, CanonStreamType(t), l)
+          canonV = VarModel(canonN, canonType, l)
           canonOp = CanonicalizeModel(
             v.copy(properties = Chain.empty),
             CallModel.Export(canonV.name, canonV.baseType)
@@ -206,8 +212,8 @@ object TagInliner extends Logging {
       case TryTag =>
         TryTagInliner.inlined
 
-      case ForTag(item, iterable, mode) =>
-        ForTagInliner(item, iterable, mode).inlined
+      case ForTag(item, iterable, mode, keyValue) =>
+        ForTagInliner(item, iterable, mode, keyValue).inlined
 
       case PushToStreamTag(operand, exportTo) =>
         (
@@ -223,6 +229,24 @@ object TagInliner extends Logging {
               prefix = p
             )
           case (_, (vm, prefix)) =>
+            internalError(
+              s"stream ($exportTo) resolved " +
+                s"to ($vm) with prefix ($prefix)"
+            )
+        }
+
+      case PushToMapTag(key, operand, exportTo) =>
+        (
+          valueToModel(key),
+          valueToModel(operand),
+          valueToModel(exportTo.toRaw)
+        ).mapN {
+          case ((k, kp), (v, p), (VarModel(name, st: StreamMapType, Chain.nil), None)) =>
+            TagInlined.Single(
+              model = InsertKeyValueModel(k, v, name, st),
+              prefix = SeqModel.wrap(kp.toList ++ p.toList).some
+            )
+          case (_, _, (vm, prefix)) =>
             internalError(
               s"stream ($exportTo) resolved " +
                 s"to ($vm) with prefix ($prefix)"
@@ -339,7 +363,7 @@ object TagInliner extends Logging {
 
       case DeclareStreamTag(value) =>
         value match
-          case VarRaw(name, t: StreamType) =>
+          case VarRaw(name, t: MutableStreamType) =>
             for {
               _ <- Exports[S].resolved(name, VarModel(name, t))
             } yield TagInlined.Empty()

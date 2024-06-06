@@ -39,7 +39,7 @@ object ArrowInliner extends Logging {
   private def getOutsideStreamNames[S: Exports]: State[S, Set[String]] =
     Exports[S].exports
       .map(exports =>
-        exports.collect { case (n, VarModel(_, StreamType(_), _)) =>
+        exports.collect { case (n, VarModel(_, _: StreamType, _)) =>
           n
         }.toSet
       )

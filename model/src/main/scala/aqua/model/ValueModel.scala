@@ -78,7 +78,17 @@ object ValueModel {
 
     def unapply(vm: VarModel): Option[(VarModel, StreamType)] =
       vm match {
-        case vm @ VarModel(_, t: StreamType, _) =>
+        case vm@VarModel(_, t: StreamType, _) =>
+          (vm, t).some
+        case _ => none
+      }
+  }
+
+  object MutableStream {
+
+    def unapply(vm: VarModel): Option[(VarModel, MutableStreamType)] =
+      vm match {
+        case vm @ VarModel(_, t: MutableStreamType, _) =>
           (vm, t).some
         case _ => none
       }

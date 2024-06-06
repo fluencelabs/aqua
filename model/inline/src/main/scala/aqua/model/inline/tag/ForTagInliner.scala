@@ -9,22 +9,24 @@ import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.TagInliner.TagInlined
 import aqua.model.inline.TagInliner.flat
 import aqua.model.inline.state.*
-import aqua.raw.ops.ForTag
+import aqua.raw.ops.{ForKeyValue, ForTag}
 import aqua.raw.value.ValueRaw
-import aqua.types.CollectionType
-import aqua.types.StreamType
+import aqua.types.{CollectionType, ScalarType, StreamType}
 
 import cats.Eval
 import cats.data.Reader
 import cats.data.{Chain, State}
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 
 final case class ForTagInliner(
-  item: String,
-  iterable: ValueRaw,
-  mode: ForTag.Mode
-) {
+                                item: String,
+                                iterable: ValueRaw,
+                                mode: ForTag.Mode,
+                                keyValue: Option[ForKeyValue]
+                              ) {
 
   def inlined[S: Mangler: Exports: Arrows: Config]: State[S, TagInlined[S]] = for {
     vp <- valueToModel(iterable)
@@ -41,14 +43,32 @@ final case class ForTagInliner(
           s"non-box type variable '$iterable' in 'for' expression."
         )
     }
-    _ <- Exports[S].resolved(item, VarModel(n, elementType))
+    itemVar = VarModel(n, elementType)
+    _ <- Exports[S].resolved(item, itemVar)
+    pref <- keyValue.traverse(kv =>
+      for {
+        keyName <- Mangler[S].findAndForbidName(kv.key)
+        _ <- Exports[S].resolved(kv.key, VarModel(keyName, ScalarType.string))
+        valueName <- Mangler[S].findAndForbidName(kv.value)
+        _ <- Exports[S].resolved(kv.value, VarModel(valueName, elementType))
+      } yield SeqModel.wrap(
+        FlattenModel(
+          itemVar.withProperty(IntoFieldModel("key", ScalarType.string)),
+          keyName
+        ).leaf,
+        FlattenModel(
+          itemVar.withProperty(IntoFieldModel("value", elementType)),
+          valueName
+        ).leaf
+      )
+    )
     modeModel = mode match {
       case ForTag.Mode.SeqMode | ForTag.Mode.TryMode => ForModel.Mode.Null
       case ForTag.Mode.ParMode | ForTag.Mode.RecMode => ForModel.Mode.Never
     }
     model = ForModel(n, v, modeModel)
   } yield TagInlined.Around(
-    model = StreamRestrictions.restrictStreams(model.wrap),
+    model = StreamRestrictions.restrictStreams(ss => model.wrap(Chain.fromOption(pref) ++ ss)),
     prefix = p
   )
 }
