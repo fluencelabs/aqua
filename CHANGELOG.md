@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.9](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.8...aqua-v0.14.9) (2024-06-06)
+
+
+### Features
+
+* **compiler:** CRDT-maps implementation ([#1142](https://github.com/fluencelabs/aqua/issues/1142)) ([934c20c](https://github.com/fluencelabs/aqua/commit/934c20c98a6296f12543d49fe3f438a6dcecbfaf))
+
 ## [0.14.8](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.7...aqua-v0.14.8) (2024-05-29)
 
 
