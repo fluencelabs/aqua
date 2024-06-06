@@ -129,7 +129,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, CollectibleType]
 
-  def typeToStream(token: Token[S], givenType: Type, isMap: Boolean): OptionT[Alg, MutableStreamType]
+  def typeToStream(token: Token[S], givenType: Type): OptionT[Alg, StreamType]
+  def typeToStreamMap(token: Token[S], givenType: Type): OptionT[Alg, StreamMapType]
 
   def typeToIterable(token: Token[S], givenType: Type): OptionT[Alg, CollectionType]
 

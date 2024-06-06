@@ -17,9 +17,9 @@ import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.traverse.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
 
 class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
 
@@ -30,7 +30,8 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     element: Type,
     isMap: Boolean
   )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] = (
-    T.typeToStream(streamToken, stream, isMap),
+    (if (isMap) T.typeToStreamMap(streamToken, stream) else T.typeToStream(streamToken, stream))
+      .map(s => s: MutableStreamType),
     T.typeToCollectible(elementToken, element)
   ).merged.semiflatMap { case (st, et) =>
     T.ensureTypeMatches(elementToken, st.element, et)
