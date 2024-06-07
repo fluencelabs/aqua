@@ -5,23 +5,22 @@ import aqua.backend.*
 import aqua.definitions.*
 import aqua.res.FuncRes
 import aqua.types.*
-
 import io.circe.{Encoder, Json}
+
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
-import scala.scalajs.js.annotation.{JSExportAll, JSImport}
+import scala.scalajs.js.annotation.{JSExportAll, JSImport, JSName}
 
-@JSExportAll
-case class FunctionDefJs(
-  functionName: String,
-  arrow: ArrowTypeDefJs,
-  names: NamesConfigJs
-)
+class FunctionDefJs(
+  val functionName: String,
+  val arrow: ArrowTypeDefJs,
+  val names: NamesConfigJs
+) extends js.Object
 
 object FunctionDefJs {
 
   def apply(fd: FunctionDef): FunctionDefJs = {
-    FunctionDefJs(
+    new FunctionDefJs(
       fd.functionName,
       ArrowTypeDefJs(
         TypeDefinitionJs(fd.arrow.domain),
@@ -33,68 +32,57 @@ object FunctionDefJs {
   }
 }
 
-@JSExportAll
-sealed trait TypeDefinitionJs
+sealed trait TypeDefinitionJs extends js.Object
 
-@JSExportAll
-case class ArrayTypeDefJs(`type`: TypeDefinitionJs, tag: String) extends TypeDefinitionJs
+class ArrayTypeDefJs(val `type`: TypeDefinitionJs, val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class OptionTypeDefJs(`type`: TypeDefinitionJs, tag: String) extends TypeDefinitionJs
+class OptionTypeDefJs(val `type`: TypeDefinitionJs, val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class ScalarTypeDefJs(name: String, tag: String) extends TypeDefinitionJs
+class ScalarTypeDefJs(val name: String, val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class StructTypeDefJs(
-  name: String,
-  fields: js.Dictionary[TypeDefinitionJs],
-  tag: String
+class StructTypeDefJs(
+  val name: String,
+  val fields: js.Dictionary[TypeDefinitionJs],
+  val tag: String
 ) extends TypeDefinitionJs
 
-@JSExportAll
-case class LabeledTypeDefJs(fields: js.Dictionary[TypeDefinitionJs], tag: String)
+class LabeledTypeDefJs(val fields: js.Dictionary[TypeDefinitionJs], val tag: String)
     extends TypeDefinitionJs
 
 object LabeledTypeDefJs {
 
   def apply(l: LabeledProductTypeDef): LabeledTypeDefJs = {
 
-    LabeledTypeDefJs(
+    new LabeledTypeDefJs(
       js.Dictionary[TypeDefinitionJs](l.fields.map { case (n, t) => (n, TypeDefinitionJs(t)) }: _*),
       l.tag
     )
   }
 }
 
-@JSExportAll
-case class UnlabeledTypeDefJs(items: js.Array[TypeDefinitionJs], tag: String)
+class UnlabeledTypeDefJs(val items: js.Array[TypeDefinitionJs], val tag: String)
     extends TypeDefinitionJs
 
-@JSExportAll
-case class TopTypeDefJs(tag: String) extends TypeDefinitionJs
+class TopTypeDefJs(val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class BottomTypeDefJs(tag: String) extends TypeDefinitionJs
+class BottomTypeDefJs(val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class NilTypeDefJs(tag: String) extends TypeDefinitionJs
+class NilTypeDefJs(val tag: String) extends TypeDefinitionJs
 
-@JSExportAll
-case class ArrowTypeDefJs(
-  domain: TypeDefinitionJs,
-  codomain: TypeDefinitionJs,
-  tag: String
+class ArrowTypeDefJs(
+  val domain: TypeDefinitionJs,
+  val codomain: TypeDefinitionJs,
+  val tag: String
 ) extends TypeDefinitionJs
 
 object TypeDefinitionJs {
 
   def apply(td: TypeDefinition): TypeDefinitionJs = td match {
-    case o @ OptionTypeDef(t) => OptionTypeDefJs(apply(t), o.tag)
-    case a @ ArrayTypeDef(t) => ArrayTypeDefJs(apply(t), a.tag)
-    case s @ ScalarTypeDef(n) => ScalarTypeDefJs(n, s.tag)
+    case o @ OptionTypeDef(t) => new OptionTypeDefJs(apply(t), o.tag)
+    case a @ ArrayTypeDef(t) => new ArrayTypeDefJs(apply(t), a.tag)
+    case s @ ScalarTypeDef(n) => new ScalarTypeDefJs(n, s.tag)
     case s @ StructTypeDef(n, f) =>
-      StructTypeDefJs(
+      new StructTypeDefJs(
         n,
         js.Dictionary[TypeDefinitionJs](f.toList.map { case (n, t) =>
           (n, TypeDefinitionJs(t))
@@ -104,46 +92,44 @@ object TypeDefinitionJs {
     case l: LabeledProductTypeDef =>
       LabeledTypeDefJs(l)
     case u @ UnlabeledProductTypeDef(items) =>
-      UnlabeledTypeDefJs(items.map(TypeDefinitionJs.apply).toJSArray, u.tag)
+      new UnlabeledTypeDefJs(items.map(TypeDefinitionJs.apply).toJSArray, u.tag)
     case a @ ArrowTypeDef(domain, codomain) =>
-      ArrowTypeDefJs(apply(domain), apply(codomain), a.tag)
-    case n @ NilTypeDef => NilTypeDefJs(n.tag)
-    case n @ TopTypeDef => TopTypeDefJs(n.tag)
-    case n @ BottomTypeDef => BottomTypeDefJs(n.tag)
+      new ArrowTypeDefJs(apply(domain), apply(codomain), a.tag)
+    case n @ NilTypeDef => new NilTypeDefJs(n.tag)
+    case n @ TopTypeDef => new TopTypeDefJs(n.tag)
+    case n @ BottomTypeDef => new BottomTypeDefJs(n.tag)
   }
 }
 
-@JSExportAll
-case class ServiceDefJs(
-  defaultServiceId: js.UndefOr[String],
-  functions: LabeledTypeDefJs
-)
+class ServiceDefJs(
+  val defaultServiceId: js.UndefOr[String],
+  val functions: LabeledTypeDefJs
+) extends js.Object
 
 object ServiceDefJs {
 
   def apply(sd: ServiceDef): ServiceDefJs = {
-    ServiceDefJs(
+    new ServiceDefJs(
       sd.defaultServiceId.getOrElse(()),
       LabeledTypeDefJs(sd.functions)
     )
   }
 }
 
-@JSExportAll
-case class NamesConfigJs(
-  relay: String,
-  getDataSrv: String,
-  callbackSrv: String,
-  responseSrv: String,
-  responseFnName: String,
-  errorHandlingSrv: String,
-  errorFnName: String
-)
+class NamesConfigJs(
+  val relay: String,
+  val getDataSrv: String,
+  val callbackSrv: String,
+  val responseSrv: String,
+  val responseFnName: String,
+  val errorHandlingSrv: String,
+  val errorFnName: String
+) extends js.Object
 
 object NamesConfigJs {
 
   def apply(nc: NamesConfig): NamesConfigJs = {
-    NamesConfigJs(
+    new NamesConfigJs(
       nc.relay,
       nc.getDataSrv,
       nc.callbackSrv,
@@ -157,5 +143,4 @@ object NamesConfigJs {
 
 type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 
-@JSExportAll
-case class Debug(printParticleId: js.UndefOr[Boolean], marineLogLevel: js.UndefOr[LogLevel])
+class Debug(val printParticleId: js.UndefOr[Boolean], val marineLogLevel: js.UndefOr[LogLevel]) extends js.Object

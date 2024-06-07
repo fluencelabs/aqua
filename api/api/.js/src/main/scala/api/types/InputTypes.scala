@@ -8,46 +8,38 @@ import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scala.scalajs.js.annotation.{JSExport, JSExportAll, JSExportTopLevel}
 import scala.scalajs.js.|
 
 @JSExportTopLevel("Input")
+@JSExportAll
 class Input(
-  @JSExport
   val input: String
 )
 
 @JSExportTopLevel("Path")
+@JSExportAll
 class Path(
-  @JSExport
   val path: String
 )
 
 @JSExportTopLevel("Call")
+@JSExportAll
 class Call(
-  @JSExport
   val functionCall: String,
-  @JSExport
   val arguments: js.Dynamic,
-  @JSExport
   val input: Path | Input
 )
 
 @JSExportTopLevel("AquaConfig")
+@JSExportAll
 class AquaConfig(
-  @JSExport
   val logLevel: js.UndefOr[String],
-  @JSExport
   val constants: js.UndefOr[js.Array[String]],
-  @JSExport
   val noXor: js.UndefOr[Boolean],
-  @JSExport
   val noRelay: js.UndefOr[Boolean],
-  @JSExport
   val targetType: js.UndefOr[String],
-  @JSExport
   val tracing: js.UndefOr[Boolean],
-  @JSExport
   val noEmptyResponse: js.UndefOr[Boolean]
 )
 

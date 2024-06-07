@@ -4,28 +4,29 @@ import aqua.parser.lift.FileSpan
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
 
-@JSExportAll
-case class CompilationResult(
-  errors: js.Array[ErrorInfo],
-  warnings: js.Array[WarningInfo] = js.Array(),
-  locations: js.Array[TokenLink] = js.Array(),
-  importLocations: js.Array[TokenImport] = js.Array(),
-  tokens: js.Array[ExprInfoJs] = js.Array()
-)
+class CompilationResult(
+  val errors: js.Array[ErrorInfo],
+  val warnings: js.Array[WarningInfo] = js.Array(),
+  val locations: js.Array[TokenLink] = js.Array(),
+  val importLocations: js.Array[TokenImport] = js.Array(),
+  val tokens: js.Array[ExprInfoJs] = js.Array()
+) extends js.Object
 
-@JSExportAll
-case class ExprInfoJs(location: TokenLocation, `type`: TypeJs)
+class ExprInfoJs(val location: TokenLocation, val `type`: TypeJs) extends js.Object
 
-@JSExportAll
-case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
+class TokenLocation(
+  val name: String,
+  val startLine: Int,
+  val startCol: Int,
+  val endLine: Int,
+  val endCol: Int
+) extends js.Object
 
-@JSExportAll
-case class TokenLink(current: TokenLocation, definition: TokenLocation)
+class TokenLink(val current: TokenLocation, val definition: TokenLocation) extends js.Object
 
-@JSExportAll
-case class TokenImport(current: TokenLocation, path: String)
+class TokenImport(val current: TokenLocation, val path: String) extends js.Object
 
 object TokenLocation {
 
@@ -36,18 +37,17 @@ object TokenLocation {
     for {
       startLC <- start
       endLC <- end
-    } yield TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
+    } yield new TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
 
   }
 }
 
-@JSExportAll
-case class ErrorInfo(
-  start: Int,
-  end: Int,
-  message: String,
-  location: UndefOr[String]
-) {
+class ErrorInfo(
+  val start: Int,
+  val end: Int,
+  val message: String,
+  val location: UndefOr[String]
+) extends js.Object {
   // Used to distinguish from WarningInfo in TS
   val infoType: String = "error"
 }
@@ -57,21 +57,20 @@ object ErrorInfo {
   def apply(fileSpan: FileSpan, message: String): ErrorInfo = {
     val start = fileSpan.span.startIndex
     val end = fileSpan.span.endIndex
-    ErrorInfo(start, end, message, fileSpan.name)
+    new ErrorInfo(start, end, message, fileSpan.name)
   }
 
   def applyOp(start: Int, end: Int, message: String, location: Option[String]): ErrorInfo = {
-    ErrorInfo(start, end, message, location.getOrElse(undefined))
+    new ErrorInfo(start, end, message, location.getOrElse(undefined))
   }
 }
 
-@JSExportAll
-case class WarningInfo(
-  start: Int,
-  end: Int,
-  message: String,
-  location: UndefOr[String]
-) {
+class WarningInfo(
+  val start: Int,
+  val end: Int,
+  val message: String,
+  val location: UndefOr[String]
+) extends js.Object {
   // Used to distinguish from ErrorInfo in TS
   val infoType: String = "warning"
 }
@@ -81,6 +80,6 @@ object WarningInfo {
   def apply(fileSpan: FileSpan, message: String): WarningInfo = {
     val start = fileSpan.span.startIndex
     val end = fileSpan.span.endIndex
-    WarningInfo(start, end, message, fileSpan.name)
+    new WarningInfo(start, end, message, fileSpan.name)
   }
 }
