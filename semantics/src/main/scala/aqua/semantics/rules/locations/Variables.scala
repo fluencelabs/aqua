@@ -6,10 +6,11 @@ import aqua.parser.lexer.Token
 
 import cats.kernel.{Monoid, Semigroup}
 import cats.syntax.align.*
+import scribe.Logging
 
 case class Variables[S[_]](
   variables: Map[PName, List[VariableInfo[S]]] = Map.empty[PName, List[VariableInfo[S]]]
-) {
+) extends Logging {
 
   def renameDefinitions(f: PartialFunction[PName, PName]): Variables[S] =
     copy(variables = variables.map { case (k, v) =>
@@ -43,7 +44,7 @@ case class Variables[S[_]](
   ): Variables[S] = {
     copy(variables = {
       if (!variables.contains(name)) {
-        println(s"WARNING: no $name found")
+        logger.warn(s"Name `$name` not found")
       }
 
       variables.updatedWith(name)(
