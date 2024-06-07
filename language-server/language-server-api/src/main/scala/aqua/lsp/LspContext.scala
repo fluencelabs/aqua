@@ -19,9 +19,6 @@ import scala.collection.immutable.ListMap
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
-  rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
-  constants: Map[String, Type] = Map.empty[String, Type],
   // TODO: Can this field be refactored into LocationsState?
   variables: Variables[S] = Variables[S](),
   importTokens: List[LiteralToken[S]] = Nil,
@@ -43,9 +40,6 @@ object LspContext {
     override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] =
       LspContext[S](
         raw = x.raw |+| y.raw,
-        abDefinitions = x.abDefinitions ++ y.abDefinitions,
-        rootArrows = x.rootArrows ++ y.rootArrows,
-        constants = x.constants ++ y.constants,
         importTokens = x.importTokens ++ y.importTokens,
         variables = x.variables |+| y.variables,
         errors = x.errors ++ y.errors,
@@ -146,17 +140,11 @@ object LspContext {
         }
       }.getOrElse(ctx.variables)
 
-      def pickFrom[T](map: Map[String, T]): Map[String, T] =
-        map.get(name.value).map(t => Map(rename.getOrElse(name).value -> t)).getOrElse(Map.empty)
-
       ctx.raw
         .pick(name, rename)
         .map(rc =>
           ctx.copy(
             raw = rc,
-            abDefinitions = pickFrom(ctx.abDefinitions),
-            rootArrows = pickFrom(ctx.rootArrows),
-            constants = pickFrom(ctx.constants),
             variables = newVariables
           )
         )
