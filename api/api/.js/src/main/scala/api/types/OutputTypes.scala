@@ -2,34 +2,24 @@ package api.types
 
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
-
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.scalajs.js.|
 
-@JSExportTopLevel("AquaFunction")
-case class AquaFunction(
-  @JSExport
-  funcDef: FunctionDefJs,
-  @JSExport
-  script: String
-)
+class AquaFunction(
+  val funcDef: FunctionDefJs,
+  val script: String
+) extends js.Object
 
-@JSExportTopLevel("GeneratedSource")
-case class GeneratedSource(
-  @JSExport
+class GeneratedSource(
   val name: String,
-  @JSExport
   val tsSource: js.UndefOr[String],
-  @JSExport
   val jsSource: js.UndefOr[String],
-  @JSExport
   val tsTypes: js.UndefOr[String]
-)
+) extends js.Object
 
 object GeneratedSource {
 
@@ -40,21 +30,14 @@ object GeneratedSource {
     new GeneratedSource(name, null, jsSource, tsTypes)
 }
 
-@JSExportTopLevel("CompilationResult")
 class CompilationResult(
-  @JSExport
   val services: js.Dictionary[ServiceDefJs],
-  @JSExport
   val functions: js.Dictionary[AquaFunction],
-  @JSExport
   val functionCall: js.UndefOr[AquaFunction],
-  @JSExport
   val generatedSources: js.Array[GeneratedSource],
-  @JSExport
   val errors: js.Array[String],
-  @JSExport
   val warnings: js.Array[String]
-)
+) extends js.Object
 
 object CompilationResult {
 
