@@ -58,10 +58,10 @@ class TypesInterpreter[S[_], X](using
       case _ => none.pure
     }
 
-  override def resolveStreamType(token: TypeToken[S]): State[X, Option[StreamType]] =
+  override def resolveStreamType(token: TypeToken[S]): State[X, Option[MutableStreamType]] =
     OptionT(resolveType(token)).flatMapF {
-      case st: StreamType => st.some.pure[ST]
-      case t => report.error(token, s"Expected stream type, got $t").as(none)
+      case st: MutableStreamType => st.some.pure[ST]
+      case t => report.error(token, s"Expected stream or stream map type, got $t").as(none)
     }.value
 
   def resolveNamedType(token: TypeToken[S]): State[X, Option[AbilityType | StructType]] =
@@ -235,6 +235,62 @@ class TypesInterpreter[S[_], X](using
     }
   }
 
+  private def checkArrowType(
+    op: IntoArrow[S],
+    tOp: Option[Type],
+    rootName: String,
+    availableStr: String,
+    types: List[Type]
+  ): State[X, Option[ArrowType]] = {
+    val opName = op.name.value
+    tOp match {
+      case Some(at: ArrowType) =>
+        val reportNotEnoughArguments =
+          /* Report at position of arrow application */
+          report
+            .error(
+              op,
+              s"Not enough arguments for arrow `$opName` in `$rootName`, " +
+                s"expected: ${at.domain.length}, given: ${op.arguments.length}"
+            )
+            .whenA(op.arguments.length < at.domain.length)
+        val reportTooManyArguments =
+          /* Report once at position of the first extra argument */
+          op.arguments.drop(at.domain.length).headOption.traverse_ { arg =>
+            report
+              .error(
+                arg,
+                s"Too many arguments for arrow `$opName` in `$rootName`, " +
+                  s"expected: ${at.domain.length}, given: ${op.arguments.length}"
+              )
+          }
+        val checkArgumentTypes =
+          op.arguments
+            .zip(types)
+            .zip(at.domain.toList)
+            .forallM { case ((arg, argType), expectedType) =>
+              ensureTypeMatches(arg, expectedType, argType)
+            }
+
+        reportNotEnoughArguments *>
+          reportTooManyArguments *>
+          checkArgumentTypes.map(typesMatch =>
+            Option.when(
+              typesMatch && at.domain.length == op.arguments.length
+            )(at)
+          )
+
+      case Some(t) =>
+        report
+          .error(op, s"Field `$opName` has non arrow type `$t` in `$rootName`")
+          .as(None)
+      case None =>
+        report
+          .error(op, s"Arrow `$opName` not found in `$rootName`, available: $availableStr")
+          .as(None)
+    }
+  }
+
   override def resolveIntoArrow(
     op: IntoArrow[S],
     rootT: Type,
@@ -249,55 +305,12 @@ class TypesInterpreter[S[_], X](using
     rootT match {
       case ab: GeneralAbilityType =>
         val abName = ab.fullName
-
-        ab.fields.lookup(opName) match {
-          case Some(at: ArrowType) =>
-            val reportNotEnoughArguments =
-              /* Report at position of arrow application */
-              report
-                .error(
-                  op,
-                  s"Not enough arguments for arrow `$opName` in `$abName`, " +
-                    s"expected: ${at.domain.length}, given: ${op.arguments.length}"
-                )
-                .whenA(op.arguments.length < at.domain.length)
-            val reportTooManyArguments =
-              /* Report once at position of the first extra argument */
-              op.arguments.drop(at.domain.length).headOption.traverse_ { arg =>
-                report
-                  .error(
-                    arg,
-                    s"Too many arguments for arrow `$opName` in `$abName`, " +
-                      s"expected: ${at.domain.length}, given: ${op.arguments.length}"
-                  )
-              }
-            val checkArgumentTypes =
-              op.arguments
-                .zip(types)
-                .zip(at.domain.toList)
-                .forallM { case ((arg, argType), expectedType) =>
-                  ensureTypeMatches(arg, expectedType, argType)
-                }
-
-            locations.pointFieldLocation(PName.stringUnsafe(ab.name), op.simpleName, op) *>
-              reportNotEnoughArguments *>
-              reportTooManyArguments *>
-              checkArgumentTypes.map(typesMatch =>
-                Option.when(
-                  typesMatch && at.domain.length == op.arguments.length
-                )(at)
-              )
-
-          case Some(t) =>
-            report
-              .error(op, s"Field `$opName` has non arrow type `$t` in `$abName`")
-              .as(None)
-          case None =>
-            val available = ab.arrowFields.keys.map(k => s"`$k`").mkString(", ")
-            report
-              .error(op, s"Arrow `$opName` not found in `$abName`, available: $available")
-              .as(None)
-        }
+        val avStr = ab.arrowFields.keys.map(k => s"`$k`").mkString(", ")
+        locations.pointFieldLocation(PName.stringUnsafe(ab.name), op.simpleName, op) *>
+          checkArrowType(op, ab.fields.lookup(opName), abName, avStr, types)
+      case st: StreamMapType =>
+        val avStr = StreamMapType.allFuncs.map(k => s"`${k.name}`").mkString(", ")
+        checkArrowType(op, st.funcByString(opName), st.toString, avStr, types)
       case t =>
         /* NOTE: Arrows are only supported on services and abilities,
            (`.copy(...)` for structs is resolved by separate method) */
@@ -545,7 +558,17 @@ class TypesInterpreter[S[_], X](using
     typeTo[StreamType](
       token,
       givenType,
-      s"Expected stream value, got value of type '$givenType'"
+      s"Expected stream value (*), got value of type '$givenType'"
+    )
+
+  override def typeToStreamMap(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], StreamMapType] =
+    typeTo[StreamMapType](
+      token,
+      givenType,
+      s"Expected stream map value (%), got value of type '$givenType'"
     )
 
   override def typeToIterable(

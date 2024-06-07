@@ -36,14 +36,14 @@ class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
       (),
       error(
         token,
-        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
+        s"The function '$name' cannot be exported, because it returns an arrow, an ability or a stream map"
       )
     ) combine Validated.condNec(
       !ctx.funcAcceptAbility(name),
       (),
       error(
         token,
-        s"The function '$name' cannot be exported, because it accepts an ability"
+        s"The function '$name' cannot be exported, because it accepts an ability or a stream map"
       )
     )
 

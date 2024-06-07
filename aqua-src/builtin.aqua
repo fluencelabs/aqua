@@ -1,3 +1,5 @@
+aqua Builtin declares *
+
 -- Default public interface of Fluence nodes
 
 alias Field : []string

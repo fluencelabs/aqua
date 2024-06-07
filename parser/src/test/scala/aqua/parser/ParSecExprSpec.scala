@@ -12,16 +12,16 @@ class ParSeqExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "parseq" should "be parsed" in {
     parseParSeq("parseq s <- strings on \"peerId\"") should be(
-      ParSeqExpr[Id](toName("s"), toVar("strings"), toStr("peerId"), Nil)
+      ParSeqExpr[Id](Right(toName("s")), toVar("strings"), toStr("peerId"), Nil)
     )
 
     parseParSeq("parseq s <- strings on \"peerId\" via \"relay\"") should be(
-      ParSeqExpr[Id](toName("s"), toVar("strings"), toStr("peerId"), toStr("relay") :: Nil)
+      ParSeqExpr[Id](Right(toName("s")), toVar("strings"), toStr("peerId"), toStr("relay") :: Nil)
     )
 
     parseParSeq("parseq s <- strings on \"peerId\" via \"relay\" via \"relay2\"") should be(
       ParSeqExpr[Id](
-        toName("s"),
+        Right(toName("s")),
         toVar("strings"),
         toStr("peerId"),
         toStr("relay") :: toStr("relay2") :: Nil
@@ -29,7 +29,11 @@ class ParSeqExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseParSeq("parseq s <- strings on peerId via relay") should be(
-      ParSeqExpr[Id](toName("s"), toVar("strings"), toVar("peerId"), toVar("relay") :: Nil)
+      ParSeqExpr[Id](Right(toName("s")), toVar("strings"), toVar("peerId"), toVar("relay") :: Nil)
+    )
+
+    parseParSeq("parseq s, v <- strings on peerId via relay") should be(
+      ParSeqExpr[Id](Left((toName("s"), toName("v"))), toVar("strings"), toVar("peerId"), toVar("relay") :: Nil)
     )
 
   }

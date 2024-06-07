@@ -1,10 +1,8 @@
 package aqua.model.inline.state
 
-import aqua.model.ValueModel.{Ability, Stream}
+import aqua.model.ValueModel.{Ability, MutableStream, Stream}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.types.StreamType
-import aqua.types.{AbilityType, GeneralAbilityType, NamedType}
-
+import aqua.types.{AbilityType, GeneralAbilityType, MutableStreamType, NamedType, StreamType}
 import cats.data.{NonEmptyList, State}
 import cats.syntax.apply.*
 import cats.syntax.traverse.*
@@ -78,9 +76,9 @@ trait Exports[S] extends Scoped[S] {
 
   def deleteStreams(names: Set[String]): State[S, Unit]
 
-  def streams: State[S, Map[String, StreamType]]
+  def streams: State[S, Map[String, MutableStreamType]]
 
-  def streamScope[T](inside: State[S, T]): State[S, (T, Map[String, StreamType])] =
+  def streamScope[T](inside: State[S, T]): State[S, (T, Map[String, MutableStreamType])] =
     for {
       streamsBefore <- streams
       tree <- inside
@@ -103,7 +101,7 @@ trait Exports[S] extends Scoped[S] {
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
 
-    override def streams: State[R, Map[String, StreamType]] =
+    override def streams: State[R, Map[String, MutableStreamType]] =
       self.streams.transformS(f, g)
 
     override def deleteStreams(names: Set[String]): State[R, Unit] =
@@ -186,7 +184,7 @@ object Exports {
    */
   case class ExportsState(
     values: Map[String, ValueModel] = Map.empty,
-    streams: Map[String, StreamType] = Map.empty
+    streams: Map[String, MutableStreamType] = Map.empty
   )
 
   object Simple extends Exports[ExportsState] {
@@ -220,7 +218,7 @@ object Exports {
         case Ability(vm, at) if vm.properties.isEmpty =>
           val pairs = getAbilityPairs(vm.name, exportName, at, state.values)
           state.copy(values = state.values ++ pairs.toList.toMap + (exportName -> value))
-        case Stream(VarModel(streamName, _, _), st) if exportName == streamName =>
+        case MutableStream(VarModel(streamName, _, _), st) if exportName == streamName =>
           state.copy(
             values = state.values + (exportName -> value),
             streams = state.streams + (exportName -> st)
@@ -237,7 +235,7 @@ object Exports {
     override def resolved(exports: Map[String, ValueModel]): State[ExportsState, Unit] =
       State.modify(st => st.copy(values = st.values ++ exports))
 
-    override def streams: State[ExportsState, Map[String, StreamType]] =
+    override def streams: State[ExportsState, Map[String, MutableStreamType]] =
       State.get.map(_.streams)
 
     override def deleteStreams(names: Set[String]): State[ExportsState, Unit] =

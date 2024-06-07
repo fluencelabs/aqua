@@ -9,6 +9,7 @@ import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
@@ -26,8 +27,9 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
   def program[F[_]: Monad](using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
-    T: TypesAlgebra[S, F],
-    A: AbilitiesAlgebra[S, F]
+    A: AbilitiesAlgebra[S, F],
+    M: ManglerAlgebra[F],
+    T: TypesAlgebra[S, F]
   ): Prog[F, Raw] =
     Prog
       .around(
@@ -50,10 +52,12 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 case ForTag.Mode.RecMode => ParTag
               }
 
-              val forTag = ForTag(expr.item.value, vm, mode).wrap(
+              val (item, pair) = ForSem.itemOrPair(expr.item)
+
+              val forTag = ForTag(item, vm, mode, pair).wrap(
                 innerTag.wrap(
                   op,
-                  NextTag(expr.item.value).leaf
+                  NextTag(item).leaf
                 )
               )
 
@@ -75,18 +79,40 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
 object ForSem {
 
+  def itemOrPair[S[_]](nameOrPair: ForExpr.NameOrPair[S]): (String, Option[ForKeyValue]) =
+    nameOrPair match {
+      case Right(v) => (v.value, None)
+      case Left(k, v) => ("-iterable-", ForKeyValue(k.value, v.value).some)
+    }
+
   def beforeFor[S[_], F[_]: Monad](
-    item: Name[S],
+    item: ForExpr.NameOrPair[S],
     iterable: ValueToken[S]
   )(using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
+    M: ManglerAlgebra[F],
     T: TypesAlgebra[S, F]
   ): F[Option[ValueRaw]] = (for {
     value <- V.valueToIterable(iterable)
     (raw, typ) = value
-    _ <- OptionT.liftF(
-      N.define(item, typ.element)
-    )
-  } yield raw).value
+    res <- (typ, item) match {
+      case (smt: StreamMapType, Left(key, value)) =>
+        OptionT.liftF(for {
+          _ <- N.define(key, ScalarType.string)
+          _ <- N.define(value, smt.element)
+        } yield raw)
+      case (smt: StreamMapType, Right(it)) =>
+        val typeName = s"KVPair(${smt.element})"
+        OptionT.liftF(for {
+          newTypeName <- M.rename(typeName)
+          iterType = smt.iterType(newTypeName)
+          _ <- N.define(it, iterType)
+        } yield raw)
+      case (_, Left(_, _)) =>
+        OptionT(T.ensureTypeMatches(iterable, StreamMapType(TopType), typ).as(None))
+      case (_, Right(it)) =>
+        OptionT.liftF(N.define(it, typ.element).as(raw))
+    }
+  } yield res).value
 }

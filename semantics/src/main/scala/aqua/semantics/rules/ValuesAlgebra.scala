@@ -12,6 +12,7 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
+import aqua.types.Type.isStreamMapType
 
 import cats.Monad
 import cats.data.{NonEmptyList, OptionT}
@@ -85,7 +86,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           idx <- OptionT(op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw))
           valueType <- OptionT(T.resolveIntoIndex(op, rootType, idx.`type`))
         } yield IntoIndexRaw(idx, valueType)).value
-      case op: IntoApply[S] =>
+      case _: IntoApply[S] =>
         internalError("Unexpected. `IntoApply` expected to be transformed into `NamedValueToken`")
     }
 
@@ -377,6 +378,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     valueToRaw(v).flatMap(
       _.flatTraverse {
         case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]
+        case ApplyPropertyRaw(value, _) if isStreamMapType(value.baseType) =>
+          // TODO: make it possible to use `<-`
+          report.error(v, s"Use `=` instead of `<-` with map functions").as(none)
         case apr @ ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) =>
           (apr, arrowType).some.pure[Alg]
         // TODO: better error message (`raw` formatting)

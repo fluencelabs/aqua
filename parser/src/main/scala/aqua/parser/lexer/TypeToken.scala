@@ -55,6 +55,20 @@ object StreamTypeToken {
 
 }
 
+case class StreamMapTypeToken[S[_] : Comonad](override val unit: S[Unit], data: BasicTypeToken[S])
+  extends BasicTypeToken[S] {
+  override def as[T](v: T): S[T] = unit.as(v)
+
+  override def mapK[K[_] : Comonad](fk: S ~> K): StreamMapTypeToken[K] = copy(fk(unit), data.mapK(fk))
+}
+
+object StreamMapTypeToken {
+
+  val `streammaptypedef`: P[StreamMapTypeToken[Span.S]] =
+    (`%`.lift ~ BasicTypeToken.`compositetypedef`).map(ud => StreamMapTypeToken(ud._1, ud._2))
+
+}
+
 case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: BasicTypeToken[F])
     extends BasicTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
@@ -180,6 +194,7 @@ object BasicTypeToken {
       P.defer(`topbottomdef`) ::
         P.defer(ArrayTypeToken.`arraytypedef`) ::
         P.defer(StreamTypeToken.`streamtypedef`) ::
+        P.defer(StreamMapTypeToken.`streammaptypedef`) ::
         P.defer(OptionTypeToken.`optiontypedef`) ::
         ScalarTypeToken.`scalartypedef` ::
         NamedTypeToken.dotted :: Nil

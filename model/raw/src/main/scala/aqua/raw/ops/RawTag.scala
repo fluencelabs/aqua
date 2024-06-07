@@ -159,17 +159,23 @@ case class NextTag(item: String) extends RawTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends SeqGroupTag {
+case class ForKeyValue(key: String, value: String) {
+  def toSet: Set[String] = Set(key, value)
 
-  override def restrictsVarNames: Set[String] = Set(item)
+  def rename(map: Map[String, String]): ForKeyValue = copy(key = map.getOrElse(key, key), value = map.getOrElse(value, value))
+}
+
+case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode, keyValue: Option[ForKeyValue] = None) extends SeqGroupTag {
+
+  override def restrictsVarNames: Set[String] = Set(item) ++ keyValue.toSet.flatMap(_.toSet)
 
   override def usesVarNames: Set[String] = iterable.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ForTag(item, iterable.map(f), mode)
+    ForTag(item, iterable.map(f), mode, keyValue)
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(item = map.getOrElse(item, item))
+    copy(item = map.getOrElse(item, item), keyValue = keyValue.map(_.rename(map)))
 }
 
 object ForTag {
@@ -187,11 +193,11 @@ object ForTag {
     case ParMode, SeqMode, TryMode, RecMode
   }
 
-  def par(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.ParMode)
+  def par(item: String, iterable: ValueRaw, keyValue: Option[ForKeyValue] = None): ForTag =
+    ForTag(item, iterable, Mode.ParMode, keyValue)
 
-  def seq(item: String, iterable: ValueRaw): ForTag =
-    ForTag(item, iterable, Mode.SeqMode)
+  def seq(item: String, iterable: ValueRaw, keyValue: Option[ForKeyValue] = None): ForTag =
+    ForTag(item, iterable, Mode.SeqMode, keyValue)
 }
 
 case class CallArrowRawTag(
@@ -374,6 +380,21 @@ case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
     copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
 
   override def toString: String = s"(push $operand $exportTo)"
+}
+
+case class PushToMapTag(key: ValueRaw, operand: ValueRaw, exportTo: Call.Export) extends RawTag {
+
+  override def exportsVarNames: Set[String] = Set.empty
+
+  override def usesVarNames: Set[String] = key.varNames ++ operand.varNames + exportTo.name
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    PushToMapTag(key.map(f), operand.map(f), exportTo)
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
+
+  override def toString: String = s"(pushmap ($key $operand) $exportTo)"
 }
 
 case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {

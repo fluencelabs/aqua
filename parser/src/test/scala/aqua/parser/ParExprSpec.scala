@@ -84,7 +84,7 @@ class ParExprSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
       _ should be(
         par(
           ForExpr(
-            toName("w"),
+            Right(toName("w")),
             CallArrowToken(toName("getWorkers"), Nil),
             None
           )

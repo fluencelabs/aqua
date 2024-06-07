@@ -84,7 +84,7 @@ class CoExprSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
       _ should be(
         co(
           ForExpr(
-            toName("w"),
+            Right(toName("w")),
             CallArrowToken(toName("getWorkers"), Nil),
             None
           )
