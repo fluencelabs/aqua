@@ -48,7 +48,7 @@ jobs:
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
-  # registry:
-  #  needs:
-  #    - fcli-snapshot
-  #  uses: fluencelabs/registry/.github/workflows/tests.yml@main
+  registry:
+   needs:
+     - fcli-snapshot
+   uses: fluencelabs/registry/.github/workflows/tests.yml@main
