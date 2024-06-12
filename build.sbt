@@ -21,7 +21,7 @@ name := "aqua-hll"
 val commons = Seq(
   version := {
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
-    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
+    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot
   },
   scalaVersion := scalaV,
   libraryDependencies ++= Seq(
@@ -211,6 +211,30 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .in(file("compiler"))
   .settings(commons)
   .dependsOn(semantics, linker, backend, transform % "test->test", res % "test->test")
+
+lazy val `compiler-native-lib` = project
+  .in(file("compiler-native-lib"))
+  .enablePlugins(NativeImagePlugin)
+  .settings(commons: _*)
+  .settings(
+    name := "libaqua",
+    Compile / mainClass := Some("aqua.compiler.Library"),
+    nativeImageVersion:="22.3.1",
+    nativeImageOptions ++= Seq(
+      "--verbose",
+      "--no-fallback",
+      "--shared", // Produce shared library
+      "--initialize-at-run-time=aqua.logging.LogFormatter$",
+      // Uncomment next lines to use llvm backend
+      // and obtain bitcode files
+       //  "-H:CompilerBackend=llvm",
+       //  "-H:TempDirectory=temp", // Directory with bc files
+    ),
+    libraryDependencies ++= Seq(
+      "org.graalvm.sdk" % "graal-sdk" % "24.0.1"
+    )
+  )
+  .dependsOn(`aqua-api`.jvm)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
