@@ -1,16 +1,35 @@
-aqua StreamMapTest declares *
+aqua StreamMapAbilities
 
-export testGetFunc, Srv
+export streamMapAbilityTest
 
-service Srv("baaa"):
-  g() -> string
+service SrvA("a"):
+  call(arrr: []string)
 
-func testGetFunc() -> []string, []string, []string, u32:
-  streamMap: %string
-  key = "key"
-  resEmpty = streamMap.get(key)
-  streamMap <<- key, "first value"
-  resFirst = streamMap.get(key)
-  streamMap <<- key, "second value"
-  resSecond = streamMap.get(key)
-  <- resEmpty, resFirst, resSecond, resSecond.length
+ability Streams:
+  stream: *string
+
+ability Adds:
+  addToStream(s: string)
+
+func addToStreamClosure(str: *string) -> string -> ():
+  cl = func (s: string):
+    SrvA.call(str)
+    str <<- s
+  <- cl
+
+func addTo{Streams}() -> Adds:
+  addStream = addToStreamClosure(Streams.stream)
+  adds = Adds(addToStream = addStream)
+  <- adds
+
+func add{Adds}(s: string, k: string):
+  Adds.addToStream(s)
+
+func streamMapAbilityTest() -> []string:
+  streamBla: *string
+  ab = Streams(stream = streamBla)
+  adds <- addTo{ab}()
+  add{adds}("one", "1")
+  cl = addToStreamClosure(streamBla)
+  cl("two")
+  <- streamBla
