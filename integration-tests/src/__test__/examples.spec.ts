@@ -141,7 +141,7 @@ import { literalCall } from "../examples/returnLiteralCall.js";
 import { multiReturnCall } from "../examples/multiReturnCall.js";
 import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
-import { lng193BugCall } from "../examples/closureReturnRename.js";
+import { lng193BugCall, lng365BugCall } from "../examples/closureReturnRename.js";
 import {
   closuresCall,
   multipleClosuresLNG262BugCall,
@@ -1231,6 +1231,12 @@ describe("Testing examples", () => {
     const result = await lng193BugCall();
     expect(result).toEqual(1 + 42 + (2 + 42) + (3 + 42) + (4 + 42));
   }, 20000);
+
+  it("closureReturnRename.aqua bug LNG-365", async () => {
+    const [values, keys] = await lng365BugCall();
+    expect(values).toEqual(["1", "2", "3"]);
+    expect(keys).toEqual(["one", "two", "three"]);
+  });
 
   it("closures.aqua", async () => {
     const closuresResult = await closuresCall();
