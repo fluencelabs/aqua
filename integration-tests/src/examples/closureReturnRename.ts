@@ -7,6 +7,6 @@ export async function lng193BugCall(): Promise<number> {
   return lng193Bug(relays[4].peerId, relays[5].peerId);
 }
 
-export async function lng365BugCall(): Promise<number> {
+export async function lng365BugCall() {
   return lng365Bug();
 }
