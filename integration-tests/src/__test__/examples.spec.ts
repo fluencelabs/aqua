@@ -1234,8 +1234,8 @@ describe("Testing examples", () => {
 
   it("closureReturnRename.aqua bug LNG-365", async () => {
     const [values, keys] = await lng365BugCall();
-    expect(values).toEqual(["1", "2", "3"]);
-    expect(keys).toEqual(["one", "two", "three"]);
+    expect(values).toEqual(["one", "two", "three"]);
+    expect(keys).toEqual(["1", "2", "3"]);
   });
 
   it("closures.aqua", async () => {
