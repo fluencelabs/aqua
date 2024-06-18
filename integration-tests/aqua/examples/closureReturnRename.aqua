@@ -1,6 +1,6 @@
 aqua ClosureReturnRename
 
-export lng193Bug
+export lng193Bug, lng365Bug
 
 func getClosure(arg: u16, peer: string) -> u16 -> u16:
   on peer:
@@ -16,3 +16,41 @@ func lng193Bug(peer: string, closurePeer: string) -> u16:
     res1 = a(1) + a(2) -- Call two times for 
     res2 = b(3) + b(4) -- bug to appear
   <- res1 + res2
+
+ability Streams:
+  stream: *string
+  map: %string
+
+ability Adds:
+  addToStream(s: string)
+  addToMap(k: string, v: string)
+
+func addToStreamClosure(str: *string) -> string -> ():
+  cl = func (s: string):
+    str <<- s
+  <- cl
+
+func addToMapClosure(str: %string) -> string, string -> ():
+  cl = func (k: string, v: string):
+    str <<- k, v
+  <- cl
+
+func addTo{Streams}() -> Adds:
+  addStream = addToStreamClosure(Streams.stream)
+  addMap = addToMapClosure(Streams.map)
+  adds = Adds(addToStream = addStream, addToMap = addMap)
+  <- adds
+
+func add{Adds}(s: string, k: string):
+  Adds.addToStream(s)
+  Adds.addToMap(k, k)
+
+func lng365Bug() -> []string, []string:
+  stream: *string
+  map: %string
+  ab = Streams(stream = stream, map = map)
+  adds <- addTo{ab}()
+  add{adds}("one", "1")
+  add{adds}("two", "2")
+  add{adds}("three", "3")
+  <- stream, map.keys()
