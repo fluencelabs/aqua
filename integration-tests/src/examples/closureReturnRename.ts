@@ -1,4 +1,4 @@
-import { lng193Bug } from "../compiled/examples/closureReturnRename.js";
+import { lng193Bug, lng365Bug } from "../compiled/examples/closureReturnRename.js";
 import { config } from "../config.js";
 
 const relays = config.relays;
