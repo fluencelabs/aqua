@@ -1,6 +1,6 @@
 aqua ClosureReturnRename
 
-export lng193Bug, lng365bug
+export lng193Bug, lng365Bug
 
 func getClosure(arg: u16, peer: string) -> u16 -> u16:
   on peer:
@@ -45,7 +45,7 @@ func add{Adds}(s: string, k: string):
   Adds.addToStream(s)
   Adds.addToMap(k, k)
 
-func lng365bug() -> []string, []string:
+func lng365Bug() -> []string, []string:
   stream: *string
   map: %string
   ab = Streams(stream = stream, map = map)
