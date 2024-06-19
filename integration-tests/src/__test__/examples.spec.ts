@@ -950,9 +950,9 @@ describe("Testing examples", () => {
     expect(res).toEqual("ok");
   });
 
-  it("streamMap.aqua call with parseq over map", async () => {
+  it("streamMap.aqua insert from func", async () => {
     const res = await testInsertMapFromFuncCall();
-    expect(res).toEqual(["123"]);
+    expect(res).toEqual(["123", "123"]);
   });
 
   it("stream.aqua", async () => {
