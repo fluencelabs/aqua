@@ -1,7 +1,7 @@
 aqua StreamMapTest declares *
 
 export testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc
-export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc
+export testContainsFunc, testForFunc, testParSeqMap, testForTupleFunc, testInsertMapFromFunc
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
@@ -128,3 +128,17 @@ func testForTupleFunc() -> []string, []string, []string:
     streamThird <<- streamMap.get(k)!
 
   <- streamFirst, streamSecond, streamThird
+
+func foo() -> string, u64:
+  <- "123", 42
+
+func create() -> %u64:
+  map: %u64
+  map <- foo()
+  <- map
+
+func testInsertMapFromFunc():
+  map <- create()
+
+  map <- foo()
+  <- map.keys()

@@ -54,22 +54,30 @@ object ArrowInliner extends Logging {
     RawValueInliner
       .valueListToModel(results)
       .map(resolvedResults =>
-        // Fix the return values
-        (exportTo zip resolvedResults).map {
-          case (
+        (exportTo, resolvedResults) match {
+          case (CallModel.Export(n, StreamMapType(_)) :: Nil, (res @ VarModel(_, StreamMapType(_), _), resDesugar) :: Nil) if !outsideStreamNames.contains(n) =>
+            resDesugar.toList -> (res :: Nil)
+          case ((cexp @ CallModel.Export(n, st@StreamMapType(_))) :: Nil, (m1, des1) :: (m2, des2) :: Nil)  =>
+            (des1.toList ++ des2.toList :+ InsertKeyValueModel(m1, m2, n, st).leaf) -> (cexp.asVar :: Nil)
+          case _ =>
+            // Fix the return values
+            (exportTo zip resolvedResults).map {
+              case (
                 CallModel.Export(n, StreamType(_)),
                 (res @ VarModel(_, StreamType(_), _), resDesugar)
-              ) if !outsideStreamNames.contains(n) =>
-            resDesugar.toList -> res
-          case (
+                ) if !outsideStreamNames.contains(n) =>
+                resDesugar.toList -> res
+              case (
                 cexp @ CallModel.Export(_, StreamType(_)),
                 (res, resDesugar)
-              ) =>
-            // pass nested function results to a stream
-            (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
-          case (_, (res, resDesugar)) =>
-            resDesugar.toList -> res
-        }.unzip.leftMap(_.flatten)
+                ) =>
+                // pass nested function results to a stream
+                (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
+              case (_, (res, resDesugar)) =>
+                resDesugar.toList -> res
+            }.unzip.leftMap(_.flatten)
+        }
+
       )
 
   /**

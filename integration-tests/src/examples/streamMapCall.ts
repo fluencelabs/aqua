@@ -1,6 +1,6 @@
 import {
   testGetFunc, testGetStreamFunc, testKeysFunc, testKeysStreamFunc, testContainsFunc,
-  testForFunc, testParSeqMap, testForTupleFunc
+  testForFunc, testParSeqMap, testForTupleFunc, testInsertMapFromFunc
 } from "../compiled/examples/streamMap.js";
 import { config } from "../config.js";
 
@@ -36,5 +36,9 @@ export async function testForTupleFuncCall() {
 
 export async function testParSeqMapCall() {
     return testParSeqMap(relays[3].peerId, relays[4].peerId, relays[5].peerId)
+}
+
+export async function testInsertMapFromFuncCall() {
+    return testInsertMapFromFunc()
 }
 

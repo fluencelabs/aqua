@@ -1,41 +1,16 @@
-aqua StreamMapAbilities
+aqua StreamMapTest declares *
 
-export streamMapAbilityTest
+export main
 
-ability Streams:
-  stream: *string
-  map: %string
+func foo() -> string, u64:
+  <- "123", 42
 
-ability Adds:
-  addToStream(s: string)
-  addToMap(k: string, v: string)
+func create() -> %u64:
+  map: %u64
+  map <- foo()
+  <- map
 
-func addToStreamClosure(str: *string) -> string -> ():
-  cl = func (s: string):
-    str <<- s
-  <- cl
+func main():
+  map <- create()
 
-func addToMapClosure(str: %string) -> string, string -> ():
-  cl = func (k: string, v: string):
-    str <<- k, v
-  <- cl
-
-func addTo{Streams}() -> Adds:
-  addStream = addToStreamClosure(Streams.stream)
-  addMap = addToMapClosure(Streams.map)
-  adds = Adds(addToStream = addStream, addToMap = addMap)
-  <- adds
-
-func add{Adds}(s: string, k: string):
-  Adds.addToStream(s)
-  Adds.addToMap(k, k)
-
-func streamMapAbilityTest() -> []string, []string:
-  stream: *string
-  map: %string
-  ab = Streams(stream = stream, map = map)
-  adds <- addTo{ab}()
-  add{adds}("one", "1")
-  add{adds}("two", "2")
-  add{adds}("three", "3")
-  <- stream, map.keys()
+  map <- foo()
