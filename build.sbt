@@ -18,7 +18,27 @@ val scribeV = "3.13.0"
 
 name := "aqua-hll"
 
-val commons = Seq(
+val orgName = "Fluence DAO"
+val licenseStartYear = 2024
+val licenseName = "AGPL-3.0-only"
+val licenseUrl = "https://www.gnu.org/licenses/agpl-3.0.txt"
+
+val license = HeaderLicense.AGPLv3Only(
+  yyyy = licenseStartYear.toString,
+  copyrightOwner = orgName,
+  licenseStyle = HeaderLicenseStyle.Detailed
+)
+
+val licenseSettings = Seq(
+  organizationName := orgName,
+  startYear        := Some(licenseStartYear),
+  licenses += (licenseName, new URI(licenseUrl).toURL()),
+  headerLicense := Some(license)
+)
+
+licenseSettings
+
+val commons = licenseSettings ++ Seq(
   version := {
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
     if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
@@ -43,11 +63,7 @@ val commons = Seq(
     )
   },
   // Needed to resolve snapshot versions
-  resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
-  // License related settings
-  organizationName := "Fluence DAO",
-  licenses += ("AGPL-3.0-only", new URI("https://www.gnu.org/licenses/agpl-3.0.txt").toURL()),
-  startYear := Some(2024)
+  resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 )
 
 lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
@@ -72,8 +88,12 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val ioJS = io.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig := updatedScalaJSLinkerConfig(ModuleKind.CommonJSModule).value
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    )
   )
   .dependsOn(`js-imports`)
   .enablePlugins(AutomateHeaderPlugin)
@@ -93,8 +113,12 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig             := updatedScalaJSLinkerConfig(ModuleKind.CommonJSModule).value,
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    ),
     scalaJSUseMainModuleInitializer := false
   )
   .settings(addBundleJS("../../language-server-npm/aqua-lsp-api.js"))
@@ -124,8 +148,12 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig             := updatedScalaJSLinkerConfig(ModuleKind.ESModule).value,
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.ESModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    ),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
   )
@@ -354,15 +382,3 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   )
   .dependsOn(`backend-air`, definitions)
   .enablePlugins(AutomateHeaderPlugin)
-
-def updatedScalaJSLinkerConfig(
-  moduleKind: org.scalajs.linker.interface.ModuleKind
-): Def.Initialize[org.scalajs.linker.interface.StandardConfig] =
-  Def.setting {
-    val originalConfig = scalaJSLinkerConfig.value
-    val licenseText = headerLicense.value
-      // ScalaJS requires \n at the end
-      .map(license => s"/*${license.text}*/\n")
-      .getOrElse(sys.error("Unable to auto detect project license"))
-    originalConfig.withModuleKind(moduleKind).withJSHeader(licenseText)
-  }
