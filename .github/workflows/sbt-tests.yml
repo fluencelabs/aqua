@@ -29,4 +29,4 @@ jobs:
           apps: sbt
 
       - name: Run tests
-        run: env JAVA_OPTS="-Xmx4G" sbt test
+        run: env JAVA_OPTS="-Xmx4G" sbt "headerCheckAll; test"
