@@ -25,7 +25,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
   ): Alg[List[Call.Export]] =
     variables.traverse(v => N.read(v, mustBeDefined = false).map(v -> _)).flatMap {
       case (v, Some(map @ StreamMapType(_))) :: Nil =>
-        T.ensureTypeMatches(v, map.toProduct, codomain)
+        T.ensureTypeMatches(v, map.elementProduct, codomain)
           .as(Call.Export(v.value, map, isExistingStream = true) :: Nil)
       case vars =>
         (vars zip codomain.toList).traverse { case ((v, vType), t) =>

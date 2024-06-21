@@ -2,19 +2,13 @@ aqua StreamMapTest declares *
 
 export main
 
-func foo() -> string, u64:
-  <- "123", 42
+func foo() -> %string, u64:
+  map: %string
+  <- map, 42
 
-func zzz() -> string, string:
-  <- "123", "str"
+func get() -> string, string:
+  <- "123", "44"
 
-func create() -> %u64:
-  map: %u64
-  map <- foo()
-  <- map
-
-func main():
-  map <- create()
-  a <- zzz()
-
-  map <- foo()
+func main() -> string:
+  m <- foo()
+  <- m.get("key")!

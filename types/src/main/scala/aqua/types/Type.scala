@@ -399,7 +399,7 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
 
   def toCanon: ImmutableCollectionType = CanonStreamMapType(element)
 
-  def toProduct: ProductType = ProductType(ScalarType.string :: element :: Nil)
+  def elementProduct: ProductType = ProductType(ScalarType.string :: element :: Nil)
 }
 
 object StreamMapType {
