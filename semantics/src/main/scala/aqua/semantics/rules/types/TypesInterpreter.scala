@@ -2,6 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.errors.Errors.internalError
 import aqua.parser.lexer.*
+import aqua.raw.ops.Call
 import aqua.raw.value.*
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
@@ -595,7 +596,8 @@ class TypesInterpreter[S[_], X](using
   override def checkArrowCallResults(
     token: Token[S],
     arrowType: ArrowType,
-    results: List[Name[S]]
+    results: List[Name[S]],
+    exports: List[Call.Export]
   ): State[X, Unit] = for {
     _ <- results
       .drop(arrowType.codomain.length)
@@ -620,8 +622,21 @@ class TypesInterpreter[S[_], X](using
           case i => s"only $i are"
         }} used"
       )
-      .whenA(arrowType.codomain.length > results.length)
+      .whenA(checkNumberOfResults(arrowType, results, exports))
   } yield ()
+
+  private def checkNumberOfResults(
+    at: ArrowType,
+    results: List[Name[S]],
+    exports: List[Call.Export]
+  ): Boolean = {
+    val checkLength = at.codomain.length > results.length
+    val isOneStreamMapInExport =
+      exports.headOption.exists(e => isStreamMapType(e.`type`)) && exports.length == 1
+    val twoResultsToStreamMap = isOneStreamMapInExport && at.codomain.length == 2
+
+    !twoResultsToStreamMap && checkLength
+  }
 
   override def checkArgumentsNumber(
     token: Token[S],

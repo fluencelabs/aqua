@@ -55,16 +55,20 @@ object ArrowInliner extends Logging {
       .valueListToModel(results)
       .map(resolvedResults =>
         (exportTo, resolvedResults) match {
-          case (CallModel.Export(n, StreamMapType(_)) :: Nil, (res @ VarModel(_, StreamMapType(_), _), resDesugar) :: Nil) if !outsideStreamNames.contains(n) =>
-            resDesugar.toList -> (res :: Nil)
-          case ((cexp @ CallModel.Export(n, st@StreamMapType(_))) :: Nil, (m1, des1) :: (m2, des2) :: Nil)  =>
-            (des1.toList ++ des2.toList :+ InsertKeyValueModel(m1, m2, n, st).leaf) -> (cexp.asVar :: Nil)
+          // if export is a stream map and there is two results from function
+          case ((cexp @ CallModel.Export(n, st@StreamMapType(_))) :: Nil, (res1, desugar1) :: (res2, desugar2) :: Nil)  =>
+            (desugar1.toList ++ desugar2.toList :+ InsertKeyValueModel(res1, res2, n, st).leaf) -> (cexp.asVar :: Nil)
           case _ =>
             // Fix the return values
             (exportTo zip resolvedResults).map {
               case (
                 CallModel.Export(n, StreamType(_)),
                 (res @ VarModel(_, StreamType(_), _), resDesugar)
+                ) if !outsideStreamNames.contains(n) =>
+                resDesugar.toList -> res
+              case (
+                CallModel.Export(n, StreamMapType(_)),
+                (res @ VarModel(_, StreamMapType(_), _), resDesugar)
                 ) if !outsideStreamNames.contains(n) =>
                 resDesugar.toList -> res
               case (

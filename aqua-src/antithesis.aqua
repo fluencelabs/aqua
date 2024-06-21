@@ -5,6 +5,9 @@ export main
 func foo() -> string, u64:
   <- "123", 42
 
+func zzz() -> string, string:
+  <- "123", "str"
+
 func create() -> %u64:
   map: %u64
   map <- foo()
@@ -12,5 +15,6 @@ func create() -> %u64:
 
 func main():
   map <- create()
+  a <- zzz()
 
   map <- foo()

@@ -47,8 +47,9 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     // TODO: Accept other expressions
     callArrowRaw <- V.valueToCall(expr.callArrow)
     tag <- callArrowRaw.traverse { case (raw, at) =>
-      getExports(at.codomain).map(CallArrowRawTag(_, raw)) <*
-        T.checkArrowCallResults(callArrow, at, variables)
+      getExports(at.codomain).flatMap(exports =>
+        T.checkArrowCallResults(callArrow, at, variables, exports).as(CallArrowRawTag(exports, raw))
+      )
     }
   } yield tag.map(_.funcOpLeaf)
 
