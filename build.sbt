@@ -50,8 +50,6 @@ val commons = Seq(
   startYear := Some(2024)
 )
 
-commons
-
 lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
@@ -75,7 +73,7 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
 
 lazy val ioJS = io.js
   .settings(
-    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
+    scalaJSLinkerConfig := updatedScalaJSLinkerConfig(ModuleKind.CommonJSModule).value
   )
   .dependsOn(`js-imports`)
   .enablePlugins(AutomateHeaderPlugin)
@@ -96,7 +94,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig             := updatedScalaJSLinkerConfig(ModuleKind.CommonJSModule).value,
     scalaJSUseMainModuleInitializer := false
   )
   .settings(addBundleJS("../../language-server-npm/aqua-lsp-api.js"))
@@ -127,7 +125,7 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig             := updatedScalaJSLinkerConfig(ModuleKind.ESModule).value,
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
   )
@@ -356,3 +354,15 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   )
   .dependsOn(`backend-air`, definitions)
   .enablePlugins(AutomateHeaderPlugin)
+
+def updatedScalaJSLinkerConfig(
+  moduleKind: org.scalajs.linker.interface.ModuleKind
+): Def.Initialize[org.scalajs.linker.interface.StandardConfig] =
+  Def.setting {
+    val originalConfig = scalaJSLinkerConfig.value
+    val licenseText = headerLicense.value
+      // ScalaJS requires \n at the end
+      .map(license => s"/*${license.text}*/\n")
+      .getOrElse(sys.error("Unable to auto detect project license"))
+    originalConfig.withModuleKind(moduleKind).withJSHeader(licenseText)
+  }
