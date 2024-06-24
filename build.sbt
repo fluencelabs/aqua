@@ -18,7 +18,27 @@ val scribeV = "3.13.0"
 
 name := "aqua-hll"
 
-val commons = Seq(
+val orgName = "Fluence DAO"
+val licenseStartYear = 2024
+val licenseName = "AGPL-3.0-only"
+val licenseUrl = "https://www.gnu.org/licenses/agpl-3.0.txt"
+
+val license = HeaderLicense.AGPLv3Only(
+  yyyy = licenseStartYear.toString,
+  copyrightOwner = orgName,
+  licenseStyle = HeaderLicenseStyle.Detailed
+)
+
+val licenseSettings = Seq(
+  organizationName := orgName,
+  startYear        := Some(licenseStartYear),
+  licenses += (licenseName, new URI(licenseUrl).toURL()),
+  headerLicense := Some(license)
+)
+
+licenseSettings
+
+val commons = licenseSettings ++ Seq(
   version := {
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
     if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
@@ -46,14 +66,13 @@ val commons = Seq(
   resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 )
 
-commons
-
 lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("aqua-run"))
   .settings(commons)
   .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val io = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -66,12 +85,18 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(compiler, parser, helpers)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val ioJS = io.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    )
   )
   .dependsOn(`js-imports`)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -85,21 +110,28 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
     )
   )
   .dependsOn(compiler, io, compiler % "test->test")
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    ),
     scalaJSUseMainModuleInitializer := false
   )
   .settings(addBundleJS("../../language-server-npm/aqua-lsp-api.js"))
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`, `js-imports`)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `js-exports` = project
   .in(file("js/js-exports"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commons)
   .dependsOn(`backend`.js, definitions.js)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `js-imports` = project
   .in(file("js/js-imports"))
@@ -113,16 +145,22 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
   .in(file("api/api"))
   .settings(commons)
   .dependsOn(`aqua-run`, `backend-api`)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
+  .settings(licenseSettings)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig ~= (
+      _.withModuleKind(ModuleKind.ESModule)
+        .withJSHeader(s"/*${license.text}*/\n")
+    ),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
   )
   .settings(addBundleJS("../../api-npm/aqua-api.js"))
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -134,6 +172,7 @@ lazy val types = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(errors)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -146,12 +185,14 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(types, helpers)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val linker = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
   .dependsOn(parser)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val tree = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -164,6 +205,7 @@ lazy val tree = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(helpers)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val raw = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -171,12 +213,14 @@ lazy val raw = crossProject(JVMPlatform, JSPlatform)
   .in(file("model/raw"))
   .settings(commons)
   .dependsOn(types, tree)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
   .dependsOn(types, tree, raw, helpers, errors)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val res = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -184,6 +228,7 @@ lazy val res = crossProject(JVMPlatform, JSPlatform)
   .in(file("model/res"))
   .settings(commons)
   .dependsOn(model)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val inline = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -191,6 +236,7 @@ lazy val inline = crossProject(JVMPlatform, JSPlatform)
   .in(file("model/inline"))
   .settings(commons)
   .dependsOn(raw, model, mangler)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -198,12 +244,14 @@ lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .in(file("model/transform"))
   .settings(commons)
   .dependsOn(model, res, inline, res % "test->test")
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
   .dependsOn(raw, parser, errors, mangler)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -211,6 +259,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .in(file("compiler"))
   .settings(commons)
   .dependsOn(semantics, linker, backend, transform % "test->test", res % "test->test")
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -223,6 +272,7 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
     buildInfoPackage := "aqua.backend"
   )
   .dependsOn(res, definitions)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val definitions = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -237,6 +287,7 @@ lazy val definitions = crossProject(JVMPlatform, JSPlatform)
     ).map(_ % circeVersion)
   )
   .dependsOn(res, types)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val logging = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -248,6 +299,7 @@ lazy val logging = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-core" % catsV
     )
   )
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val mangler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -259,6 +311,7 @@ lazy val mangler = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-core" % catsV
     )
   )
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val constants = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -271,6 +324,7 @@ lazy val constants = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(parser, raw)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val helpers = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -284,6 +338,7 @@ lazy val helpers = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(errors)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val errors = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -295,6 +350,7 @@ lazy val errors = crossProject(JVMPlatform, JSPlatform)
       "com.lihaoyi" %%% "sourcecode" % sourcecodeV
     )
   )
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -302,6 +358,7 @@ lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .in(file("backend/air"))
   .settings(commons)
   .dependsOn(backend, transform)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `backend-api` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -309,6 +366,7 @@ lazy val `backend-api` = crossProject(JVMPlatform, JSPlatform)
   .in(file("backend/api"))
   .settings(commons)
   .dependsOn(backend, transform, `backend-air`)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -323,3 +381,4 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
     ).map(_ % circeVersion)
   )
   .dependsOn(`backend-air`, definitions)
+  .enablePlugins(AutomateHeaderPlugin)
