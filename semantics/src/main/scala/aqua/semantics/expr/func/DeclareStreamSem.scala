@@ -25,8 +25,7 @@ class DeclareStreamSem[S[_]](val expr: DeclareStreamExpr[S]) {
       _ <- OptionT.withFilterF(
         N.define(expr.name, streamType)
       )
-      valueModel = VarRaw(expr.name.value, streamType)
-    } yield DeclareStreamTag(valueModel).funcOpLeaf: Raw
+    } yield DeclareStreamTag(expr.name.value, streamType).funcOpLeaf: Raw
 
     sem.getOrElse(Raw.error(s"Name `${expr.name.value}` not defined"))
   }

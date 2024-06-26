@@ -361,14 +361,10 @@ object TagInliner extends Logging {
           }
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
-      case DeclareStreamTag(value) =>
-        value match
-          case VarRaw(name, t: MutableStreamType) =>
-            for {
-              _ <- Exports[S].resolved(name, VarModel(name, t))
-            } yield TagInlined.Empty()
-          case _ =>
-            internalError(s"Cannot declare $value as stream, because it is not a stream type")
+      case DeclareStreamTag(name, t) =>
+        for {
+          _ <- Exports[S].resolved(name, VarModel(name, t))
+        } yield TagInlined.Empty()
 
       case ServiceIdTag(id, serviceType, name) =>
         for {
