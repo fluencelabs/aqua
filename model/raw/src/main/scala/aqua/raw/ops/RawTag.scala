@@ -282,7 +282,7 @@ case class DeclareStreamTag(
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     f(VarRaw(name, `type`)) match {
-      case VarRaw(name, t: StreamMapType) => copy(name, t)
+      case VarRaw(name, t: MutableStreamType) => copy(name, t)
       case v =>
         internalError(s"DeclareStreamTag can be only VarRaw with stream type, currently: '$v' ")
     }
