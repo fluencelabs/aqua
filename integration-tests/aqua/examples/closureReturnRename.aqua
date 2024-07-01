@@ -30,9 +30,12 @@ func addToStreamClosure(str: *string) -> string -> ():
     str <<- s
   <- cl
 
+func toMap(k: string, v: string) -> string, string:
+  <- k, v
+
 func addToMapClosure(str: %string) -> string, string -> ():
   cl = func (k: string, v: string):
-    str <<- k, v
+    str <- toMap(k, v)
   <- cl
 
 func addTo{Streams}() -> Adds:

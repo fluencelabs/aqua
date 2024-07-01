@@ -151,7 +151,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         FuncArrow(
           "stream-callback",
           SeqTag.wrap(
-            DeclareStreamTag(streamVar).leaf,
+            DeclareStreamTag(streamName, streamType).leaf,
             CallArrowRawTag.func("cb", Call(streamVar :: Nil, Nil)).leaf
           ),
           ArrowType(
@@ -247,7 +247,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         FuncArrow(
           "call",
           SeqTag.wrap(
-            DeclareStreamTag(streamVar).leaf,
+            DeclareStreamTag(streamName, streamType).leaf,
             CallArrowRawTag.func(useArrow.funcName, Call(streamVar :: Nil, Nil)).leaf
           ),
           ArrowType(
@@ -308,7 +308,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val returnNil = FuncArrow(
       "returnNil",
       SeqTag.wrap(
-        DeclareStreamTag(someStr).leaf,
+        DeclareStreamTag(someStr.name, streamType).leaf,
         ReturnTag(
           NonEmptyList.one(someStr)
         ).leaf
@@ -409,7 +409,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val returnStream = FuncArrow(
       "returnStream",
       SeqTag.wrap(
-        DeclareStreamTag(streamVar).leaf,
+        DeclareStreamTag(streamVar.name, streamType).leaf,
         PushToStreamTag(
           LiteralRaw.quote("one"),
           Call.Export(streamVar.name, streamVar.`type`)
@@ -595,7 +595,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val returnFunc = FuncArrow(
       "return",
       SeqTag.wrap(
-        DeclareStreamTag(streamVar).leaf,
+        DeclareStreamTag(streamVar.name, streamType).leaf,
         PushToStreamTag(
           LiteralRaw.quote("one"),
           Call.Export(streamVar.name, streamVar.`type`)
@@ -893,7 +893,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         FuncArrow(
           "stream-callback",
           SeqTag.wrap(
-            DeclareStreamTag(streamVar).leaf,
+            DeclareStreamTag(streamVar.name, streamType).leaf,
             CallArrowRawTag.func("cb", Call(streamVarLambda :: Nil, Nil)).leaf
           ),
           ArrowType(
@@ -976,7 +976,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         FuncArrow(
           "outer",
           SeqTag.wrap(
-            DeclareStreamTag(recordsVar).leaf,
+            DeclareStreamTag(recordsVar.name, streamType).leaf,
             CallArrowRawTag.func(innerName, Call(recordsVar :: Nil, Nil)).leaf,
             CallArrowRawTag
               .service(
@@ -2311,7 +2311,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   it should "generate result in right order" in {
     val innerName = "inner"
     val results = VarRaw("results", ScalarType.string)
-    val resultsOut = VarRaw("results", StreamType(ScalarType.string))
+    val streamType = StreamType(ScalarType.string)
+    val resultsOut = VarRaw("results", streamType)
 
     val inner = FuncArrow(
       innerName,
@@ -2339,7 +2340,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val outer = FuncArrow(
       "outer",
       SeqTag.wrap(
-        DeclareStreamTag(resultsOut).leaf,
+        DeclareStreamTag(resultsOut.name, streamType).leaf,
         CallArrowRawTag
           .func(innerName, Call(Nil, Call.Export(resultsOut.name, resultsOut.baseType) :: Nil))
           .leaf
