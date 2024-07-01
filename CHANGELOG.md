@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.10](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.9...aqua-v0.14.10) (2024-06-07)
+
+
+### Features
+
+* **api, lsp:** Case classes exported to JS as normal JSONs ([#1151](https://github.com/fluencelabs/aqua/issues/1151)) ([037532f](https://github.com/fluencelabs/aqua/commit/037532fb858c9ef98ea536e72cc9f71e73a2cfc3))
+
 ## [0.14.9](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.8...aqua-v0.14.9) (2024-06-06)
 
 

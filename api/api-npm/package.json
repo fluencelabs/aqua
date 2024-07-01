@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-api",
-  "version": "0.14.9",
+  "version": "0.14.10",
   "description": "Aqua API",
   "type": "module",
   "main": "index.js",
@@ -20,7 +20,7 @@
     "fluence"
   ],
   "author": "Fluence Labs",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/fluencelabs/aqua/issues"
   },

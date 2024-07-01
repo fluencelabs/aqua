@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-language-server-api",
-  "version": "0.14.9",
+  "version": "0.14.10",
   "description": "Aqua Language Server API",
   "type": "commonjs",
   "files": [
@@ -16,7 +16,7 @@
     "fluence"
   ],
   "author": "Fluence Labs",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/fluencelabs/aqua/issues"
   },
