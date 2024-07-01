@@ -28,6 +28,7 @@ import org.scalatest.matchers.should.Matchers
 class AquaModulesSpec extends CompilerSpec {
   import ModelBuilder.*
 
+  // Importing empty module caused internal compiler error once
   it should "sucessfully import empty module" in {
     val module = s"""aqua Module
                     |""".stripMargin
@@ -59,6 +60,58 @@ class AquaModulesSpec extends CompilerSpec {
       main.body.equalsOrShowDiff(expected) should be(true)
     }
 
+  }
+
+  it should "merge modules on redeclaration" in {
+    def test(subA: String, subB: String) = {
+      val moduleA = s"""aqua Module.$subA declares fA
+                       |func fA() -> i32:
+                       |  <- 42
+                       |""".stripMargin
+      val moduleB = s"""aqua Module.$subB  declares fB
+                       |func fB() -> i32:
+                       |  <- 24
+                       |""".stripMargin
+      val merged = s"""aqua Merged declares Module
+                      |use "moduleA"
+                      |use "moduleB"
+      """.stripMargin
+      val main = s"""aqua Main
+                    |
+                    |use "merged"
+                    |
+                    |export main
+                    |
+                    |func main() -> i32:
+                    |  <- Merged.Module.$subA.fA() + Merged.Module.$subB.fB()
+                    |""".stripMargin
+
+      val src = Map("main.aqua" -> main)
+      val imports = Map(
+        "moduleA.aqua" -> moduleA,
+        "moduleB.aqua" -> moduleB,
+        "merged.aqua" -> merged
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          respCall(transformCfg, LiteralModel.number(42 + 24), initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test("A", "B")
+    test("Lib.A", "Lib.B")
+    test("Lib.Sub", "Lib.Sub.Path")
   }
 
 }
