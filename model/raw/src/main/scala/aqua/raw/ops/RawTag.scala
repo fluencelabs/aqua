@@ -16,6 +16,7 @@
 
 package aqua.raw.ops
 
+import aqua.errors.Errors.internalError
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw, VarRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
@@ -178,10 +179,16 @@ case class NextTag(item: String) extends RawTag {
 case class ForKeyValue(key: String, value: String) {
   def toSet: Set[String] = Set(key, value)
 
-  def rename(map: Map[String, String]): ForKeyValue = copy(key = map.getOrElse(key, key), value = map.getOrElse(value, value))
+  def rename(map: Map[String, String]): ForKeyValue =
+    copy(key = map.getOrElse(key, key), value = map.getOrElse(value, value))
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode, keyValue: Option[ForKeyValue] = None) extends SeqGroupTag {
+case class ForTag(
+  item: String,
+  iterable: ValueRaw,
+  mode: ForTag.Mode,
+  keyValue: Option[ForKeyValue] = None
+) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item) ++ keyValue.toSet.flatMap(_.toSet)
 
@@ -283,15 +290,18 @@ object CallArrowRawTag {
 }
 
 case class DeclareStreamTag(
-  // TODO: Why is it ValueRaw and
-  // not just (stream name, stream type)?
-  value: ValueRaw
+  name: String,
+  `type`: MutableStreamType
 ) extends RawTag {
 
-  override def exportsVarNames: Set[String] = value.varNames
+  override def exportsVarNames: Set[String] = Set(name)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    DeclareStreamTag(value.map(f))
+    f(VarRaw(name, `type`)) match {
+      case VarRaw(name, t: MutableStreamType) => copy(name, t)
+      case v =>
+        internalError(s"DeclareStreamTag can be only VarRaw with stream type, currently: '$v' ")
+    }
 }
 
 case class AssignmentTag(

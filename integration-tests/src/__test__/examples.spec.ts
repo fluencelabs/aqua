@@ -85,7 +85,8 @@ import {
   testContainsFuncCall,
   testForFuncCall,
   testForTupleFuncCall,
-  testParSeqMapCall
+  testParSeqMapCall,
+  testInsertMapFromFuncCall
 } from "../examples/streamMapCall.js";
 import {
   topologyBug205Call,
@@ -963,6 +964,11 @@ describe("Testing examples", () => {
   it("streamMap.aqua call with parseq over map", async () => {
     const res = await testParSeqCall();
     expect(res).toEqual("ok");
+  });
+
+  it("streamMap.aqua insert from func", async () => {
+    const res = await testInsertMapFromFuncCall();
+    expect(res).toEqual(["123", "123"]);
   });
 
   it("stream.aqua", async () => {

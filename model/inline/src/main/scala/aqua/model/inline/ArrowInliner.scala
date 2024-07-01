@@ -70,22 +70,35 @@ object ArrowInliner extends Logging {
     RawValueInliner
       .valueListToModel(results)
       .map(resolvedResults =>
-        // Fix the return values
-        (exportTo zip resolvedResults).map {
-          case (
+        (exportTo, resolvedResults) match {
+          // if export is a stream map and there is two results from function and first one is not a stream map
+          // TODO: can it be better?
+          case ((cexp @ CallModel.Export(n, st@StreamMapType(_))) :: Nil, (res1, desugar1) :: (res2, desugar2) :: Nil) if !Type.isStreamMapType(res1.`type`)  =>
+            (desugar1.toList ++ desugar2.toList :+ InsertKeyValueModel(res1, res2, n, st).leaf) -> (cexp.asVar :: Nil)
+          case _ =>
+            // Fix the return values
+            (exportTo zip resolvedResults).map {
+              case (
                 CallModel.Export(n, StreamType(_)),
                 (res @ VarModel(_, StreamType(_), _), resDesugar)
-              ) if !outsideStreamNames.contains(n) =>
-            resDesugar.toList -> res
-          case (
+                ) if !outsideStreamNames.contains(n) =>
+                resDesugar.toList -> res
+              case (
+                CallModel.Export(n, StreamMapType(_)),
+                (res @ VarModel(_, StreamMapType(_), _), resDesugar)
+                ) if !outsideStreamNames.contains(n) =>
+                resDesugar.toList -> res
+              case (
                 cexp @ CallModel.Export(_, StreamType(_)),
                 (res, resDesugar)
-              ) =>
-            // pass nested function results to a stream
-            (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
-          case (_, (res, resDesugar)) =>
-            resDesugar.toList -> res
-        }.unzip.leftMap(_.flatten)
+                ) =>
+                // pass nested function results to a stream
+                (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
+              case (_, (res, resDesugar)) =>
+                resDesugar.toList -> res
+            }.unzip.leftMap(_.flatten)
+        }
+
       )
 
   /**

@@ -17,13 +17,12 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
+import aqua.raw.ops.Call
 import aqua.raw.value.{PropertyRaw, ValueRaw}
 import aqua.types.*
 import aqua.types.Type.*
 
-import cats.data.NonEmptyList
-import cats.data.NonEmptyMap
-import cats.data.OptionT
+import cats.data.{NonEmptyList, NonEmptyMap, OptionT}
 
 trait TypesAlgebra[S[_], Alg[_]] {
 
@@ -35,7 +34,10 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
-  def resolveServiceType(name: NamedTypeToken[S], mustBeDefined: Boolean = true): Alg[Option[ServiceType]]
+  def resolveServiceType(
+    name: NamedTypeToken[S],
+    mustBeDefined: Boolean = true
+  ): Alg[Option[ServiceType]]
 
   def defineAbilityType(
     name: NamedTypeToken[S],
@@ -159,7 +161,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def checkArrowCallResults(
     token: Token[S],
     arrowType: ArrowType,
-    results: List[Name[S]]
+    results: List[Name[S]],
+    exports: List[Call.Export]
   ): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]

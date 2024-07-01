@@ -23,7 +23,7 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ProductType, StreamType, Type}
+import aqua.types.{ProductType, StreamMapType, StreamType, Type}
 
 import cats.Monad
 import cats.syntax.apply.*
@@ -39,13 +39,20 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Alg[List[Call.Export]] =
-    (variables zip codomain.toList).traverse { case (v, t) =>
-      N.read(v, mustBeDefined = false).flatMap {
-        case Some(stream @ StreamType(st)) =>
-          T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream, isExistingStream = true))
-        case _ =>
-          N.define(v, t).as(Call.Export(v.value, t))
-      }
+    variables.traverse(v => N.read(v, mustBeDefined = false).map(v -> _)).flatMap {
+      case (v, Some(map @ StreamMapType(_))) :: Nil =>
+        T.ensureTypeMatches(v, map.elementProduct, codomain)
+          .as(Call.Export(v.value, map, isExistingStream = true) :: Nil)
+      case vars =>
+        (vars zip codomain.toList).traverse { case ((v, vType), t) =>
+          vType match {
+            case Some(stream @ StreamType(st)) =>
+              T.ensureTypeMatches(v, st, t)
+                .as(Call.Export(v.value, stream, isExistingStream = true))
+            case _ =>
+              N.define(v, t).as(Call.Export(v.value, t))
+          }
+        }
     }
 
   private def toModel[Alg[_]: Monad](using
@@ -56,8 +63,9 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     // TODO: Accept other expressions
     callArrowRaw <- V.valueToCall(expr.callArrow)
     tag <- callArrowRaw.traverse { case (raw, at) =>
-      getExports(at.codomain).map(CallArrowRawTag(_, raw)) <*
-        T.checkArrowCallResults(callArrow, at, variables)
+      getExports(at.codomain).flatMap(exports =>
+        T.checkArrowCallResults(callArrow, at, variables, exports).as(CallArrowRawTag(exports, raw))
+      )
     }
   } yield tag.map(_.funcOpLeaf)
 
