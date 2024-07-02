@@ -21,6 +21,7 @@ import aqua.model.transform.{ModelBuilder, TransformConfig}
 import aqua.res.*
 import aqua.types.*
 
+import cats.syntax.option.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -114,4 +115,120 @@ class AquaModulesSpec extends CompilerSpec {
     test("Lib.Sub", "Lib.Sub.Path")
   }
 
+  it should "allow renaming of redeclared symbols" in {
+    def test(
+      symbolRename: Option[String] = None,
+      moduleRename: Option[String] = None
+    ) = {
+      val lib = s"""aqua Lib.Impl declares f
+                   |func f() -> i32:
+                   |  <- 42
+                   |""".stripMargin
+      val module = s"""aqua Module declares Lib
+                      |use "lib"
+                      |""".stripMargin
+      val asSymbol = symbolRename.fold("")(" as " + _)
+      val symbolName = symbolRename.getOrElse("Lib.Impl.f")
+      val asModule = moduleRename.fold("")(" as " + _)
+      val moduleName = moduleRename.getOrElse("Module")
+      val renaming = s"""aqua Renaming declares $moduleName
+                        |use Lib.Impl.f$asSymbol from "module"$asModule
+                        |""".stripMargin
+      val main = s"""aqua Main
+                    |
+                    |use "renaming"
+                    |
+                    |export main
+                    |
+                    |func main() -> i32:
+                    |  <- Renaming.$moduleName.$symbolName()
+                    |""".stripMargin
+
+      val src = Map("main.aqua" -> main)
+      val imports = Map(
+        "lib.aqua" -> lib,
+        "module.aqua" -> module,
+        "renaming.aqua" -> renaming
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          respCall(transformCfg, LiteralModel.number(42), initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test()
+
+    test("g".some)
+    test("Lib.f".some)
+    test("Lib.Impl.g".some)
+
+    test("g".some, "NewLib".some)
+    test("Sub.Path.g".some, "NewLib.Another".some)
+  }
+
+  it should "allow renaming of redeclared symbols (with `import`)" in {
+    def test(symbolRename: Option[String] = None) = {
+      val lib = s"""aqua Lib.Impl declares f
+                   |func f() -> i32:
+                   |  <- 42
+                   |""".stripMargin
+      val module = s"""aqua Module declares Lib
+                      |use "lib"
+                      |""".stripMargin
+      val asSymbol = symbolRename.fold("")(" as " + _)
+      val symbolName = symbolRename.getOrElse("Lib.Impl.f")
+      val renaming = s"""aqua Renaming declares $symbolName
+                        |import Lib.Impl.f$asSymbol from "module"
+                        |""".stripMargin
+      val main = s"""aqua Main
+                    |
+                    |use "renaming"
+                    |
+                    |export main
+                    |
+                    |func main() -> i32:
+                    |  <- Renaming.$symbolName()
+                    |""".stripMargin
+
+      val src = Map("main.aqua" -> main)
+      val imports = Map(
+        "lib.aqua" -> lib,
+        "module.aqua" -> module,
+        "renaming.aqua" -> renaming
+      )
+
+      val transformCfg = TransformConfig(relayVarName = None)
+
+      insideRes(src, imports, transformCfg)(
+        "main"
+      ) { case main :: _ =>
+        val ap = CallModel.Export("literal_ap", LiteralType.unsigned)
+        val props = ap.copy(name = "literal_props")
+        val expected = XorRes.wrap(
+          respCall(transformCfg, LiteralModel.number(42), initPeer),
+          errorCall(transformCfg, 0, initPeer)
+        )
+
+        main.body.equalsOrShowDiff(expected) should be(true)
+      }
+    }
+
+    test()
+
+    test("g".some)
+    test("NewLib.g".some)
+    test("Lib.f".some)
+    test("Lib.Impl.g".some)
+  }
 }
