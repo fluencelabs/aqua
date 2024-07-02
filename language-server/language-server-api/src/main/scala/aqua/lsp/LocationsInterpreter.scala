@@ -16,8 +16,7 @@
 
 package aqua.lsp
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
 import aqua.types.AbilityType

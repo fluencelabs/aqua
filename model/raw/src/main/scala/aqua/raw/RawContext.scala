@@ -17,8 +17,7 @@
 package aqua.raw
 
 import aqua.errors.Errors.internalError
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
 import aqua.types.{AbilityType, StructType, Type}

@@ -16,8 +16,7 @@
 
 package aqua.model
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.CallArrowRawTag
 import aqua.raw.value.CallArrowRaw

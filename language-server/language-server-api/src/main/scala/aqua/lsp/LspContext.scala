@@ -16,8 +16,7 @@
 
 package aqua.lsp
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker

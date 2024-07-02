@@ -17,8 +17,7 @@
 package aqua.semantics.rules.types
 
 import aqua.errors.Errors.internalError
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.*
 import aqua.raw.ops.Call
 import aqua.raw.value.*

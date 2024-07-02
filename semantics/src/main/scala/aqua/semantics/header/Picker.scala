@@ -16,8 +16,7 @@
 
 package aqua.semantics.header
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.{AbilityType, ArrowType, StreamMapType, Type}
 
@@ -26,7 +25,10 @@ import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
 
-// Able to pick info from different contexts
+/**
+ * Typeclass of compilation contexts.
+ * Refer to `Picker.Laws` for laws of this typeclass.
+ */
 trait Picker[A] {
   def funcNames(ctx: A): Set[String]
   def definedAbilityNames(ctx: A): Set[String]
@@ -45,7 +47,30 @@ trait Picker[A] {
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def setAbility(ctx: A, path: PName, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
+
+  /**
+   * Generate new context that contains given
+   * context nested by given path.
+   *
+   * Note: this method clears module information.
+   *
+   * @param ctx context to nest
+   * @param path path to nested context
+   * @return new context
+   */
   def scoped(ctx: A, path: PName): A
+
+  /**
+   * Retrieve context contained within
+   * given context by given path.
+   *
+   * This method behave like `pick` for contexts but
+   * unnests the result, while `pick` does not.
+   *
+   * @param ctx context to search in
+   * @param path path to search for
+   * @return nested context if any
+   */
   def unscoped(ctx: A, path: PName): Option[A]
 
   def setModuleName(ctx: A, name: PName): A
@@ -190,7 +215,7 @@ object Picker {
       RawContext.moduleLens.modify(_.copy(exports = exports))(ctx)
 
     override def clearModule(ctx: RawContext): RawContext =
-      RawContext.moduleLens.modify(_.copy(name = None, declares = Set.empty))(ctx)
+      RawContext.moduleLens.set(RawContext.Module.blank)(ctx)
 
     override def scoped(ctx: RawContext, path: PName): RawContext =
       path.parts.toList.foldRight(ctx.clearModule) { case (name, ctx) =>
@@ -259,4 +284,16 @@ object Picker {
       }
   }
 
+  /**
+   * This trait is for documentation purposes only.
+   * It defines the laws for `Picker` typeclass.
+   */
+  private trait Laws[A: Picker] {
+
+    private def moduleContainsItself(ctx: A): Boolean =
+      ctx.moduleName.isEmpty || ctx.unscoped(ctx.moduleName.get).isDefined
+
+    private def unscopedIsReverseOfScoped(ctx: A, path: PName): Boolean =
+      ctx.scoped(path).unscoped(path).contains(ctx)
+  }
 }

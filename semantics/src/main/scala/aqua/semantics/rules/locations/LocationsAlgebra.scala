@@ -16,8 +16,7 @@
 
 package aqua.semantics.rules.locations
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.Token
 import aqua.types.Type
 

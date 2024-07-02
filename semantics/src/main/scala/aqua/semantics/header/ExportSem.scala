@@ -17,8 +17,7 @@
 package aqua.semantics.header
 
 import aqua.parser.head.*
-import aqua.parser.lexer.QName
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{QName, Token}
 import aqua.semantics.SemanticError
 import aqua.semantics.header.HeaderHandler.*
 import aqua.semantics.header.Picker.*

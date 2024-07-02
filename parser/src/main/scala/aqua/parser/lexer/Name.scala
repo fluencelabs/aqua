@@ -16,8 +16,7 @@
 
 package aqua.parser.lexer
 
-import aqua.helpers.data.PName
-import aqua.helpers.data.SName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
