@@ -16,6 +16,7 @@
 
 package aqua.raw
 
+import aqua.errors.Errors.internalError
 import aqua.helpers.data.PName
 import aqua.helpers.data.SName
 import aqua.raw.arrow.FuncRaw
@@ -39,20 +40,14 @@ import scala.collection.immutable.SortedMap
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
  *
  * @param module
- * This file's module name
- * @param declares
- * What this file declares
- * @param exports
- * Defined exports: what to export, and optionally how to rename it
+ * Information about module this context represents
  * @param parts
  * Declarations, functions, etc of the file
  * @param abilities
  * Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
-  module: Option[PName] = None,
-  declares: Set[PName] = Set.empty,
-  exports: Map[PName, Option[PName]] = Map.empty,
+  module: RawContext.Module = RawContext.Module.blank,
   parts: RawContext.Parts = Chain.empty,
   abilities: Map[SName, RawContext] = Map.empty
 ) {
@@ -121,17 +116,69 @@ case class RawContext(
     // TODO: How about names in abilities?
     parts.map { case (_, p) => p.name }.toList.toSet
 
-  override def toString: String =
-    s"""|module: ${module.map(_.value).getOrElse("unnamed")}
-        |declares: ${declares.map(_.value).mkString(", ")}
-        |exports: ${exports.map { case (name, rename) =>
+  lazy val moduleName: Option[PName] = module.name
+
+  lazy val declares: Set[PName] = module.declares
+
+  lazy val exports: Map[PName, Option[PName]] = module.exports
+
+  override def toString: String = {
+    val exportsStr = exports.map { case (name, rename) =>
       rename.fold(name.value)(name.value + " as " + _.value)
-    }.mkString(", ")}
-        |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
-        |abilities: ${abilities.keys.map(_.name).mkString(", ")}""".stripMargin
+    }.mkString(", ")
+    val partsStr = parts.map { case (_, part) => part.name }.toList.mkString(", ")
+    val abilitiesStr = abilities.keys.map(_.name).mkString(", ")
+
+    s"""|$module
+        |declares: ${declares.map(_.value).mkString(", ")}
+        |exports: $exportsStr
+        |parts: $partsStr
+        |abilities: $abilitiesStr""".stripMargin
+  }
 }
 
 object RawContext {
+
+  final case class Module(
+    name: Option[PName] = None,
+    declares: Set[PName] = Set.empty,
+    exports: Map[PName, Option[PName]] = Map.empty
+  ) {
+
+    // Module is considered empty if it has no name
+    def isEmpty: Boolean = name.isEmpty
+
+    override def toString: String = {
+      val nameStr = name.fold("<unnamed>")(_.value)
+      val declaresStr = declares.map(_.value).mkString(", ")
+      val exportsStr = exports.map { case (name, rename) =>
+        rename.fold(name.value)(name.value + " as " + _.value)
+      }.mkString(", ")
+
+      s"""|module: $nameStr
+          |declares: $declaresStr
+          |exports: $exportsStr""".stripMargin
+    }
+  }
+
+  object Module {
+    lazy val blank: Module = Module()
+
+    given Monoid[Module] with {
+
+      override def empty: Module = blank
+
+      override def combine(x: Module, y: Module): Module =
+        Module(
+          name = x.name.orElse(y.name),
+          declares = x.declares ++ y.declares,
+          exports = x.exports ++ y.exports
+        )
+    }
+  }
+
+  lazy val moduleLens: Lens[RawContext, RawContext.Module] = GenLens[RawContext](_.module)
+
   type Parts = Chain[(RawContext, RawPart)];
 
   val blank: RawContext = RawContext()
@@ -154,10 +201,8 @@ object RawContext {
 
     override def combine(x: RawContext, y: RawContext): RawContext =
       RawContext(
-        x.module orElse y.module,
-        x.declares ++ y.declares,
-        x.exports ++ y.exports,
-        x.parts ++ y.parts,
+        x.module |+| y.module,
+        x.parts |+| y.parts,
         // This combines abilities (which are RawContexts too) recursively
         x.abilities.alignCombine(y.abilities)
       )

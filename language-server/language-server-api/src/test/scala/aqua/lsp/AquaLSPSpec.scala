@@ -98,9 +98,9 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
             val (span, _) = definition.token.unit
 
             definition.name.value == fullName.getOrElse(checkName) &&
-              span.startIndex == start && 
-              span.endIndex == end && 
-              definition.`type` == `type`
+            span.startIndex == start &&
+            span.endIndex == end &&
+            definition.`type` == `type`
           }
 
         if (printFiltered)
@@ -247,7 +247,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         thirdImport
     )
     val ctx = compile(src, imports).toOption.get.values.head
-    val res = ctx.unscoped(ctx.module.get).get
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     val serviceType = ServiceType(
       "OneMore",
@@ -423,7 +423,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val ctx = compile(src, Map.empty).toOption.get.values.head
-    val res = ctx.unscoped(ctx.module.get).get
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
     val someStr =
@@ -530,7 +530,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val ctx = compile(src, imports).toOption.get.values.head
-    val res = ctx.unscoped(ctx.module.get).get
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     res.errors shouldBe empty
     res.checkLocations("timeout", 1, 0, firstImport, Some(main)) shouldBe true

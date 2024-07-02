@@ -66,7 +66,7 @@ class ModuleSem[S[_]: Comonad, C: Monoid: Picker](expr: ModuleExpr[S])(using
       }).map(ctx =>
         ctx
           .scoped(pname)
-          .setModule(Some(pname))
+          .setModuleName(pname)
           .setDeclares(ctx.declares.map(_.prepended(pname)))
           .setExports(ctx.exports.map { case (name, rename) => name.prepended(pname) -> rename })
       )

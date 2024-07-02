@@ -62,8 +62,8 @@ class HeaderHandler[S[_]: Comonad, C](using
       ctx.pickHeader.validNec |+| f.imports.map { case QName.As(importName, importRename) =>
         val piName = importName.toPName
         val piRename = importRename.map(_.toPName)
-        val name = ctx.module.fold(piName)(piName.prepended)
-        val rename = piRename.map(r => ctx.module.fold(r)(r.prepended))
+        val name = ctx.moduleName.fold(piName)(piName.prepended)
+        val rename = piRename.map(r => ctx.moduleName.fold(r)(r.prepended))
 
         ctx
           .pick(name, rename)
@@ -84,7 +84,7 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     // Convert an imported context into a module (ability)
     def toModule(ctx: C, tkn: Token[S], rename: Option[PName]): ResAC[S, C] =
-      ctx.module
+      ctx.moduleName
         .toValidNec(
           error(
             tkn,
@@ -94,11 +94,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         .map { modName =>
           rename
             .filter(_ != modName)
-            .fold(
-              ctx
-                .setModule(None)
-                .setDeclares(Set.empty)
-            )(newName =>
+            .fold(ctx.clearModule)(newName =>
               ctx
                 .pick(modName, newName.some)
                 .getOrElse(
@@ -108,7 +104,7 @@ class HeaderHandler[S[_]: Comonad, C](using
         }
 
     def unscope(ctx: C, tkn: Token[S]): ResAC[S, C] =
-      ctx.module
+      ctx.moduleName
         .toValidNec(
           error(
             tkn,

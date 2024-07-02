@@ -34,20 +34,26 @@ trait Picker[A] {
   def pick(ctx: A, name: PName, rename: Option[PName]): Option[A]
   def pickDeclared(ctx: A): A
   def pickHeader(ctx: A): A
-  def module(ctx: A): Option[PName]
-  def allNames(ctx: A): Set[String]
+
+  def moduleName(ctx: A): Option[PName]
   def declares(ctx: A): Set[PName]
   def exports(ctx: A): Map[PName, Option[PName]]
+
+  def allNames(ctx: A): Set[String]
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def setAbility(ctx: A, path: PName, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
-  def setModule(ctx: A, name: Option[PName]): A
   def scoped(ctx: A, path: PName): A
   def unscoped(ctx: A, path: PName): Option[A]
+
+  def setModuleName(ctx: A, name: PName): A
   def setDeclares(ctx: A, declares: Set[PName]): A
   def setExports(ctx: A, exports: Map[PName, Option[PName]]): A
+
+  def clearModule(ctx: A): A
+
   def addPart(ctx: A, part: (A, RawPart)): A
 }
 
@@ -65,7 +71,7 @@ object Picker {
 
     def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
-    def module: Option[PName] = Picker[A].module(p)
+    def moduleName: Option[PName] = Picker[A].moduleName(p)
     def declares: Set[PName] = Picker[A].declares(p)
     def exports: Map[PName, Option[PName]] = Picker[A].exports(p)
     def allNames: Set[String] = Picker[A].allNames(p)
@@ -92,20 +98,17 @@ object Picker {
     def addFreeParts(parts: List[RawPart]): A =
       parts.foldLeft(p) { case (ctx, part) => ctx.addPart(blank -> part) }
 
-    def setModule(name: Option[PName]): A =
-      Picker[A].setModule(p, name)
+    def setModuleName(name: PName): A = Picker[A].setModuleName(p, name)
+    def setDeclares(declares: Set[PName]): A = Picker[A].setDeclares(p, declares)
+    def setExports(exports: Map[PName, Option[PName]]): A = Picker[A].setExports(p, exports)
+
+    def clearModule: A = Picker[A].clearModule(p)
 
     def scoped(path: PName): A =
       Picker[A].scoped(p, path)
 
     def unscoped(path: PName): Option[A] =
       Picker[A].unscoped(p, path)
-
-    def setDeclares(declares: Set[PName]): A =
-      Picker[A].setDeclares(p, declares)
-
-    def setExports(exports: Map[PName, Option[PName]]): A =
-      Picker[A].setExports(p, exports)
   }
 
   private def returnsAbilityOrArrowOrStreamMap(arrowType: ArrowType): Boolean =
@@ -156,8 +159,7 @@ object Picker {
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
 
-    override def module(ctx: RawContext): Option[PName] =
-      ctx.module
+    override def moduleName(ctx: RawContext): Option[PName] = ctx.moduleName
 
     override def declares(ctx: RawContext): Set[PName] = ctx.declares
 
@@ -178,30 +180,27 @@ object Picker {
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
 
-    override def setModule(ctx: RawContext, name: Option[PName]): RawContext =
-      ctx.copy(module = name)
+    override def setModuleName(ctx: RawContext, name: PName): RawContext =
+      RawContext.moduleLens.modify(_.copy(name = name.some))(ctx)
 
-    override def scoped(ctx: RawContext, path: PName): RawContext = {
-      val moduleCleared = ctx.copy(
-        module = None,
-        declares = Set.empty
-      )
+    override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
+      RawContext.moduleLens.modify(_.copy(declares = declares))(ctx)
 
-      path.parts.toList.foldRight(moduleCleared) { case (name, ctx) =>
+    override def setExports(ctx: RawContext, exports: Map[PName, Option[PName]]): RawContext =
+      RawContext.moduleLens.modify(_.copy(exports = exports))(ctx)
+
+    override def clearModule(ctx: RawContext): RawContext =
+      RawContext.moduleLens.modify(_.copy(name = None, declares = Set.empty))(ctx)
+
+    override def scoped(ctx: RawContext, path: PName): RawContext =
+      path.parts.toList.foldRight(ctx.clearModule) { case (name, ctx) =>
         RawContext.fromAbilities(
           Map(name -> ctx)
         )
       }
-    }
 
     override def unscoped(ctx: RawContext, path: PName): Option[RawContext] =
       search(ctx, path).collect { case ctx: RawContext => ctx }
-
-    override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
-      ctx.copy(declares = declares)
-
-    override def setExports(ctx: RawContext, exports: Map[PName, Option[PName]]): RawContext =
-      ctx.copy(exports = exports)
 
     override def pick(
       ctx: RawContext,
@@ -228,13 +227,8 @@ object Picker {
       }
 
     override def pickHeader(ctx: RawContext): RawContext =
-      RawContext.blank.copy(
-        module = ctx.module,
-        declares = ctx.declares,
-        exports = ctx.exports
-      ) |+| ctx.module
-        .map(blank.scoped)
-        .orEmpty
+      RawContext.blank.copy(module = ctx.module) |+|
+        ctx.moduleName.map(blank.scoped).orEmpty
 
     override def pickDeclared(ctx: RawContext): RawContext =
       if (ctx.module.isEmpty) ctx

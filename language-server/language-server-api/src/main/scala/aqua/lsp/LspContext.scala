@@ -87,8 +87,8 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def module(ctx: LspContext[S]): Option[PName] =
-      ctx.raw.module
+    override def moduleName(ctx: LspContext[S]): Option[PName] =
+      ctx.raw.moduleName
 
     override def declares(ctx: LspContext[S]): Set[PName] = ctx.raw.declares
 
@@ -110,8 +110,8 @@ object LspContext {
     ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
-    override def setModule(ctx: LspContext[S], name: Option[PName]): LspContext[S] =
-      ctx.copy(raw = ctx.raw.setModule(name))
+    override def setModuleName(ctx: LspContext[S], name: PName): LspContext[S] =
+      ctx.copy(raw = ctx.raw.setModuleName(name))
 
     override def scoped(ctx: LspContext[S], path: PName): LspContext[S] =
       ctx.copy(
@@ -143,6 +143,9 @@ object LspContext {
       exports: Map[PName, Option[PName]]
     ): LspContext[S] =
       ctx.copy(raw = ctx.raw.setExports(exports))
+
+    override def clearModule(ctx: LspContext[S]): LspContext[S] =
+      ctx.copy(raw = ctx.raw.clearModule)
 
     override def pick(
       ctx: LspContext[S],
