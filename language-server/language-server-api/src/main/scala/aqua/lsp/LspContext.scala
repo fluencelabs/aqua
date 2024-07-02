@@ -93,16 +93,6 @@ object LspContext {
 
     override def allNames(ctx: LspContext[S]): Set[String] = ctx.raw.allNames
 
-    override def setAbility(
-      ctx: LspContext[S],
-      path: PName,
-      ctxAb: LspContext[S]
-    ): LspContext[S] = ctx.copy(
-      raw = ctx.raw.setAbility(path, ctxAb.raw),
-      variables = ctx.variables |+| ctxAb.variables
-        .renameDefinitions(defName => defName.prepended(path))
-    )
-
     override def setImportPaths(
       ctx: LspContext[S],
       importPaths: Map[String, String]

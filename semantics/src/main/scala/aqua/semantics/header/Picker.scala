@@ -45,7 +45,6 @@ trait Picker[A] {
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
-  def setAbility(ctx: A, path: PName, ctxAb: A): A
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
 
   /**
@@ -108,9 +107,6 @@ object Picker {
 
     def funcAcceptAbility(name: String): Boolean =
       Picker[A].funcAcceptAbility(p, name)
-
-    def setAbility(path: PName, ctx: A): A =
-      Picker[A].setAbility(p, path, ctx)
 
     def setImportPaths(importPaths: Map[String, String]): A =
       Picker[A].setImportPaths(p, importPaths)
@@ -192,15 +188,6 @@ object Picker {
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
-    override def setAbility(ctx: RawContext, path: PName, ctxAb: RawContext): RawContext =
-      ctx |+| RawContext.partsLens
-        .modify(
-          _.map { case (partContext, part) =>
-            (partContext, part.addAbilityName(path.value))
-          }
-        )(ctxAb)
-        .scoped(path)
-
     // dummy
     override def setImportPaths(ctx: RawContext, importPaths: Map[String, String]): RawContext =
       ctx
@@ -218,9 +205,9 @@ object Picker {
       RawContext.moduleLens.set(RawContext.Module.blank)(ctx)
 
     override def scoped(ctx: RawContext, path: PName): RawContext =
-      path.parts.toList.foldRight(ctx.clearModule) { case (name, ctx) =>
+      path.parts.toList.foldRight(ctx.clearModule) { case (name, stepCtx) =>
         RawContext.fromAbilities(
-          Map(name -> ctx)
+          Map(name -> stepCtx)
         )
       }
 
@@ -248,7 +235,13 @@ object Picker {
             )
         }
 
-        path.fold(inner)(subPath => blank.setAbility(subPath, inner))
+        path.fold(inner)(subPath =>
+          // TODO:  Should we move parts renaming to `scoped`?
+          //        It causes tests to fail for some reason
+          inner
+            .prependPathToParts(subPath)
+            .scoped(subPath)
+        )
       }
 
     override def pickHeader(ctx: RawContext): RawContext =

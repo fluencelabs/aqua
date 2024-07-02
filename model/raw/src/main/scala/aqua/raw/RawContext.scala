@@ -121,6 +121,13 @@ case class RawContext(
 
   lazy val exports: Map[PName, Option[PName]] = module.exports
 
+  def prependPathToParts(path: PName): RawContext =
+    RawContext.partsLens.modify(
+      _.map { case (partContext, part) =>
+        (partContext, part.addAbilityName(path.value))
+      }
+    )(this)
+
   override def toString: String = {
     val exportsStr = exports.map { case (name, rename) =>
       rename.fold(name.value)(name.value + " as " + _.value)
