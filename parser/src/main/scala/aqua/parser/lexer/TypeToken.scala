@@ -16,6 +16,7 @@
 
 package aqua.parser.lexer
 
+import aqua.helpers.data.PName
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
@@ -101,11 +102,14 @@ object OptionTypeToken {
 
 case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends BasicTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
+
   def asName: Name[F] = Name[F](name)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): NamedTypeToken[K] = copy(fk(name))
 
   def value: String = name.extract
+
+  def pathName: PName = PName.stringUnsafe(value)
 
   override def toString: String = name.extract
 }

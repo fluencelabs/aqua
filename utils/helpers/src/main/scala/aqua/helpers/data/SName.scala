@@ -14,25 +14,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package aqua.semantics
+package aqua.helpers.data
 
-import aqua.helpers.data.PName
-import aqua.parser.lexer.Token
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.errors.Errors.internalError
 
-import cats.data.State
+/**
+ * Short for SimpleName. Represents name without `.`
+ */
+final case class SName private (
+  name: String
+) {
 
-package object header {
+  lazy val toPName: PName =
+    PName.fromSName(this)
+}
 
-  /*
-   NOTE: This extension glues locations algebra from the body semantics
-         with the context that is used in the header semantics
-   */
-  extension [S[_], C](context: C)(using
-    locations: LocationsAlgebra[S, State[C, *]]
-  ) {
+object SName {
 
-    def addOccurences(tokens: List[(PName, Token[S])]): C =
-      locations.pointLocations(tokens).runS(context).value
-  }
+  def nameUnsafe(name: String): SName =
+    if (name.isEmpty || name.contains("."))
+      internalError(s"Invalid SName: $name")
+    else SName(name)
 }

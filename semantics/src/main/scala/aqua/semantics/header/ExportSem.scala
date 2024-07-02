@@ -17,7 +17,7 @@
 package aqua.semantics.header
 
 import aqua.parser.head.*
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{QName, Token}
 import aqua.semantics.SemanticError
 import aqua.semantics.header.HeaderHandler.*
 import aqua.semantics.header.Picker.*
@@ -36,7 +36,7 @@ import cats.syntax.semigroup.*
 import cats.syntax.validated.*
 import cats.{Comonad, Monoid}
 
-class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
+class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
   picker: Picker[C],
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
@@ -62,51 +62,37 @@ class ExportSem[S[_]: Comonad, C](expr: ExportExpr[S])(using
       )
     )
 
-  def headerSem: Res[S, C] = {
+  def headerSem: Res[S, C] =
     // Save exports, finally handle them
-    HeaderSem(
-      // Nothing there
-      picker.blank,
-      finSem
-    ).validNec
-  }
+    HeaderSem
+      .fromFin(finSem)
+      .validNec
 
   private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
-    val pubs = expr.pubs
-      .map(
-        _.bimap(
-          _.bimap(n => (n, n.value), n => (n, n.map(_.value))),
-          _.bimap(n => (n, n.value), n => (n, n.map(_.value)))
-        ).merge
-      )
-
-    val tokens = pubs.toList.flatMap { case ((token, name), (renameToken, _)) =>
-      renameToken.map(name -> _).toList :+ (name, token)
+    val tokens = expr.pubs.toList.flatMap { case QName.As(name, rename) =>
+      rename.map(name.toPName -> _).toList :+ (name.toPName, name)
     }
 
     val resCtx = ctx.addOccurences(tokens)
 
-    pubs.map { case ((token, name), (_, rename)) =>
+    expr.pubs.map { case QName.As(name, rename) =>
       resCtx
-        .pick(name, rename, declared = false)
-        .as(Map(name -> rename))
+        .pick(name.toPName, rename.map(_.toPName))
+        .as(List(name.toPName -> rename.map(_.toPName)))
         .toValid(
           error(
-            token,
-            s"Files has no $name declaration or import, " +
+            name,
+            s"Files has no '${name.value}' declaration or import, " +
               s"cannot export, available functions: ${resCtx.funcNames.mkString(", ")}"
           )
         )
         .ensure(
           error(
-            token,
-            s"Can not export '$name' as it is an ability"
+            name,
+            s"Can not export '${name.value}' as it is an ability"
           )
-        )(_ => !resCtx.isAbility(name))
-        .toValidatedNec <* exportFuncChecks(resCtx, token, name)
-    }
-      .prepend(validNec(resCtx.exports))
-      .combineAll
-      .map(resCtx.setExports)
+        )(_ => !resCtx.isAbility(name.value))
+        .toValidatedNec <* exportFuncChecks(resCtx, name, name.value)
+    }.combineAll.map(exps => resCtx.setExports(resCtx.exports ++ exps))
   }
 }

@@ -16,9 +16,13 @@
 
 package aqua.semantics.header
 
+import aqua.errors.Errors.internalError
+import aqua.helpers.data.PName
 import aqua.parser.Ast
 import aqua.parser.head.*
+import aqua.parser.lexer.QName
 import aqua.parser.lexer.{Ability, Token}
+import aqua.raw.RawContext
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.{HeaderError, SemanticError}
@@ -55,42 +59,65 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S, C] =
-      ctx.pickHeader.validNec |+| f.imports
-        .map(
-          _.bimap(
-            _.bimap(n => (n, n.value), n => (n, n.map(_.value))),
-            _.bimap(n => (n, n.value), n => (n, n.map(_.value)))
-          ).merge match {
-            case ((token, name), (renameToken, rename)) =>
-              ctx
-                .pick(name, rename, ctx.module.nonEmpty)
-                .map { ctx =>
-                  val defName = rename.getOrElse(name)
-                  val occs = renameToken.map(defName -> _).toList :+ (defName, token)
-                  ctx.addOccurences(occs)
-                }
-                .toValidNec(
-                  error(
-                    token,
-                    s"Imported file `declares ${ctx.declaredNames.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
-                  )
-                )
+      ctx.pickHeader.validNec |+| f.imports.map { case QName.As(importName, importRename) =>
+        val piName = importName.toPName
+        val piRename = importRename.map(_.toPName)
+        val name = ctx.moduleName.fold(piName)(piName.prepended)
+        val rename = piRename.map(r => ctx.moduleName.fold(r)(r.prepended))
+
+        ctx
+          .pick(name, rename)
+          .map { ctx =>
+            val defName = rename.getOrElse(name)
+            val occs = importRename.map(defName -> _).toList :+ (defName, importName)
+
+            ctx.addOccurences(occs)
           }
-        )
-        .combineAll
+          .toValidNec(
+            error(
+              importName,
+              s"Imported file `declares ${ctx.declares.map(_.value).mkString(", ")}`, " +
+                s"no ${name.value} declared. Try adding `declares ${name.value}` to that file."
+            )
+          )
+      }.combineAll
 
     // Convert an imported context into a module (ability)
-    def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S, C] =
-      rename
-        .map(_.value)
-        .orElse(ctx.module)
-        .map(modName => picker.blank.setAbility(modName, ctx))
+    def toModule(ctx: C, tkn: Token[S], rename: Option[PName]): ResAC[S, C] =
+      ctx.moduleName
         .toValidNec(
           error(
             tkn,
-            s"Used module has no `aqua` header. Please add `aqua` header or use ... as ModuleName, or switch to import"
+            s"Used module has no `aqua` header. Please add `aqua` header or `use ... as ModuleName`, or switch to import"
           )
         )
+        .map { modName =>
+          rename
+            .filter(_ != modName)
+            .fold(ctx.clearModule)(newName =>
+              ctx
+                .pick(modName, newName.some)
+                .getOrElse(
+                  internalError(s"Module ${modName.value} does not contain itself")
+                )
+            )
+        }
+
+    def unscope(ctx: C, tkn: Token[S]): ResAC[S, C] =
+      ctx.moduleName
+        .toValidNec(
+          error(
+            tkn,
+            s"Used module has no `aqua` header. Please add `aqua` header or `use ... as ModuleName`, or switch to import"
+          )
+        )
+        .map { modName =>
+          ctx
+            .unscoped(modName)
+            .getOrElse(
+              internalError(s"Module ${modName.value} does not contain itself")
+            )
+        }
 
     val handleModule: ModuleExpr[S] => Res[S, C] = { me =>
       ModuleSem(me).headerSem
@@ -103,32 +130,44 @@ class HeaderHandler[S[_]: Comonad, C](using
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(HeaderSem.fromInit)
+        resolve(f)
+          .andThen(unscope(_, f.token))
+          .map(HeaderSem.fromInit)
 
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
+          .andThen(unscope(_, f.token))
           .map(HeaderSem.fromInit)
 
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
         resolve(f)
-          .andThen(toModule(_, f.token, asModule))
+          .andThen(ctx =>
+            toModule(
+              ctx = ctx,
+              tkn = f.token,
+              rename = asModule.map(_.toPName)
+            )
+          )
           .map(HeaderSem.fromInit)
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
-          .andThen(toModule(_, f.token, Some(asModule)))
+          .andThen(ctx =>
+            toModule(
+              ctx = ctx,
+              tkn = f.token,
+              rename = asModule.map(_.toPName)
+            )
+          )
           .map(HeaderSem.fromInit)
 
       case ee: ExportExpr[S] =>
         ExportSem(ee).headerSem
-
-      case f: FilenameExpr[S] =>
-        resolve(f).map(HeaderSem.fromInit)
     }
 
     val (module, other) =
@@ -145,7 +184,7 @@ class HeaderHandler[S[_]: Comonad, C](using
           _.foldMap(onExpr)
         )
 
-    module |+| other
+    other |+| module
   }
 }
 

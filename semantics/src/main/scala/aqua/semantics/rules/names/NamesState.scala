@@ -67,10 +67,12 @@ object NamesState {
 
   def init[S[_]](context: RawContext): NamesState[S] =
     NamesState(
-      rootArrows = context.allFuncs.map { case (s, fc) =>
-        (s, fc.arrow.`type`)
+      rootArrows = context.allFuncs.map { case (name, fc) =>
+        name.value -> fc.arrow.`type`
       },
-      constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
+      constants = context.allValues.map { case (name, vm) =>
+        name.value -> vm.`type`
+      }
     )
 
 }

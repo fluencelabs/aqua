@@ -17,6 +17,7 @@
 package aqua.semantics.rules.types
 
 import aqua.errors.Errors.internalError
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.*
 import aqua.raw.ops.Call
 import aqua.raw.value.*
@@ -165,11 +166,10 @@ class TypesInterpreter[S[_], X](using
     name: NamedTypeToken[S],
     t: NamedType,
     fields: Map[String, (Name[S], Type)]
-  ) =
-    locations.addDefinitionWithFields(
-      DefinitionInfo[S](name.value, name, t),
-      fields.map { case (n, (t, ty)) => DefinitionInfo[S](n, t, ty) }.toList
-    )
+  ) = locations.addDefinitionWithFields(
+    DefinitionInfo[S](name.pathName, name, t),
+    fields.map { case (n, (t, ty)) => DefinitionInfo[S](PName.simpleUnsafe(n), t, ty) }.toList
+  )
 
   override def defineStructType(
     name: NamedTypeToken[S],
@@ -206,7 +206,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target)))
+          .productL(locations.addDefinition(DefinitionInfo(name.pathName, name, target)))
           .as(true)
     }
 
@@ -219,7 +219,12 @@ class TypesInterpreter[S[_], X](using
         nt.fields(op.value) match {
           case Some(t) =>
             locations
-              .pointFieldLocation(nt.name, op.value, op)
+              .pointFieldLocation(
+                // TODO: Refactor so that `nt.name` is PName
+                PName.stringUnsafe(nt.name),
+                op.simpleName,
+                op
+              )
               .as(Some(IntoFieldRes.Field(t)))
           case None =>
             val fields = nt.fields.keys.map(k => s"`$k`").toList.mkString(", ")
@@ -317,7 +322,7 @@ class TypesInterpreter[S[_], X](using
       case ab: GeneralAbilityType =>
         val abName = ab.fullName
         val avStr = ab.arrowFields.keys.map(k => s"`$k`").mkString(", ")
-        locations.pointFieldLocation(ab.name, opName, op) *>
+        locations.pointFieldLocation(PName.stringUnsafe(ab.name), op.simpleName, op) *>
           checkArrowType(op, ab.fields.lookup(opName), abName, avStr, types)
       case st: StreamMapType =>
         val avStr = StreamMapType.allFuncs.map(k => s"`${k.name}`").mkString(", ")

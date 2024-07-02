@@ -53,5 +53,7 @@ object TypesState {
   )
 
   def init[S[_]](context: RawContext): TypesState[S] =
-    TypesState(strict = context.allTypes)
+    TypesState(strict = context.allTypes.map { case (name, t) =>
+      name.value -> t
+    })
 }

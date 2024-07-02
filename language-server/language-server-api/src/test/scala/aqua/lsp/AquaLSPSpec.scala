@@ -25,6 +25,7 @@ import aqua.parser.lexer.Token
 import aqua.parser.lift.Span.S
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.raw.ConstantRaw
+import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
 import aqua.semantics.{RulesViolated, SemanticError}
 import aqua.types.*
@@ -96,16 +97,16 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
           c.variables.variables.values.flatten.exists { case VariableInfo(definition, _) =>
             val (span, _) = definition.token.unit
 
-            definition.name == fullName.getOrElse(checkName) &&
-              span.startIndex == start && 
-              span.endIndex == end && 
-              definition.`type` == `type`
+            definition.name.value == fullName.getOrElse(checkName) &&
+            span.startIndex == start &&
+            span.endIndex == end &&
+            definition.`type` == `type`
           }
 
         if (printFiltered)
           println(
             c.variables.definitions
-              .filter(v => v.name == fullName.getOrElse(checkName))
+              .filter(v => v.name.value == fullName.getOrElse(checkName))
               .map { case DefinitionInfo(name, token, t) =>
                 val span = token.unit._1
                 s"$name(${span.startIndex}:${span.endIndex}) $t"
@@ -245,8 +246,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "third.aqua" ->
         thirdImport
     )
-
-    val res = compile(src, imports).toOption.get.values.head
+    val ctx = compile(src, imports).toOption.get.values.head
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     val serviceType = ServiceType(
       "OneMore",
@@ -421,7 +422,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "index.aqua" -> main
     )
 
-    val res = compile(src, Map.empty).toOption.get.values.head
+    val ctx = compile(src, Map.empty).toOption.get.values.head
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     val nestedType = StructType("NestedStruct", NonEmptyMap.of(("a", ScalarType.string)))
     val someStr =
@@ -527,7 +529,8 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         firstImport
     )
 
-    val res = compile(src, imports).toOption.get.values.head
+    val ctx = compile(src, imports).toOption.get.values.head
+    val res = ctx.unscoped(ctx.moduleName.get).get
 
     res.errors shouldBe empty
     res.checkLocations("timeout", 1, 0, firstImport, Some(main)) shouldBe true

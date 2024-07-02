@@ -16,6 +16,7 @@
 
 package aqua.semantics.rules.types
 
+import aqua.helpers.data.PName
 import aqua.parser.lexer.*
 import aqua.types.*
 
@@ -30,7 +31,7 @@ import cats.syntax.validated.*
 
 final case class TypeResolution[S[_], +T](
   `type`: T,
-  occurrences: List[(Token[S], String)]
+  occurrences: List[(Token[S], PName)]
 )
 
 object TypeResolution {
@@ -77,7 +78,7 @@ object TypeResolution {
       case OptionTypeToken(_, dtt) =>
         resolveCollection(dtt, "Option", OptionType.apply)(state)
       case ntt: NamedTypeToken[S] =>
-        val defs = (ntt -> ntt.value) :: Nil
+        val defs = (ntt -> ntt.pathName) :: Nil
 
         state
           .getType(ntt.value)

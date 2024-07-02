@@ -69,7 +69,7 @@ class NamesInterpreter[S[_], X](using
             )
           )
         case Some(_) =>
-          locations.pointLocation(name.value, name)
+          locations.pointLocation(name.pathName, name)
         case _ => State.pure(())
       }
 
@@ -79,12 +79,12 @@ class NamesInterpreter[S[_], X](using
   def readArrow(name: Name[S]): SX[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {
       case Some(at) =>
-        locations.pointLocation(name.value, name).map(_ => Option(at))
+        locations.pointLocation(name.pathName, name).as(at.some)
       case None =>
         // check if we have arrow in variable
         readName(name.value).flatMap {
           case Some(at @ ArrowType(_, _)) =>
-            locations.pointLocation(name.value, name).map(_ => Option(at))
+            locations.pointLocation(name.pathName, name).as(at.some)
           case _ =>
             getState.flatMap(st =>
               report
@@ -130,7 +130,7 @@ class NamesInterpreter[S[_], X](using
       case None =>
         mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
           fr => (fr.addName(name, `type`) -> true).pure
-        ) <* locations.addDefinition(DefinitionInfo(name.value, name, `type`))
+        ) <* locations.addDefinition(DefinitionInfo(name.pathName, name, `type`))
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
@@ -155,7 +155,7 @@ class NamesInterpreter[S[_], X](using
             constants = st.constants.updated(name.value, `type`)
           )
         ).as(true)
-    }.flatTap(_ => locations.addDefinition(DefinitionInfo(name.value, name, `type`)))
+    } <* locations.addDefinition(DefinitionInfo(name.pathName, name, `type`))
 
   override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
@@ -179,9 +179,8 @@ class NamesInterpreter[S[_], X](using
             report
               .error(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => (fr.addArrow(name, arrowType) -> true).pure).flatTap(_ =>
-          locations.addDefinition(DefinitionInfo[S](name.value, name, arrowType))
-        )
+        )(fr => (fr.addArrow(name, arrowType) -> true).pure) <*
+          locations.addDefinition(DefinitionInfo[S](name.pathName, name, arrowType))
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =

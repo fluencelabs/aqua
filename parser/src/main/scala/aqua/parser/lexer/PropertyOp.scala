@@ -16,6 +16,7 @@
 
 package aqua.parser.lexer
 
+import aqua.helpers.data.SName
 import aqua.parser.lexer.CallArrowToken.CallBraces
 import aqua.parser.lexer.NamedArg.namedArgs
 import aqua.parser.lexer.Token.*
@@ -44,6 +45,8 @@ case class IntoArrow[F[_]: Comonad](name: Name[F], arguments: List[ValueToken[F]
   override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] =
     copy(name.mapK(fk), arguments.map(_.mapK(fk)))
 
+  def simpleName: SName = SName.nameUnsafe(name.value)
+
   override def toString: String = s".$name(${arguments.map(_.toString).mkString(", ")})"
 }
 
@@ -53,6 +56,8 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
   override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] = copy(fk(name))
 
   lazy val value: String = name.extract
+
+  def simpleName: SName = SName.nameUnsafe(value)
 
   override def toString: String = name.extract
 }
