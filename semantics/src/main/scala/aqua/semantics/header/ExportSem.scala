@@ -90,7 +90,7 @@ class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
 
     val resCtx = ctx.addOccurences(tokens)
 
-    val res = expr.pubs.map { case QName.As(name, rename) =>
+    expr.pubs.map { case QName.As(name, rename) =>
       val pName = name.toPName
 
       val symbol = resCtx
@@ -125,7 +125,5 @@ class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
         exportFuncChecks(resCtx, name, pName) *>
         simpleRename.map(r => List(pName -> r))
     }.combineAll.map(exps => resCtx.setExports(resCtx.exports ++ exps))
-
-    res
   }
 }
