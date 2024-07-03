@@ -39,12 +39,14 @@ trait Picker[A] {
 
   def moduleName(ctx: A): Option[PName]
   def declares(ctx: A): Set[PName]
-  def exports(ctx: A): Map[PName, Option[PName]]
+  def exports(ctx: A): Map[PName, SName]
 
   def allNames(ctx: A): Set[String]
-  def isAbility(ctx: A, name: String): Boolean
-  def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
-  def funcAcceptAbility(ctx: A, name: String): Boolean
+
+  def isAbility(ctx: A, name: PName): Boolean
+  def funcReturnAbilityOrArrow(ctx: A, name: PName): Boolean
+  def funcAcceptAbility(ctx: A, name: PName): Boolean
+
   def setImportPaths(ctx: A, importPaths: Map[String, String]): A
 
   /**
@@ -74,7 +76,7 @@ trait Picker[A] {
 
   def setModuleName(ctx: A, name: PName): A
   def setDeclares(ctx: A, declares: Set[PName]): A
-  def setExports(ctx: A, exports: Map[PName, Option[PName]]): A
+  def setExports(ctx: A, exports: Map[PName, SName]): A
 
   def clearModule(ctx: A): A
 
@@ -90,22 +92,22 @@ object Picker {
     def funcNames: Set[String] = Picker[A].funcNames(p)
     def definedAbilityNames: Set[String] = Picker[A].definedAbilityNames(p)
 
-    def pick(name: PName, rename: Option[PName]): Option[A] =
+    def pick(name: PName, rename: Option[PName] = None): Option[A] =
       Picker[A].pick(p, name, rename)
 
     def pickDeclared: A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
     def moduleName: Option[PName] = Picker[A].moduleName(p)
     def declares: Set[PName] = Picker[A].declares(p)
-    def exports: Map[PName, Option[PName]] = Picker[A].exports(p)
+    def exports: Map[PName, SName] = Picker[A].exports(p)
     def allNames: Set[String] = Picker[A].allNames(p)
 
-    def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
+    def isAbility(name: PName): Boolean = Picker[A].isAbility(p, name)
 
-    def funcReturnAbilityOrArrow(name: String): Boolean =
+    def funcReturnAbilityOrArrow(name: PName): Boolean =
       Picker[A].funcReturnAbilityOrArrow(p, name)
 
-    def funcAcceptAbility(name: String): Boolean =
+    def funcAcceptAbility(name: PName): Boolean =
       Picker[A].funcAcceptAbility(p, name)
 
     def setImportPaths(importPaths: Map[String, String]): A =
@@ -121,7 +123,7 @@ object Picker {
 
     def setModuleName(name: PName): A = Picker[A].setModuleName(p, name)
     def setDeclares(declares: Set[PName]): A = Picker[A].setDeclares(p, declares)
-    def setExports(exports: Map[PName, Option[PName]]): A = Picker[A].setExports(p, exports)
+    def setExports(exports: Map[PName, SName]): A = Picker[A].setExports(p, exports)
 
     def clearModule: A = Picker[A].clearModule(p)
 
@@ -159,17 +161,17 @@ object Picker {
 
     override def blank: RawContext = RawContext.blank
 
-    override def isAbility(ctx: RawContext, name: String): Boolean =
-      ctx.types.get(SName.nameUnsafe(name)).exists(isAbilityType)
+    override def isAbility(ctx: RawContext, name: PName): Boolean =
+      ctx.allTypes.get(name).exists(isAbilityType)
 
-    override def funcReturnAbilityOrArrow(ctx: RawContext, name: String): Boolean =
-      ctx.funcs
-        .get(SName.nameUnsafe(name))
+    override def funcReturnAbilityOrArrow(ctx: RawContext, name: PName): Boolean =
+      ctx.allFuncs
+        .get(name)
         .map(_.arrow.`type`)
         .exists(returnsAbilityOrArrowOrStreamMap)
 
-    override def funcAcceptAbility(ctx: RawContext, name: String): Boolean =
-      ctx.funcs.get(SName.nameUnsafe(name)).map(_.arrow.`type`).exists(acceptsAbilityOrStreamMap)
+    override def funcAcceptAbility(ctx: RawContext, name: PName): Boolean =
+      ctx.allFuncs.get(name).map(_.arrow.`type`).exists(acceptsAbilityOrStreamMap)
 
     override def funcNames(ctx: RawContext): Set[String] =
       ctx.funcs.keySet.map(_.name)
@@ -184,7 +186,7 @@ object Picker {
 
     override def declares(ctx: RawContext): Set[PName] = ctx.declares
 
-    override def exports(ctx: RawContext): Map[PName, Option[PName]] = ctx.exports
+    override def exports(ctx: RawContext): Map[PName, SName] = ctx.exports
 
     override def allNames(ctx: RawContext): Set[String] = ctx.allNames
 
@@ -198,7 +200,7 @@ object Picker {
     override def setDeclares(ctx: RawContext, declares: Set[PName]): RawContext =
       RawContext.moduleLens.modify(_.copy(declares = declares))(ctx)
 
-    override def setExports(ctx: RawContext, exports: Map[PName, Option[PName]]): RawContext =
+    override def setExports(ctx: RawContext, exports: Map[PName, SName]): RawContext =
       RawContext.moduleLens.modify(_.copy(exports = exports))(ctx)
 
     override def clearModule(ctx: RawContext): RawContext =

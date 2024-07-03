@@ -119,7 +119,7 @@ case class RawContext(
 
   lazy val declares: Set[PName] = module.declares
 
-  lazy val exports: Map[PName, Option[PName]] = module.exports
+  lazy val exports: Map[PName, SName] = module.exports
 
   def prependPathToParts(path: PName): RawContext =
     RawContext.partsLens.modify(
@@ -129,15 +129,10 @@ case class RawContext(
     )(this)
 
   override def toString: String = {
-    val exportsStr = exports.map { case (name, rename) =>
-      rename.fold(name.value)(name.value + " as " + _.value)
-    }.mkString(", ")
     val partsStr = parts.map { case (_, part) => part.name }.toList.mkString(", ")
     val abilitiesStr = abilities.keys.map(_.name).mkString(", ")
 
     s"""|$module
-        |declares: ${declares.map(_.value).mkString(", ")}
-        |exports: $exportsStr
         |parts: $partsStr
         |abilities: $abilitiesStr""".stripMargin
   }
@@ -148,7 +143,7 @@ object RawContext {
   final case class Module(
     name: Option[PName] = None,
     declares: Set[PName] = Set.empty,
-    exports: Map[PName, Option[PName]] = Map.empty
+    exports: Map[PName, SName] = Map.empty
   ) {
 
     // Module is considered empty if it has no name
@@ -158,7 +153,7 @@ object RawContext {
       val nameStr = name.fold("<unnamed>")(_.value)
       val declaresStr = declares.map(_.value).mkString(", ")
       val exportsStr = exports.map { case (name, rename) =>
-        rename.fold(name.value)(name.value + " as " + _.value)
+        name.value + " as " + rename.name
       }.mkString(", ")
 
       s"""|module: $nameStr

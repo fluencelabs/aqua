@@ -125,19 +125,16 @@ case class AquaContext(
       )
     )
 
-  def pick(name: PName, maybeRename: Option[PName]): AquaContext =
+  def pick(name: PName, rename: SName): AquaContext =
     name.uncons match {
-      case (name, Some(subpath)) => abilities.get(name).map(_.pick(subpath, maybeRename)).orEmpty
-      case (name, None) => {
-        // WARNING: maybeRename here is lost if it is not a simple name
-        val newName = maybeRename.flatMap(_.simple).getOrElse(name)
+      case (name, Some(subpath)) => abilities.get(name).map(_.pick(subpath, rename)).orEmpty
+      case (name, None) =>
+        pickOne(name.name, rename.name, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|
+          pickOne(name.name, rename.name, types, (ctx, el) => ctx.copy(types = el)) |+|
+          pickOne(name.name, rename.name, values, (ctx, el) => ctx.copy(values = el)) |+|
+          pickOne(name, rename, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
+          pickOne(name.name, rename.name, services, (ctx, el) => ctx.copy(services = el))
 
-        pickOne(name.name, newName.name, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|
-          pickOne(name.name, newName.name, types, (ctx, el) => ctx.copy(types = el)) |+|
-          pickOne(name.name, newName.name, values, (ctx, el) => ctx.copy(values = el)) |+|
-          pickOne(name, newName, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
-          pickOne(name.name, newName.name, services, (ctx, el) => ctx.copy(services = el))
-      }
     }
 
   def withModule(newModule: Option[String]): AquaContext =

@@ -67,15 +67,15 @@ object LspContext {
     import aqua.semantics.header.Picker.*
 
     override def blank: LspContext[S] = LspContext.blank[S]
-    override def exports(ctx: LspContext[S]): Map[PName, Option[PName]] = ctx.raw.exports
+    override def exports(ctx: LspContext[S]): Map[PName, SName] = ctx.raw.exports
 
-    override def isAbility(ctx: LspContext[S], name: String): Boolean =
+    override def isAbility(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.isAbility(name)
 
-    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: String): Boolean =
+    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.funcReturnAbilityOrArrow(name)
 
-    override def funcAcceptAbility(ctx: LspContext[S], name: String): Boolean =
+    override def funcAcceptAbility(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.funcAcceptAbility(name)
 
     override def funcNames(ctx: LspContext[S]): Set[String] = ctx.raw.funcNames
@@ -129,7 +129,7 @@ object LspContext {
 
     override def setExports(
       ctx: LspContext[S],
-      exports: Map[PName, Option[PName]]
+      exports: Map[PName, SName]
     ): LspContext[S] =
       ctx.copy(raw = ctx.raw.setExports(exports))
 

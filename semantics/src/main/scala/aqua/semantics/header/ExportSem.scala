@@ -16,6 +16,7 @@
 
 package aqua.semantics.header
 
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.head.*
 import aqua.parser.lexer.{QName, Token}
 import aqua.semantics.SemanticError
@@ -41,10 +42,24 @@ class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
   locations: LocationsAlgebra[S, State[C, *]]
 ) {
 
+  private def exportAbilityCheck(
+    ctx: C,
+    token: Token[S],
+    name: PName
+  ): ValidatedNec[SemanticError[S], Unit] =
+    Validated.condNec(
+      !ctx.isAbility(name),
+      (),
+      error(
+        token,
+        s"Can not export '${name}' as it is an ability"
+      )
+    )
+
   private def exportFuncChecks(
     ctx: C,
     token: Token[S],
-    name: String
+    name: PName
   ): ValidatedNec[SemanticError[S], Unit] =
     Validated.condNec(
       !ctx.funcReturnAbilityOrArrow(name),
@@ -71,28 +86,46 @@ class ExportSem[S[_]: Comonad, C: Monoid](expr: ExportExpr[S])(using
   private def finSem(ctx: C): ValidatedNec[SemanticError[S], C] = {
     val tokens = expr.pubs.toList.flatMap { case QName.As(name, rename) =>
       rename.map(name.toPName -> _).toList :+ (name.toPName, name)
-    }
+    }.widen[(PName, Token[S])]
 
     val resCtx = ctx.addOccurences(tokens)
 
-    expr.pubs.map { case QName.As(name, rename) =>
-      resCtx
-        .pick(name.toPName, rename.map(_.toPName))
-        .as(List(name.toPName -> rename.map(_.toPName)))
-        .toValid(
+    val res = expr.pubs.map { case QName.As(name, rename) =>
+      val pName = name.toPName
+
+      val symbol = resCtx
+        .pick(pName)
+        .toValidNec(
           error(
             name,
-            s"Files has no '${name.value}' declaration or import, " +
+            s"No '${name.value}' declaration or import found, " +
               s"cannot export, available functions: ${resCtx.funcNames.mkString(", ")}"
           )
         )
-        .ensure(
+
+      val simpleRename = rename.fold(
+        pName.simple.toValidNec(
           error(
             name,
-            s"Can not export '${name.value}' as it is an ability"
+            s"Can not export '${name.value}' as it has path name, " +
+              s"use 'export ${name.value} as' with simple name without dots"
           )
-        )(_ => !resCtx.isAbility(name.value))
-        .toValidatedNec <* exportFuncChecks(resCtx, name, name.value)
+        )
+      )(newName =>
+        newName.toPName.simple.toValidNec(
+          error(
+            newName,
+            s"Can not export '${name.value}' by path name '${newName.value}', use simple name without dots"
+          )
+        )
+      )
+
+      symbol *>
+        exportAbilityCheck(resCtx, name, pName) *>
+        exportFuncChecks(resCtx, name, pName) *>
+        simpleRename.map(r => List(pName -> r))
     }.combineAll.map(exps => resCtx.setExports(resCtx.exports ++ exps))
+
+    res
   }
 }
