@@ -1,0 +1,4 @@
+aqua Export.Me.Please declares exp
+
+func exp() -> i32:
+    <- 7

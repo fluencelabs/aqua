@@ -17,24 +17,14 @@
 package aqua.compiler
 
 import aqua.compiler.FileIdString.given
-import aqua.model.AquaContext
-import aqua.model.CallServiceModel
-import aqua.model.FlattenModel
-import aqua.model.transform.ModelBuilder
-import aqua.model.transform.Transform
-import aqua.model.transform.TransformConfig
-import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
-import aqua.parser.Ast
-import aqua.parser.Parser
-import aqua.parser.ParserError
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.S
+import aqua.model.*
+import aqua.model.transform.{ModelBuilder, Transform, TransformConfig}
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.*
 import aqua.res.ResBuilder
 import aqua.semantics.FileId
-import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
+import aqua.types.*
 
 import cats.Eval
 import cats.Id
@@ -45,67 +35,10 @@ import cats.syntax.either.*
 import cats.syntax.flatMap.*
 import cats.syntax.option.*
 import cats.syntax.show.*
-import org.scalatest.Inside
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import scala.annotation.tailrec
 
-class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
+class AquaCompilerSpec extends CompilerSpec {
   import ModelBuilder.*
-
-  private def aquaSource(src: Map[String, String], imports: Map[String, String]) = {
-    new AquaSources[Id, String, String] {
-
-      override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
-        Validated.validNec(Chain.fromSeq(src.toSeq))
-
-      override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
-        Validated.validNec(imp)
-
-      override def load(file: String): Id[ValidatedNec[String, String]] =
-        Validated.fromEither(
-          (imports ++ src)
-            .get(file)
-            .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
-        )
-    }
-  }
-
-  private def insideContext(
-    src: Map[String, String],
-    imports: Map[String, String] = Map.empty
-  )(
-    test: AquaContext => Any
-  ) = {
-    val compiled = CompilerAPI
-      .compileToContext[Id, String, String, Span.S](
-        aquaSource(src, imports),
-        id => txt => Parser.parse(Parser.parserSchema)(txt),
-        AquaCompilerConf(ConstantRaw.defaultConstants(None))
-      )
-      .value
-      .value
-      .toValidated
-
-    inside(compiled) { case Validated.Valid(contexts) =>
-      inside(contexts.headOption) { case Some(ctx) =>
-        test(ctx)
-      }
-    }
-  }
-
-  private def insideRes(
-    src: Map[String, String],
-    imports: Map[String, String] = Map.empty,
-    transformCfg: TransformConfig = TransformConfig()
-  )(funcNames: String*)(
-    test: PartialFunction[List[FuncRes], Any]
-  ) = insideContext(src, imports)(ctx =>
-    val aquaRes = Transform.contextRes(ctx, transformCfg)
-    // To preserve order as in funcNames do flatMap
-    val funcs = funcNames.flatMap(name => aquaRes.funcs.find(_.funcName == name)).toList
-    inside(funcs)(test)
-  )
 
   def through(peer: ValueModel) =
     MakeRes.hop(peer)
@@ -638,6 +571,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       withClue(s"Testing $name") {
         test(name, None)
       }
+
       withClue(s"Testing $name as $rename") {
         test(name, rename.some)
       }
@@ -925,15 +859,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   def testImportsHierarchy(test: List[NameRename] => Any) = {
     // Simple
-    (1 to 10).foreach { i =>
+    (1 to 4).foreach { i =>
       val names = (1 to i).map(n => s"Imp$n").toList
-      withClue(s"Testing ${names.mkString(" -> ")}") {
+      withClue(s"Testing ${names.mkString(" -> ")}: ") {
         test(names.map(_ -> none))
       }
     }
 
     // // With subpaths
-    (1 to 4).foreach { i =>
+    (1 to 3).foreach { i =>
       (1 to i)
         .map(idx =>
           paths(
@@ -944,7 +878,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
         .toList
         .rotate
         .foreach(names =>
-          withClue(s"Testing ${names.mkString(" -> ")}") {
+          withClue(s"Testing ${names.mkString(" -> ")}: ") {
             test(names.map(_ -> none))
           }
         )

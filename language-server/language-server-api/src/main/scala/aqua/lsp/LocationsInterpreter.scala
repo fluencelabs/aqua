@@ -16,6 +16,7 @@
 
 package aqua.lsp
 
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
 import aqua.types.AbilityType
@@ -33,7 +34,7 @@ class LocationsInterpreter[S[_], X](using
   override def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] =
     definition.`type` match {
       // case where ability is an {Argument} in a function
-      case t: AbilityType if definition.name == t.name =>
+      case t: AbilityType if definition.name.value == t.name =>
         pointLocation(definition.name, definition.token)
       case _ => modify { st => st.addDefinition(definition) }
     }
@@ -41,41 +42,35 @@ class LocationsInterpreter[S[_], X](using
   override def addDefinitionWithFields(
     definition: DefinitionInfo[S],
     fields: List[DefinitionInfo[S]]
-  ): State[X, Unit] = {
-    val allTokens =
-      definition +: fields.map { fieldDef =>
-        fieldDef.copy(name = AbilityType.fullName(definition.name, fieldDef.name))
-      }
-    modify { st =>
-      st.addDefinitions(allTokens)
-    }
-  }
+  ): State[X, Unit] =
+    modify(_.addDefinitions(definition +: fields.map { fieldDef =>
+      fieldDef.copy(name = fieldDef.name.prepended(definition.name))
+    }))
 
-  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
-    pointLocation(AbilityType.fullName(typeName, fieldName), token)
+  override def pointFieldLocation(
+    typeName: PName,
+    fieldName: SName,
+    token: Token[S]
+  ): State[X, Unit] =
+    pointLocation(typeName.postfixed(fieldName), token)
 
-  def pointTokenWithFieldLocation(
-    typeName: String,
+  override def pointTokenWithFieldLocation(
+    typeName: PName,
     typeToken: Token[S],
-    fieldName: String,
+    fieldName: SName,
     token: Token[S]
   ): State[X, Unit] = {
     for {
       _ <- pointLocation(typeName, typeToken)
-      _ <- pointLocation(AbilityType.fullName(typeName, fieldName), token)
+      _ <- pointLocation(typeName.postfixed(fieldName), token)
     } yield {}
   }
 
-  override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
-    modify { st =>
-      st.addLocation(name, token)
-    }
-  }
+  override def pointLocation(name: PName, token: Token[S]): State[X, Unit] =
+    modify(_.addLocation(name, token))
 
-  def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] =
-    modify { st =>
-      st.addLocations(locations)
-    }
+  override def pointLocations(locations: List[(PName, Token[S])]): State[X, Unit] =
+    modify(_.addLocations(locations))
 
   private def modify(f: LocationsState[S] => LocationsState[S]): SX[Unit] =
     State.modify(lens.modify(f))

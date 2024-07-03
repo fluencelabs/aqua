@@ -56,7 +56,7 @@ object Token {
   val `aqua-word`: P[Unit] = P.string("aqua")
   val `declares`: P[Unit] = P.string("declares")
   val `declare`: P[Unit] = P.string("declare")
-  val `_export`: P[Unit] = P.string("export")
+  val `export`: P[Unit] = P.string("export")
   val `star`: P[Unit] = P.char('*')
   val `use`: P[Unit] = P.string("use")
   val `from`: P[Unit] = P.string("from")
@@ -145,10 +145,10 @@ object Token {
   def lift[F[_]: Functor, A](point: F[A]): Token[F] = LiftToken(point)
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =
-    P.repSep(p, `,` <* ` \n+`.rep0)
+    P.repSep(p, `,` <* ` \n*`)
 
   def comma0[T](p: P[T]): P0[List[T]] =
-    P.repSep0(p, `,` <* ` \n+`.rep0)
+    P.repSep0(p, `,` <* ` \n*`)
 
   def asOpt[T](p: P[T]): P[(T, Option[T])] =
     p ~ (` as `.backtrack *> p).?

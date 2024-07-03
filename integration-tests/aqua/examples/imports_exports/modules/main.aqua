@@ -1,0 +1,15 @@
+aqua Main
+
+use "libMerge" as M
+use "libRename" as R
+use "libExport"
+
+export merged
+export renamed
+export Export.Me.Please.exp as exported
+
+func merged() -> i32:
+    <- M.Lib.Sub.A.f() + M.Lib.Sub.B.g()
+
+func renamed() -> i32:
+    <- R.AB.A.SubA.f() + R.AB.B.SubB.g()

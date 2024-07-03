@@ -28,8 +28,8 @@ import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation as TokenLoc}
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
-import cats.syntax.show.*
 
+import cats.syntax.show.*
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scribe.Logging
@@ -124,7 +124,9 @@ object ResultHelper extends Logging {
       link.toList
     }.toJSArray
 
-  private def importsToTokenImport(paths: List[TokenImportPath[FileSpan.F]]): js.Array[TokenImport] =
+  private def importsToTokenImport(
+    paths: List[TokenImportPath[FileSpan.F]]
+  ): js.Array[TokenImport] =
     paths.flatMap { path =>
       val (span, _) = path.token.valueToken
       TokenLocation.fromSpan(span).map(l => TokenImport(l, path.path))
@@ -145,7 +147,7 @@ object ResultHelper extends Logging {
     CompilationResult(
       errors.toJSArray,
       warnings.toJSArray,
-      locationsToJs(lsp.variables.allLocations),
+      locationsToJs(lsp.variables.locations),
       importTokens,
       tokensToJs(lsp.variables.definitions)
     )

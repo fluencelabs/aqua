@@ -39,8 +39,11 @@ case class HeaderSem[S[_], C](
 
 object HeaderSem {
 
-  def fromInit[S[_], C: Monoid](init: C): HeaderSem[S, C] =
-    HeaderSem(init, _ => Monoid[C].empty.validNec)
+  def fromInit[S[_], C](init: C): HeaderSem[S, C] =
+    HeaderSem(init, _.validNec)
+
+  def fromFin[S[_], C: Monoid](fin: C => ValidatedNec[SemanticError[S], C]): HeaderSem[S, C] =
+    HeaderSem(Monoid[C].empty, fin)
 
   given [S[_]: Comonad, C](using
     rc: Monoid[C]
@@ -55,7 +58,7 @@ object HeaderSem {
     ): HeaderSem[S, C] =
       HeaderSem(
         a.init |+| b.init,
-        c => a.fin(c) |+| b.fin(c)
+        c => a.fin(c).andThen(b.fin)
       )
   }
 }

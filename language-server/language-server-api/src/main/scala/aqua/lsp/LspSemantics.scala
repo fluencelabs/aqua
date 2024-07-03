@@ -75,9 +75,6 @@ class LspSemantics[S[_]](
       .map { case (state, ctx) =>
         LspContext(
           raw = ctx,
-          rootArrows = state.names.rootArrows,
-          constants = state.names.constants,
-          abDefinitions = state.abilities.definitions,
           importTokens = importTokens,
           variables = state.locations.variables,
           errors = state.errors.toList,

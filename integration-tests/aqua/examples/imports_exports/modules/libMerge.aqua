@@ -1,0 +1,4 @@
+aqua Merge declares Lib
+
+use "libSubA"
+use "libSubB"

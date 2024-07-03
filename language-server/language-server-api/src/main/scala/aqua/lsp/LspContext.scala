@@ -16,7 +16,7 @@
 
 package aqua.lsp
 
-import aqua.helpers.data.PName
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
@@ -34,9 +34,6 @@ import scala.collection.immutable.ListMap
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
-  rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
-  constants: Map[String, Type] = Map.empty[String, Type],
   // TODO: Can this field be refactored into LocationsState?
   variables: Variables[S] = Variables[S](),
   importTokens: List[LiteralToken[S]] = Nil,
@@ -44,8 +41,7 @@ case class LspContext[S[_]](
   warnings: List[SemanticWarning[S]] = Nil,
   importPaths: Map[String, String] = Map.empty
 ) {
-  lazy val allLocations: List[TokenLocation[S]] = variables.allLocations
-
+  lazy val allLocations: List[TokenLocation[S]] = variables.locations
   lazy val tokenPaths: List[TokenImportPath[S]] = TokenImportPath.importPathsFromContext(this)
 }
 
@@ -59,9 +55,6 @@ object LspContext {
     override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] =
       LspContext[S](
         raw = x.raw |+| y.raw,
-        abDefinitions = x.abDefinitions ++ y.abDefinitions,
-        rootArrows = x.rootArrows ++ y.rootArrows,
-        constants = x.constants ++ y.constants,
         importTokens = x.importTokens ++ y.importTokens,
         variables = x.variables |+| y.variables,
         errors = x.errors ++ y.errors,
@@ -74,15 +67,15 @@ object LspContext {
     import aqua.semantics.header.Picker.*
 
     override def blank: LspContext[S] = LspContext.blank[S]
-    override def exports(ctx: LspContext[S]): Map[String, Option[String]] = ctx.raw.exports
+    override def exports(ctx: LspContext[S]): Map[PName, SName] = ctx.raw.exports
 
-    override def isAbility(ctx: LspContext[S], name: String): Boolean =
+    override def isAbility(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.isAbility(name)
 
-    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: String): Boolean =
+    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.funcReturnAbilityOrArrow(name)
 
-    override def funcAcceptAbility(ctx: LspContext[S], name: String): Boolean =
+    override def funcAcceptAbility(ctx: LspContext[S], name: PName): Boolean =
       ctx.raw.funcAcceptAbility(name)
 
     override def funcNames(ctx: LspContext[S]): Set[String] = ctx.raw.funcNames
@@ -93,23 +86,12 @@ object LspContext {
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
-    override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
+    override def moduleName(ctx: LspContext[S]): Option[PName] =
+      ctx.raw.moduleName
 
-    override def declaredNames(ctx: LspContext[S]): Set[String] = ctx.raw.declaredNames
+    override def declares(ctx: LspContext[S]): Set[PName] = ctx.raw.declares
 
     override def allNames(ctx: LspContext[S]): Set[String] = ctx.raw.allNames
-
-    override def setAbility(
-      ctx: LspContext[S],
-      name: String,
-      ctxAb: LspContext[S]
-    ): LspContext[S] =
-      ctx.copy(
-        raw = ctx.raw.setAbility(name, ctxAb.raw),
-        variables = ctx.variables |+| ctxAb.variables.renameDefinitions(defName =>
-          AbilityType.fullName(name, defName)
-        )
-      )
 
     override def setImportPaths(
       ctx: LspContext[S],
@@ -117,8 +99,27 @@ object LspContext {
     ): LspContext[S] =
       ctx.copy(importPaths = importPaths)
 
-    override def setModule(ctx: LspContext[S], name: Option[String]): LspContext[S] =
-      ctx.copy(raw = ctx.raw.setModule(name))
+    override def setModuleName(ctx: LspContext[S], name: PName): LspContext[S] =
+      ctx.copy(raw = ctx.raw.setModuleName(name))
+
+    override def scoped(ctx: LspContext[S], path: PName): LspContext[S] =
+      ctx.copy(
+        raw = ctx.raw.scoped(path),
+        variables = ctx.variables.renameDefinitions(defName => defName.prepended(path))
+      )
+
+    override def unscoped(ctx: LspContext[S], path: PName): Option[LspContext[S]] =
+      ctx.raw
+        .unscoped(path)
+        .map(rc =>
+          ctx.copy(
+            raw = rc,
+            variables = ctx.variables.renameDefinitions {
+              case defName if defName.startsWith(path) =>
+                defName.removePrefix(path)
+            }
+          )
+        )
 
     override def setDeclares(
       ctx: LspContext[S],
@@ -128,43 +129,37 @@ object LspContext {
 
     override def setExports(
       ctx: LspContext[S],
-      exports: Map[String, Option[String]]
+      exports: Map[PName, SName]
     ): LspContext[S] =
       ctx.copy(raw = ctx.raw.setExports(exports))
 
+    override def clearModule(ctx: LspContext[S]): LspContext[S] =
+      ctx.copy(raw = ctx.raw.clearModule)
+
     override def pick(
       ctx: LspContext[S],
-      name: String,
-      rename: Option[String],
-      declared: Boolean
-    ): Option[LspContext[S]] =
-      // rename tokens from one context with prefix addition
-      val newVariables = rename.map { renameStr =>
+      name: PName,
+      rename: Option[PName]
+    ): Option[LspContext[S]] = {
+      val newVariables = rename.map { newName =>
         ctx.variables.renameDefinitions {
           case defName if defName.startsWith(name) =>
-            defName.replaceFirst(name, renameStr)
+            defName.replacePrefix(name, newName)
         }
       }.getOrElse(ctx.variables)
 
       ctx.raw
-        .pick(name, rename, declared)
+        .pick(name, rename)
         .map(rc =>
           ctx.copy(
             raw = rc,
-            abDefinitions =
-              ctx.abDefinitions.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            rootArrows =
-              ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            constants =
-              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             variables = newVariables
           )
         )
+    }
 
-    override def pick(ctx: LspContext[S], name: PName, declared: Boolean): Option[LspContext[S]] =
-      ctx.raw.pick(name, declared).map(rc => ctx.copy(raw = rc))
-
-    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
+    override def pickHeader(ctx: LspContext[S]): LspContext[S] =
+      ctx.copy(raw = ctx.raw.pickHeader)
 
     override def pickDeclared(ctx: LspContext[S]): LspContext[S] =
       ctx.copy(raw = ctx.raw.pickDeclared)

@@ -1,0 +1,4 @@
+aqua Lib.Sub.A declares f
+
+func f() -> i32:
+    <- 42

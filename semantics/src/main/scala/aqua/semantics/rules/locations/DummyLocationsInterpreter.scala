@@ -16,7 +16,9 @@
 
 package aqua.semantics.rules.locations
 
+import aqua.helpers.data.{PName, SName}
 import aqua.parser.lexer.Token
+
 import cats.data.State
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
@@ -28,17 +30,20 @@ class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]
     fields: List[DefinitionInfo[S]]
   ): State[X, Unit] = State.pure(())
 
-  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
-    State.pure(())
-
-  def pointTokenWithFieldLocation(
-    typeName: String,
-    typeToken: Token[S],
-    fieldName: String,
+  def pointFieldLocation(
+    typeName: PName,
+    fieldName: SName,
     token: Token[S]
   ): State[X, Unit] = State.pure(())
-  override def pointLocation(name: String, token: Token[S]): State[X, Unit] = State.pure(())
-  override def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] = State.pure(())
+
+  def pointTokenWithFieldLocation(
+    typeName: PName,
+    typeToken: Token[S],
+    fieldName: SName,
+    token: Token[S]
+  ): State[X, Unit] = State.pure(())
+  override def pointLocation(name: PName, token: Token[S]): State[X, Unit] = State.pure(())
+  override def pointLocations(locations: List[(PName, Token[S])]): State[X, Unit] = State.pure(())
 
   def beginScope(): State[X, Unit] = State.pure(())
 

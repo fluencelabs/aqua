@@ -75,20 +75,19 @@ class AbilitiesInterpreter[S[_], X](using
     }
 
   // adds location from token to its definition
-  private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
-    locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
-  }
+  private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] =
+    locations.pointTokenWithFieldLocation(name.pathName, name, arrow.simpleName, arrow)
 
   override def isDefinedAbility(name: NamedTypeToken[S]): State[X, Boolean] =
     OptionT(getState.map(_.abilities.get(name.value))).semiflatTap { _ =>
-      locations.pointLocation(name.value, name)
+      locations.pointLocation(name.pathName, name)
     }.isDefined
 
   override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getAbility(name.value).flatMap {
       case Some(abCtx) =>
         abCtx.funcs
-          .get(arrow.value)
+          .get(arrow.simpleName)
           .fold(
             report
               .error(
@@ -96,7 +95,7 @@ class AbilitiesInterpreter[S[_], X](using
                 Levenshtein.genMessage(
                   s"Ability is found, but arrow '${arrow.value}' isn't found in scope",
                   arrow.value,
-                  abCtx.funcs.keys.toList
+                  abCtx.funcs.keys.toList.map(_.name)
                 )
               )
               .as(none)

@@ -34,16 +34,16 @@ class UseSpec extends AnyFlatSpec with Matchers with AquaSpec {
   "use" should "be parsed" in {
     parseUse("use DECLARE_CONST2 as DC2 from \"declare.aqua\" as Declare") shouldBe
       UseFromExpr(
-        NonEmptyList.one(Right((toAb("DECLARE_CONST2"), Some(toAb("DC2"))))),
+        NonEmptyList.one(toQNameAs("DECLARE_CONST2", Some("DC2"))),
         toStr("declare.aqua"),
-        toAb("Declare")
+        Some(toQName("Declare"))
       )
 
     parseUse("use DECLARE_CONST from \"declare.aqua\" as Declare") shouldBe
       UseFromExpr(
-        NonEmptyList.one(Right((toAb("DECLARE_CONST"), None))),
+        NonEmptyList.one(toQNameAs("DECLARE_CONST", None)),
         toStr("declare.aqua"),
-        toAb("Declare")
+        Some(toQName("Declare"))
       )
   }
 }
