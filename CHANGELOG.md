@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.14.11](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.10...aqua-v0.14.11) (2024-07-03)
+
+
+### Features
+
+* **compiler:** Add feature to insert map from a function result with correct type [LNG-367] ([#1159](https://github.com/fluencelabs/aqua/issues/1159)) ([4d49279](https://github.com/fluencelabs/aqua/commit/4d49279569b5cfbdf351e9236dd508d9bf51badc))
+* **compiler:** Allow renaming imports with qualified names [LNG-361] ([#1136](https://github.com/fluencelabs/aqua/issues/1136)) ([1c76f75](https://github.com/fluencelabs/aqua/commit/1c76f75d80ae958a7eb2bf2aec5c58a5b92c438f))
+
+
+### Bug Fixes
+
+* **compiler:** Push to stream in closures [LNG-365] ([#1157](https://github.com/fluencelabs/aqua/issues/1157)) ([77b7b9b](https://github.com/fluencelabs/aqua/commit/77b7b9b4bd4e8964b6ceb681750fda27766c16b2))
+
 ## [0.14.10](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.9...aqua-v0.14.10) (2024-06-07)
 
 
