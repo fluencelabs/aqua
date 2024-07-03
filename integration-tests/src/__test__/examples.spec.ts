@@ -212,6 +212,7 @@ import { yesNoStreamCall } from "../examples/recursiveStreams/yesNoStreamCall.js
 import { multiRecStreamCall } from "../examples/recursiveStreams/multiRecStreamCall.js";
 import { pipelineStreamCall } from "../examples/recursiveStreams/pipelineCall.js";
 import { remoteRecStreamCall } from "../examples/recursiveStreams/remoteRecCall.js";
+import { renamedCall, mergedCall, exportedCall } from "../examples/modules.js";
 
 var selfPeerId: string;
 var peer1: IFluenceClient;
@@ -1318,4 +1319,19 @@ describe("Testing examples", () => {
     const joinCallResult = await joinIdxCall(relayPeerId1);
     expect(joinCallResult.length).toBeGreaterThanOrEqual(2);
   }, 10000);
+
+  it("modules/main.aqua merged", async () => {
+    const result = await mergedCall();
+    expect(result).toBe(66);
+  });
+
+  it("modules/main.aqua renamed", async () => {
+    const result = await renamedCall();
+    expect(result).toBe(110);
+  });
+
+  it("modules/main.aqua exported", async () => {
+    const result = await exportedCall();
+    expect(result).toBe(7);
+  });
 });

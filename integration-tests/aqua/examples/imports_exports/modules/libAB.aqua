@@ -1,0 +1,5 @@
+aqua LibAB declares LibA, LibB
+
+use "libA"
+use "libB"
+

@@ -1,0 +1,3 @@
+aqua Rename declares AB
+
+use LibA as A, LibB as B from "libAB" as AB

@@ -1,0 +1,4 @@
+aqua LibB.SubB declares g
+
+func g() -> i32:
+    <- 73
