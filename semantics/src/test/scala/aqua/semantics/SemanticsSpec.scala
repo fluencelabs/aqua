@@ -1013,6 +1013,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  // NOTE: This should be true until aqua has immutable map type
   it should "prohibit putting stream maps into collection" in {
     def test(prefix: String = "") = {
       val script = s"""|func test(arr: []⊤) -> string:
