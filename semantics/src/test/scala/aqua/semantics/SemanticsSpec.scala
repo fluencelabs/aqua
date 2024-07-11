@@ -1012,4 +1012,24 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
     }
   }
+
+  it should "prohibit putting stream maps into collection" in {
+    def test(prefix: String = "") = {
+      val script = s"""|func test(arr: []⊤) -> string:
+                       |  <- "test"
+                       |
+                       |func main() -> string:
+                       |  map: %string
+                       |  <- test(${prefix}[map])""".stripMargin
+
+      insideSemErrors(script) { errors =>
+        errors.collect { case RulesViolated(_, messages) => messages }.toList.flatten
+          .contains("Value of type '%string' could not be put into a collection") shouldBe (true)
+      }
+    }
+
+    test()
+    test("?")
+    test("*")
+  }
 }
