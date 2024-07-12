@@ -330,6 +330,7 @@ object CollectionType {
 sealed trait ImmutableCollectionType extends CollectionType with DataType {
   def withElement(t: DataType): ImmutableCollectionType
 }
+
 sealed trait MutableStreamType extends CollectionType {
   def toCanon: ImmutableCollectionType
 }
@@ -389,7 +390,7 @@ case class StreamMapType(override val element: DataType) extends MutableStreamTy
 
   override def toString: String = s"%$element"
 
-  def getFunc(f: Func): ArrowType ={
+  def getFunc(f: Func): ArrowType = {
     val (args, rets) = f match {
       case Get =>
         (ScalarType.string :: Nil) -> (ArrayType(element) :: Nil)
@@ -431,7 +432,7 @@ object StreamMapType {
   def funcByString(s: String): Option[Func] =
     Func.values.find(_.name == s)
 
-  lazy val allFuncs: List[Func] =  Func.values.toList
+  lazy val allFuncs: List[Func] = Func.values.toList
 
   def top(): StreamMapType = StreamMapType(TopType)
 }
@@ -602,9 +603,11 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
 object Type {
 
   /**
-   * `StreamType` is collectible with canonicalization
+   * `StreamType` is collectible with canonicalization.
+   * Note: until aqua type system has immutable maps,
+   * they are not collectible
    */
-  type CollectibleType = DataType | MutableStreamType
+  type CollectibleType = DataType | StreamType
 
   def isStreamType(t: Type): Boolean =
     t match {
