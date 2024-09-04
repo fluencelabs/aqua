@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.12](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.11...aqua-v0.14.12) (2024-09-04)
+
+
+### Bug Fixes
+
+* **compiler:** Fix CRDT Map in array handling [LNG-370] ([#1171](https://github.com/fluencelabs/aqua/issues/1171)) ([b0f3a8c](https://github.com/fluencelabs/aqua/commit/b0f3a8c21e06994e23bb1ecb416aba4c0fa526e5))
+
 ## [0.14.11](https://github.com/fluencelabs/aqua/compare/aqua-v0.14.10...aqua-v0.14.11) (2024-07-03)
 
 
